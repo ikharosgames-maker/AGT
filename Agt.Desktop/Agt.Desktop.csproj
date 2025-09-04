@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<RootNamespace>Agt.Desktop</RootNamespace>
+		<AssemblyName>Agt.Desktop</AssemblyName>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\Agt.Contracts\Agt.Contracts.csproj" />
+	</ItemGroup>
+</Project>

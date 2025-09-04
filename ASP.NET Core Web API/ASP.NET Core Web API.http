@@ -1,0 +1,11 @@
+@ASP.NET_Core_Web_API_HostAddress = http://localhost:5023
+
+GET {{ASP.NET_Core_Web_API_HostAddress}}/todos/
+Accept: application/json
+
+###
+
+GET {{ASP.NET_Core_Web_API_HostAddress}}/todos/1
+Accept: application/json
+
+###
