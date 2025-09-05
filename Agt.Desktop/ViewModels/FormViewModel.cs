@@ -5,29 +5,31 @@ using CommunityToolkit.Mvvm.Input;
 using Agt.Contracts;
 using Agt.Desktop.Services;
 
-
 namespace Agt.Desktop.ViewModels;
-
 
 public partial class FormViewModel : ObservableObject
 {
     private readonly ApiClient _api;
+
     public FormDefinitionDto Definition { get; private set; }
     public ObservableCollection<FieldInstance> Fields { get; } = new();
 
+    public IAsyncRelayCommand LoadAsyncCommand { get; }
+    public IAsyncRelayCommand SaveAsyncCommand { get; }
 
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string? statusMessage;
-
 
     public FormViewModel(ApiClient api)
     {
         _api = api;
         Definition = new FormDefinitionDto("form.claim", 2, "Reklamace", Array.Empty<FormBlockRefDto>());
+
+        // Explicitní příkazy (bez [RelayCommand] atributu)
+        LoadAsyncCommand = new AsyncRelayCommand(LoadAsync);
+        SaveAsyncCommand = new AsyncRelayCommand(SaveAsync);
     }
 
-
-    [RelayCommand]
     public async Task LoadAsync()
     {
         IsBusy = true;
@@ -49,32 +51,26 @@ public partial class FormViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
-
-    [RelayCommand]
     public async Task SaveAsync()
     {
         IsBusy = true;
         try
         {
-            // data: { blockKey: { fieldKey: value } }
             var grouped = Fields
-            .GroupBy(f => f.BlockKey)
-            .ToDictionary(g => g.Key, g => g.ToDictionary(
-            x => x.Field.Key, x => x.Value));
+                .GroupBy(f => f.BlockKey)
+                .ToDictionary(g => g.Key, g => g.ToDictionary(
+                    x => x.Field.Key, x => x.Value));
 
-
-            using var doc = JsonDocument.Parse(JsonSerializer.Serialize(grouped));
+            using var doc = JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(grouped));
             var root = doc.RootElement.Clone();
 
-
             var created = await _api.CreateResponseAsync(new FormResponseCreateDto(
-            FormId: Definition.Id,
-            FormVersion: Definition.Version,
-            Data: root,
-            CreatedBy: Environment.UserName));
+                FormId: Definition.Id,
+                FormVersion: Definition.Version,
+                Data: root,
+                CreatedBy: Environment.UserName));
 
-
-            StatusMessage = $"Uloženo (Id: {created?.Id}).";
+            StatusMessage = created is null ? "Uložení selhalo" : $"Uloženo (Id: {created.Id}).";
         }
         finally { IsBusy = false; }
     }

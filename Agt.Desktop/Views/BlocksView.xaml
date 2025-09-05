@@ -1,0 +1,52 @@
+﻿<UserControl x:Class="Agt.Desktop.Views.BlocksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="3*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Seznam bloků -->
+        <StackPanel Grid.Column="0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="Načíst" Command="{Binding LoadCommand}" Margin="0,0,8,0"/>
+                <Button Content="Nový blok" Command="{Binding NewBlockCommand}"/>
+            </StackPanel>
+            <DataGrid ItemsSource="{Binding Blocks}" SelectedItem="{Binding Selected, Mode=TwoWay}"
+                AutoGenerateColumns="False" IsReadOnly="True" Height="420">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="*"/>
+                    <DataGridTextColumn Header="Verze" Binding="{Binding Version}" Width="Auto"/>
+                    <DataGridTextColumn Header="Název" Binding="{Binding Name}" Width="2*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </StackPanel>
+
+        <!-- Editor detailu -->
+        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+            <TextBlock Text="Detail bloku" FontWeight="Bold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,6,0,6">
+                <TextBlock Text="Id" Width="80"/>
+                <TextBox Text="{Binding Selected.Id, Mode=TwoWay}" Width="240"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <TextBlock Text="Název" Width="80"/>
+                <TextBox Text="{Binding Selected.Name, Mode=TwoWay}" Width="240"/>
+            </StackPanel>
+
+            <TextBlock Text="Fields" FontWeight="SemiBold" Margin="0,6,0,4"/>
+            <DataGrid ItemsSource="{Binding Selected.Fields}" AutoGenerateColumns="False" Height="280">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Key" Binding="{Binding Key, Mode=TwoWay}" Width="*"/>
+                    <DataGridTextColumn Header="Type" Binding="{Binding Type, Mode=TwoWay}" Width="Auto"/>
+                    <DataGridTextColumn Header="Label" Binding="{Binding Label, Mode=TwoWay}" Width="2*"/>
+                    <DataGridCheckBoxColumn Header="Required" Binding="{Binding Required, Mode=TwoWay}" Width="Auto"/>
+                    <DataGridTextColumn Header="Regex" Binding="{Binding Regex, Mode=TwoWay}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Button Content="Uložit (nová verze)" Command="{Binding SaveCommand}" Margin="0,8,0,0" Width="180"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

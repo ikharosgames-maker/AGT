@@ -1,7 +1,354 @@
 ﻿<Window x:Class="Agt.Desktop.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:Agt.Desktop.Views"
-        Title="AGT – Form" Height="600" Width="520">
-    <views:FormView/>
+        xmlns:w="clr-namespace:System.Windows;assembly=PresentationFramework"
+        mc:Ignorable="d"
+        Title="AGT – Návrhář bloků" Height="800" Width="1200"
+        Background="#121212" Foreground="#EEE"
+        SizeChanged="Window_SizeChanged">
+
+    <Grid>
+        <!-- ====== GLOBÁLNÍ ZDROJE ====== -->
+        <Grid.Resources>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+            <views:BooleanToThicknessConverter x:Key="BoolToThickness"/>
+            <views:NullToVisibilityConverter x:Key="NullToVisibility"/>
+            <views:NotNullToVisibilityConverter x:Key="NotNullToVisibility"/>
+            <views:InvertBool x:Key="InvertBool"/>
+
+            <!-- Design-safe šablony (bez hit-testu) -->
+            <DataTemplate x:Key="T_Text">
+                <Grid IsHitTestVisible="False">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Placeholder}" IsReadOnly="{Binding IsReadOnly}"
+                   HorizontalContentAlignment="{Binding HAlign}" FontSize="{Binding FontSize}"
+                   Foreground="{Binding ForegroundBrush}" Background="{Binding BackgroundBrush}"/>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="T_TextArea">
+                <Grid IsHitTestVisible="False">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Placeholder}" AcceptsReturn="True" TextWrapping="Wrap"
+                   IsReadOnly="{Binding IsReadOnly}" FontSize="{Binding FontSize}"
+                   Foreground="{Binding ForegroundBrush}" Background="{Binding BackgroundBrush}"/>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="T_Combo">
+                <Grid IsHitTestVisible="False">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+                    Background="{Binding BackgroundBrush}" Foreground="{Binding ForegroundBrush}"/>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="T_Check">
+                <Grid IsHitTestVisible="False">
+                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}"
+                    IsEnabled="{Binding IsReadOnly, Converter={StaticResource InvertBool}}"
+                    Foreground="{Binding ForegroundBrush}"/>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="T_Date">
+                <Grid IsHitTestVisible="False">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <DatePicker SelectedDate="{Binding SelectedDate}"/>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="T_Label">
+                <TextBlock IsHitTestVisible="False"
+                   Text="{Binding Label}" FontSize="{Binding FontSize}"
+                   Foreground="{Binding ForegroundBrush}"/>
+            </DataTemplate>
+
+            <DataTemplate x:Key="T_ListView">
+                <Grid IsHitTestVisible="False">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <ListView ItemsSource="{Binding Items}"/>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="T_DataGrid">
+                <Grid IsHitTestVisible="False">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="True"/>
+                </Grid>
+            </DataTemplate>
+
+            <views:ControlTemplateSelector x:Key="ControlTemplateSelector"
+                                     TextTemplate="{StaticResource T_Text}"
+                                     TextAreaTemplate="{StaticResource T_TextArea}"
+                                     ComboTemplate="{StaticResource T_Combo}"
+                                     CheckTemplate="{StaticResource T_Check}"
+                                     DateTemplate="{StaticResource T_Date}"
+                                     LabelTemplate="{StaticResource T_Label}"
+                                     ListViewTemplate="{StaticResource T_ListView}"
+                                     DataGridTemplate="{StaticResource T_DataGrid}"/>
+        </Grid.Resources>
+
+        <!-- ====== Taby: Designer + Runtime preview ====== -->
+        <TabControl>
+            <TabItem Header="Návrhář bloku">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Horní lišta -->
+                    <StackPanel Orientation="Horizontal" Margin="10">
+                        <TextBlock Text="Block Id:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Text="{Binding BlockId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="200" Margin="0,0,12,0"/>
+                        <TextBlock Text="Název:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Text="{Binding BlockName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="200" Margin="0,0,12,0"/>
+
+                        <Button Content="Nový" Command="{Binding NewBlockCommand}" Margin="0,0,8,0"/>
+                        <Button Content="Uložit (lokálně)" Command="{Binding SaveBlockLocalCommand}" Margin="0,0,8,0"/>
+                        <Button Content="Načíst" Command="{Binding LoadBlockLocalCommand}" Margin="0,0,8,0"/>
+                        <Button Content="Vymazat označené" Command="{Binding DeleteSelectedCommand}"/>
+                        <TextBlock Text="{Binding Status}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Design Canvas -->
+                    <Border Grid.Row="1" Margin="10" Background="#1E1E1E" BorderBrush="#333" BorderThickness="1">
+                        <Canvas x:Name="DesignCanvas" Background="#1E1E1E"
+                    MouseLeftButtonDown="DesignCanvas_MouseLeftButtonDown"
+                    MouseMove="DesignCanvas_MouseMove"
+                    MouseLeftButtonUp="DesignCanvas_MouseLeftButtonUp"
+                    SizeChanged="DesignCanvas_SizeChanged">
+                            <ItemsControl ItemsSource="{Binding Controls}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid MouseDown="Item_MouseDown">
+                                            <!-- výběr -->
+                                            <Border BorderThickness="{Binding IsSelected, Converter={StaticResource BoolToThickness}, ConverterParameter=2}"
+                              BorderBrush="#5FA8FA" Background="#2A2A2A">
+                                                <ContentControl Content="{Binding}" Cursor="Arrow"
+                                        ContentTemplateSelector="{StaticResource ControlTemplateSelector}"
+                                        Width="{Binding Width}" Height="{Binding Height}"/>
+                                            </Border>
+
+                                            <!-- MOVE (levý horní) -->
+                                            <Thumb Width="10" Height="10" Background="#5FA8FA"
+                             Cursor="SizeAll"
+                             HorizontalAlignment="Left" VerticalAlignment="Top"
+                             DragStarted="Handle_SelectOwner"
+                             DragDelta="Move_Handle_DragDelta"/>
+
+                                            <!-- RESIZE (pravý dolní) -->
+                                            <Thumb Width="10" Height="10" Background="#5FA8FA"
+                             Cursor="SizeNWSE"
+                             HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                             DragStarted="Handle_SelectOwner"
+                             DragDelta="Resize_BottomRight"/>
+
+                                            <!-- ContextMenu -->
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Duplikovat" Click="Ctx_Duplicate"/>
+                                                    <MenuItem Header="Kopírovat" Click="Ctx_Copy"/>
+                                                    <MenuItem Header="Vložit" Click="Ctx_Paste"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Smazat" Click="Ctx_Delete"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Rubber-band -->
+                            <Rectangle x:Name="SelectionRect" Visibility="Collapsed"
+                         Stroke="#5FA8FA" StrokeThickness="1" Fill="#5FA8FA22"/>
+                        </Canvas>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Formulář (runtime)">
+                <views:FormView/>
+            </TabItem>
+        </TabControl>
+
+        <!-- ====== FLOATING: TOOLBOX ====== -->
+        <Border x:Name="ToolboxOverlay" Background="#232323CC" BorderBrush="#5FA8FA" BorderThickness="1"
+            CornerRadius="10" Padding="10" Width="260"
+            HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <DockPanel Grid.Row="0">
+                    <TextBlock Text="Toolbox" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="–" Width="22" Height="22" Margin="8,0,0,0" Click="ToolboxMinimize_Click"/>
+                        <Thumb Width="18" Height="18" Margin="8,0,0,0" Cursor="SizeAll" DragDelta="Overlay_DragDelta"/>
+                    </StackPanel>
+                </DockPanel>
+                <Border x:Name="ToolboxContent" Grid.Row="1" Margin="0,8,0,0">
+                    <ListBox ItemsSource="{Binding Toolbox}" SelectedItem="{Binding SelectedToolboxItem, Mode=TwoWay}"
+                   DisplayMemberPath="Display" Height="380"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ====== FLOATING: PROPERTIES ====== -->
+        <Border x:Name="PropOverlay" Background="#232323CC" BorderBrush="#5FA8FA" BorderThickness="1"
+            CornerRadius="10" Padding="10" Width="340"
+            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="24">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <DockPanel Grid.Row="0">
+                    <TextBlock Text="Vlastnosti" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="–" Width="22" Height="22" Margin="8,0,0,0" Click="PropMinimize_Click"/>
+                        <Thumb Width="18" Height="18" Margin="8,0,0,0" Cursor="SizeAll" DragDelta="Overlay_DragDelta"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <ScrollViewer x:Name="PropContent" Grid.Row="1" Margin="0,8,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Žádný prvek není vybrán" Foreground="#888"
+                       Visibility="{Binding Selected, Converter={StaticResource NullToVisibility}}"/>
+
+                        <!-- Multi-select -->
+                        <StackPanel Visibility="{Binding MultiSelectionVisible, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding MultiSelectionTitle}" Margin="0,0,0,6"/>
+                            <Button Content="Použít styl na vybrané" Click="ApplyStyleToSelection_Click" Width="180" />
+                            <Separator Margin="0,8,0,8"/>
+                        </StackPanel>
+
+                        <!-- Dynamické skrývání vlastností dle typu a dle společných vlastností (VM.CommonCaps) -->
+                        <StackPanel DataContext="{Binding Selected}" Visibility="{Binding Selected, Converter={StaticResource NotNullToVisibility}}">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                          Visibility="{Binding DataContext.CommonCaps.ShowLabel, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Label" Width="140"/>
+                                <TextBox Text="{Binding Label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="180"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                          Visibility="{Binding DataContext.CommonCaps.ShowDataPath, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="DataPath" Width="140"/>
+                                <TextBox Text="{Binding DataPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="180"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                          Visibility="{Binding DataContext.CommonCaps.ShowPlaceholder, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Placeholder" Width="140"/>
+                                <TextBox Text="{Binding Placeholder, Mode=TwoWay}" Width="180"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                          Visibility="{Binding DataContext.CommonCaps.ShowReadOnly, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="ReadOnly" Width="140"/>
+                                <CheckBox IsChecked="{Binding IsReadOnly, Mode=TwoWay}"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                          Visibility="{Binding DataContext.CommonCaps.ShowMultiline, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Multiline" Width="140"/>
+                                <CheckBox IsChecked="{Binding IsMultiline, Mode=TwoWay}"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                          Visibility="{Binding DataContext.CommonCaps.ShowHAlign, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Horiz. zarovnání" Width="140"/>
+                                <ComboBox SelectedItem="{Binding HAlign, Mode=TwoWay}" Width="180">
+                                    <w:HorizontalAlignment>Left</w:HorizontalAlignment>
+                                    <w:HorizontalAlignment>Center</w:HorizontalAlignment>
+                                    <w:HorizontalAlignment>Right</w:HorizontalAlignment>
+                                    <w:HorizontalAlignment>Stretch</w:HorizontalAlignment>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                          Visibility="{Binding DataContext.CommonCaps.ShowFont, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="FontSize" Width="140"/>
+                                <TextBox Text="{Binding FontSize, Mode=TwoWay}" Width="80"/>
+                            </StackPanel>
+
+                            <!-- Foreground -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+            Visibility="{Binding DataContext.CommonCaps.ShowForeground, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Foreground (Hex)" Width="140"/>
+                                <TextBox Text="{Binding ForegroundHex, Mode=TwoWay}" Width="120"/>
+                                <Button Content="Vybrat…" Width="70" Margin="6,0,0,0" Click="PickForeground_Click"/>
+                            </StackPanel>
+
+                            <!-- Background -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+            Visibility="{Binding DataContext.CommonCaps.ShowBackground, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Background (Hex)" Width="140"/>
+                                <TextBox Text="{Binding BackgroundHex, Mode=TwoWay}" Width="120"/>
+                                <Button Content="Vybrat…" Width="70" Margin="6,0,0,0" Click="PickBackground_Click"/>
+                            </StackPanel>
+
+
+                            <Separator Margin="0,8,0,8"/>
+                            <TextBlock Text="Pozice &amp; Velikost" FontWeight="SemiBold"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,2">
+                                <TextBlock Text="X" Width="20"/>
+                                <TextBox Text="{Binding X, Mode=TwoWay}" Width="60" Margin="4,0,12,0"/>
+                                <TextBlock Text="Y" Width="20"/>
+                                <TextBox Text="{Binding Y, Mode=TwoWay}" Width="60" Margin="4,0,12,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="W" Width="20"/>
+                                <TextBox Text="{Binding Width, Mode=TwoWay}" Width="60" Margin="4,0,12,0"/>
+                                <TextBlock Text="H" Width="20"/>
+                                <TextBox Text="{Binding Height, Mode=TwoWay}" Width="60" Margin="4,0,12,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- ====== FLOATING: LAYERS (seznam prvků v bloku) ====== -->
+        <Border x:Name="LayersOverlay" Background="#232323CC" BorderBrush="#5FA8FA" BorderThickness="1"
+            CornerRadius="10" Padding="10" Width="260"
+            HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="24">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <DockPanel Grid.Row="0">
+                    <TextBlock Text="Prvky (layers)" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="–" Width="22" Height="22" Margin="8,0,0,0" Click="LayersMinimize_Click"/>
+                        <Thumb Width="18" Height="18" Margin="8,0,0,0" Cursor="SizeAll" DragDelta="Overlay_DragDelta"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <Border x:Name="LayersContent" Grid.Row="1" Margin="0,8,0,0">
+                    <ListBox ItemsSource="{Binding Controls}" DisplayMemberPath="Label"
+                   SelectedItem="{Binding Selected, Mode=TwoWay}" Height="220"/>
+                </Border>
+            </Grid>
+        </Border>
+
+    </Grid>
 </Window>

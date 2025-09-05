@@ -9,7 +9,6 @@ public class FieldTemplateSelector : DataTemplateSelector
     public DataTemplate? TextTemplate { get; set; }
     public DataTemplate? NumberTemplate { get; set; }
     public DataTemplate? DateTemplate { get; set; }
-
     public override DataTemplate SelectTemplate(object item, DependencyObject container)
     {
         var fi = (FieldInstance)item;
