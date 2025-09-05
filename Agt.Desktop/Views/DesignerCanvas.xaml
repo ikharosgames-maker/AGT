@@ -4,18 +4,24 @@
              xmlns:m="clr-namespace:Agt.Desktop.Models"
              xmlns:conv="clr-namespace:Agt.Desktop.Converters">
     <UserControl.Resources>
+        <!-- DŮLEŽITÉ: instance konvertoru, ne MarkupExtension -->
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
     </UserControl.Resources>
 
     <Grid>
+        <Canvas x:Name="LassoLayer" IsHitTestVisible="False" />
+
         <ItemsControl x:Name="ItemsHost" ItemsSource="{Binding Items}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <Canvas Background="Transparent"
+                    <Canvas x:Name="RootCanvas"
+                  Background="Transparent"
                   AllowDrop="True"
                   Drop="RootCanvas_Drop"
                   DragOver="RootCanvas_DragOver"
                   MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                  MouseMove="Canvas_MouseMove"
+                  MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
                   ContextMenuOpening="Canvas_ContextMenuOpening"/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
@@ -30,7 +36,7 @@
 
             <ItemsControl.Resources>
                 <Style x:Key="DesignerItemStyle" TargetType="Border">
-                    <Setter Property="Background" Value="#00000000"/>
+                    <Setter Property="Background" Value="{Binding Background}"/>
                     <Setter Property="BorderBrush" Value="#66B3E5FC"/>
                     <Setter Property="BorderThickness" Value="0"/>
                     <Style.Triggers>
@@ -58,7 +64,7 @@
                 <DataTemplate DataType="{x:Type m:LabelField}">
                     <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
                         <Grid>
-                            <TextBlock Text="{Binding Label}" FontSize="{Binding FontSize}" />
+                            <TextBlock Text="{Binding Label}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}" FontFamily="{Binding FontFamily}"/>
                             <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
                         </Grid>
                     </Border>
@@ -69,9 +75,11 @@
                     <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
                         <Grid>
                             <StackPanel>
-                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2" FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"/>
                                 <TextBox Width="{Binding Width}" Height="{Binding Height}" 
                          Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                         Foreground="{Binding Foreground}" Background="{Binding Background}"
+                         FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                          Tag="{Binding FieldKey}" ToolTip="{Binding Placeholder}"/>
                             </StackPanel>
                             <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
@@ -84,10 +92,12 @@
                     <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
                         <Grid>
                             <StackPanel>
-                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2" FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"/>
                                 <TextBox Width="{Binding Width}" Height="{Binding Height}"
                          AcceptsReturn="True" TextWrapping="Wrap"
                          Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                         Foreground="{Binding Foreground}" Background="{Binding Background}"
+                         FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                          Tag="{Binding FieldKey}" ToolTip="{Binding Placeholder}"/>
                             </StackPanel>
                             <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
@@ -100,9 +110,11 @@
                     <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
                         <Grid>
                             <StackPanel>
-                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2" FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"/>
                                 <ComboBox Width="{Binding Width}" IsEditable="{Binding IsEditable}"
                           SelectedValue="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                          Foreground="{Binding Foreground}" Background="{Binding Background}"
+                          FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                           Tag="{Binding FieldKey}" ItemsSource="{Binding Options}"/>
                             </StackPanel>
                             <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
@@ -114,7 +126,10 @@
                 <DataTemplate DataType="{x:Type m:CheckBoxField}">
                     <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
                         <Grid>
-                            <CheckBox Content="{Binding Label}" IsChecked="{Binding IsCheckedDefault, UpdateSourceTrigger=PropertyChanged}"/>
+                            <CheckBox Content="{Binding Label}"
+                        IsChecked="{Binding IsCheckedDefault, UpdateSourceTrigger=PropertyChanged}"
+                        Foreground="{Binding Foreground}" Background="{Binding Background}"
+                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
                             <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
                         </Grid>
                     </Border>
@@ -125,8 +140,9 @@
                     <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
                         <Grid>
                             <StackPanel>
-                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
-                                <DatePicker Width="{Binding Width}" SelectedDateFormat="Short" Tag="{Binding FieldKey}"/>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2" FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"/>
+                                <DatePicker Width="{Binding Width}" SelectedDateFormat="Short" Tag="{Binding FieldKey}"
+                            Foreground="{Binding Foreground}" Background="{Binding Background}" />
                             </StackPanel>
                             <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
                         </Grid>
@@ -138,9 +154,11 @@
                     <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
                         <Grid>
                             <StackPanel>
-                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2" FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"/>
                                 <TextBox Width="{Binding Width}" Height="{Binding Height}"
                          Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                         Foreground="{Binding Foreground}" Background="{Binding Background}"
+                         FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                          Tag="{Binding FieldKey}"/>
                             </StackPanel>
                             <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
@@ -149,6 +167,7 @@
                 </DataTemplate>
             </ItemsControl.Resources>
 
+            <!-- Kontextové menu plátna -->
             <ItemsControl.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Smazat" Command="{Binding DeleteCommand}"/>

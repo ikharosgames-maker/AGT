@@ -14,46 +14,19 @@ namespace Agt.Desktop
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new DesignerViewModel();
-
-            // Klíčová změna: počkáme, až je okno zobrazené
-            Loaded += MainWindow_Loaded;
+            DataContext = new DesignerViewModel(); // start prázdný, blok přes Menu -> Nový blok
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private void NewBlock_OnClick(object sender, RoutedEventArgs e)
         {
-            // Zavoláme NewBlock po zobrazení okna, aby šlo nastavit Owner
-            if (VM.CurrentBlock == null)
-                NewBlock();
-        }
-
-        private void NewBlock_OnClick(object sender, RoutedEventArgs e) => NewBlock();
-
-        private void NewBlock()
-        {
-            var dlg = new Views.NewBlockDialog();
-
-            // Owner nastavíme jen pokud je hlavní okno skutečně zobrazené
-            if (IsLoaded && Visibility == Visibility.Visible)
+            var dlg = new Views.NewBlockDialog
             {
-                dlg.Owner = this;
-                dlg.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            }
-            else
-            {
-                dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            }
-
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
             if (dlg.ShowDialog() == true && dlg.ResultBlock != null)
             {
-                VM.CurrentBlock = dlg.ResultBlock;
-                VM.Items.Clear();
-                VM.StatusText = $"Založen blok {VM.CurrentBlock.Name} ({VM.CurrentBlock.Id})";
-            }
-            else if (VM.CurrentBlock == null)
-            {
-                // Pokud uživatel zruší bez existujícího bloku, zavřeme aplikaci.
-                Close();
+                VM.NewBlock(dlg.ResultBlock);
             }
         }
 
@@ -65,7 +38,7 @@ namespace Agt.Desktop
 
             var payload = VM.ExportToDto();
             File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
-            VM.StatusText = $"Uloženo: {Path.GetFileName(sfd.FileName)}";
+            VM.StatusText = $"Uloženo: {System.IO.Path.GetFileName(sfd.FileName)}";
         }
 
         private void LoadJson_OnClick(object sender, RoutedEventArgs e)
@@ -77,7 +50,7 @@ namespace Agt.Desktop
             {
                 var json = File.ReadAllText(ofd.FileName);
                 VM.ImportFromDto(JsonSerializer.Deserialize<DesignerViewModel.Dto>(json)!);
-                VM.StatusText = $"Načteno: {Path.GetFileName(ofd.FileName)}";
+                VM.StatusText = $"Načteno: {System.IO.Path.GetFileName(ofd.FileName)}";
             }
             catch
             {
@@ -86,12 +59,6 @@ namespace Agt.Desktop
         }
 
         private void Exit_OnClick(object sender, RoutedEventArgs e) => Close();
-
-        private void GridSize_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is MenuItem mi && double.TryParse(mi.Header.ToString(), out var size))
-                VM.GridSize = size;
-        }
 
         private void AutoLayout_OnClick(object sender, RoutedEventArgs e) => VM.AutoLayout();
     }

@@ -4,55 +4,93 @@
              xmlns:m="clr-namespace:Agt.Desktop.Models"
              xmlns:local="clr-namespace:Agt.Desktop.Views">
     <UserControl.Resources>
+        <!-- INSTANCOVAT a používat přes StaticResource -->
         <local:IntEqualsToVisibilityConverter x:Key="EqVis"/>
         <local:IntGreaterOrEqualToVisibilityConverter x:Key="GeVis"/>
     </UserControl.Resources>
 
-    <Grid Margin="10">
-        <!-- Nic vybráno -->
-        <StackPanel Visibility="{Binding SelectedCount, Converter={StaticResource EqVis}, ConverterParameter=0}">
-            <TextBlock Text="Nic není vybráno" FontWeight="SemiBold" Margin="0,0,0,8"/>
-            <TextBlock Text="Tip: Ctrl-klik přidá/odebere položku výběru."/>
-        </StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="10" >
 
-        <!-- Jedna položka -->
-        <ContentControl Visibility="{Binding SelectedCount, Converter={StaticResource EqVis}, ConverterParameter=1}"
-                    Content="{Binding SelectedItem}">
-            <ContentControl.Resources>
-                <DataTemplate DataType="{x:Type m:FieldComponentBase}">
-                    <StackPanel>
-                        <TextBlock Text="Základní" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <UniformGrid Columns="2" Margin="0,0,0,8">
-                            <TextBlock Text="FieldKey"/>
-                            <TextBox Text="{Binding FieldKey, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Label"/>
-                            <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Placeholder"/>
-                            <TextBox Text="{Binding Placeholder, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Required"/>
-                            <CheckBox IsChecked="{Binding Required, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Default"/>
-                            <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Šířka"/>
-                            <TextBox Text="{Binding Width, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Výška"/>
-                            <TextBox Text="{Binding Height, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Z-index"/>
-                            <TextBox Text="{Binding ZIndex, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="X"/>
-                            <TextBox Text="{Binding X, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Y"/>
-                            <TextBox Text="{Binding Y, UpdateSourceTrigger=PropertyChanged}"/>
-                        </UniformGrid>
-                    </StackPanel>
-                </DataTemplate>
-            </ContentControl.Resources>
-        </ContentControl>
+            <!-- Nic vybráno -->
+            <StackPanel Visibility="{Binding SelectedCount, Converter={StaticResource EqVis}, ConverterParameter=0}">
+                <TextBlock Text="Nic není vybráno" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBlock Text="Tip: Ctrl-klik přidá/odebere položku výběru. Táhni myší pro lasso výběr."/>
+            </StackPanel>
 
-        <!-- Více položek -->
-        <StackPanel Visibility="{Binding SelectedCount, Converter={StaticResource GeVis}, ConverterParameter=2}">
-            <TextBlock Text="{Binding SelectedCount, StringFormat={}{0} vybraných}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-            <TextBlock Text="Použij floating panel nebo kontextové menu pro hromadné akce."/>
+            <!-- Jedna položka -->
+            <ContentControl Visibility="{Binding SelectedCount, Converter={StaticResource EqVis}, ConverterParameter=1}"
+                      Content="{Binding SelectedItem}">
+                <ContentControl.Resources>
+                    <DataTemplate DataType="{x:Type m:FieldComponentBase}">
+                        <StackPanel>
+                            <TextBlock Text="Vlastnosti" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <UniformGrid Columns="2" Margin="0,0,0,12">
+                                <TextBlock Text="FieldKey"/>
+                                <TextBox Text="{Binding FieldKey, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Label"/>
+                                <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Placeholder"/>
+                                <TextBox Text="{Binding Placeholder, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Required"/>
+                                <CheckBox IsChecked="{Binding Required, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Default"/>
+                                <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                <TextBlock Text="FontFamily"/>
+                                <TextBox Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="FontSize"/>
+                                <TextBox Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                <TextBlock Text="Foreground"/>
+                                <TextBox Text="{Binding Foreground, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Background"/>
+                                <TextBox Text="{Binding Background, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                <TextBlock Text="Šířka"/>
+                                <TextBox Text="{Binding Width, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Výška"/>
+                                <TextBox Text="{Binding Height, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Z-index"/>
+                                <TextBox Text="{Binding ZIndex, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="X"/>
+                                <TextBox Text="{Binding X, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Y"/>
+                                <TextBox Text="{Binding Y, UpdateSourceTrigger=PropertyChanged}"/>
+                            </UniformGrid>
+                        </StackPanel>
+                    </DataTemplate>
+                </ContentControl.Resources>
+            </ContentControl>
+
+            <!-- Více položek: společné vlastnosti s hromadnou aplikací -->
+            <StackPanel Visibility="{Binding SelectedCount, Converter={StaticResource GeVis}, ConverterParameter=2}">
+                <TextBlock Text="{Binding SelectedCount, StringFormat={}{0} vybraných}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Společné vlastnosti (ponech prázdné to, co nechceš měnit)" Margin="0,0,0,6"/>
+
+                <UniformGrid Columns="2" Margin="0,0,0,12">
+                    <TextBlock Text="Label"/>
+                    <TextBox Text="{Binding BulkLabel, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="FieldKey"/>
+                    <TextBox Text="{Binding BulkFieldKey, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="FontFamily"/>
+                    <TextBox Text="{Binding BulkFontFamily, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="FontSize"/>
+                    <TextBox Text="{Binding BulkFontSize, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Foreground"/>
+                    <TextBox Text="{Binding BulkForeground, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Background"/>
+                    <TextBox Text="{Binding BulkBackground, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Šířka"/>
+                    <TextBox Text="{Binding BulkWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Výška"/>
+                    <TextBox Text="{Binding BulkHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                </UniformGrid>
+
+                <Button Content="Použít na výběr" HorizontalAlignment="Left" Command="{Binding ApplyBulkCommand}"/>
+            </StackPanel>
+
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </UserControl>

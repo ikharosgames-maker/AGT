@@ -2,18 +2,30 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:Agt.Desktop.Views"
-        Title="AGT – Návrhář formulářů" Width="1280" Height="860"
-        Background="#121212" Foreground="#EEE"
-        WindowStartupLocation="CenterScreen">
-    <DockPanel>
+        Title="AGT – Návrhář formulářů"
+        Width="1280" Height="860"
+        Background="#121212" Foreground="#EEEEEE"
+        WindowStartupLocation="CenterScreen"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True">
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- MENU -->
+            <RowDefinition Height="Auto"/>
+            <!-- INFO BAR -->
+            <RowDefinition Height="36"/>
+            <!-- HLAVNÍ OBSAH -->
+            <RowDefinition Height="*"/>
+            <!-- STATUS BAR -->
+            <RowDefinition Height="26"/>
+        </Grid.RowDefinitions>
 
-        <!-- Menu -->
-        <Menu DockPanel.Dock="Top" Background="#1E1E1E">
+        <!-- Hlavní Menu: vždy viditelné, kontrastní -->
+        <Menu Grid.Row="0" Background="#222222" Foreground="#FFFFFF" FontSize="13">
             <MenuItem Header="_Soubor">
                 <MenuItem Header="_Nový blok…" Click="NewBlock_OnClick"/>
-                <Separator/>
-                <MenuItem Header="_Uložit (JSON)…" Click="SaveJson_OnClick"/>
-                <MenuItem Header="_Načíst (JSON)…" Click="LoadJson_OnClick"/>
+                <MenuItem Header="_Otevřít…" Click="LoadJson_OnClick"/>
+                <MenuItem Header="_Uložit…" Click="SaveJson_OnClick"/>
                 <Separator/>
                 <MenuItem Header="_Konec" Click="Exit_OnClick"/>
             </MenuItem>
@@ -31,56 +43,76 @@
             <MenuItem Header="_Zobrazení">
                 <MenuItem Header="Zobrazit _mřížku" IsCheckable="True" IsChecked="{Binding ShowGrid}"/>
                 <MenuItem Header="_Přichytávat na mřížku" IsCheckable="True" IsChecked="{Binding SnapToGrid}"/>
-                <MenuItem Header="Velikost mřížky">
-                    <MenuItem Header="4"  IsCheckable="True" Click="GridSize_Click"/>
-                    <MenuItem Header="8"  IsCheckable="True" Click="GridSize_Click"/>
-                    <MenuItem Header="10" IsCheckable="True" Click="GridSize_Click"/>
-                    <MenuItem Header="12" IsCheckable="True" Click="GridSize_Click"/>
-                    <MenuItem Header="16" IsCheckable="True" Click="GridSize_Click"/>
-                </MenuItem>
             </MenuItem>
 
             <MenuItem Header="_Layout">
-                <MenuItem Header="_Auto layout (návrh)" Click="AutoLayout_OnClick"/>
+                <MenuItem Header="_Auto layout" Click="AutoLayout_OnClick"/>
             </MenuItem>
         </Menu>
 
         <!-- Info bar -->
-        <DockPanel DockPanel.Dock="Top" Background="#1A1A1A" Height="40">
-            <TextBlock Margin="12,0" VerticalAlignment="Center" FontWeight="SemiBold">
-        <Run Text="Blok: "/>
-        <Run Text="{Binding CurrentBlock.Name, FallbackValue=(nezaložen)}"/>
-        <Run Text="  ·  "/>
-        <Run Text="{Binding StatusText, FallbackValue=Připraveno}"/>
-            </TextBlock>
-        </DockPanel>
+        <Border Grid.Row="1" Background="#1A1A1A" BorderBrush="#333" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="True">
+                <TextBlock Margin="12,0" VerticalAlignment="Center" FontWeight="SemiBold">
+          <Run Text="Blok: "/>
+          <Run Text="{Binding CurrentBlock.Name, FallbackValue=(nezaložen)}"/>
+          <Run Text="  ·  "/>
+          <Run Text="{Binding StatusText, FallbackValue=Připraveno}"/>
+                </TextBlock>
+            </DockPanel>
+        </Border>
 
-        <!-- Layout -->
-        <Grid>
+        <!-- Hlavní třísloupcový layout se splittery -->
+        <Grid Grid.Row="2" Background="#181818">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="5"/>
+                <!-- splitter -->
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5"/>
+                <!-- splitter -->
                 <ColumnDefinition Width="420"/>
             </Grid.ColumnDefinitions>
 
+            <!-- Levý panel: knihovna + seznam -->
             <Grid Grid.Column="0" Background="#1A1A1A">
-                <TabControl Background="#1A1A1A">
-                    <TabItem Header="Knihovna">
+                <TabControl Background="#1A1A1A" Foreground="#EEE" BorderBrush="#333" BorderThickness="0">
+                    <TabItem Header="Knihovna" Background="#1A1A1A" Foreground="#EEE">
                         <views:ComponentLibraryView/>
                     </TabItem>
-                    <TabItem Header="Seznam">
+                    <TabItem Header="Seznam" Background="#1A1A1A" Foreground="#EEE">
                         <views:ComponentsListView/>
                     </TabItem>
                 </TabControl>
             </Grid>
 
-            <Grid Grid.Column="1" Background="#181818">
+            <!-- Splitter 1 -->
+            <GridSplitter Grid.Column="1"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    Background="#2A2A2A" Width="5"/>
+
+            <!-- Střed: plátno -->
+            <Grid Grid.Column="2" Background="#181818">
                 <views:DesignerCanvas/>
             </Grid>
 
-            <Border Grid.Column="2" BorderBrush="#333" BorderThickness="1,0,0,0" Background="#1A1A1A">
+            <!-- Splitter 2 -->
+            <GridSplitter Grid.Column="3"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    Background="#2A2A2A" Width="5"/>
+
+            <!-- Pravý panel: vlastnosti -->
+            <Border Grid.Column="4" BorderBrush="#333" BorderThickness="1,0,0,0" Background="#1A1A1A">
                 <views:PropertiesPanel/>
             </Border>
         </Grid>
-    </DockPanel>
+
+        <!-- Status bar -->
+        <Border Grid.Row="3" Background="#1F1F1F" BorderBrush="#333" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock Margin="8,0" VerticalAlignment="Center" FontSize="12"
+                   Text="{Binding StatusText, FallbackValue=Připraveno}"/>
+            </DockPanel>
+        </Border>
+    </Grid>
 </Window>

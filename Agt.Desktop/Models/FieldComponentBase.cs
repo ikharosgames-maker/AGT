@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 
 namespace Agt.Desktop.Models
 {
@@ -22,6 +23,19 @@ namespace Agt.Desktop.Models
         private string _defaultValue = ""; public string DefaultValue { get => _defaultValue; set { if (_defaultValue != value) { _defaultValue = value; OnPropertyChanged(); } } }
 
         private bool _isSelected; public bool IsSelected { get => _isSelected; set { if (_isSelected != value) { _isSelected = value; OnPropertyChanged(); } } }
+
+        // Nové stylové vlastnosti
+        private Brush _background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
+        public Brush Background { get => _background; set { if (_background != value) { _background = value; OnPropertyChanged(); } } }
+
+        private Brush _foreground = Brushes.White;
+        public Brush Foreground { get => _foreground; set { if (_foreground != value) { _foreground = value; OnPropertyChanged(); } } }
+
+        private string _fontFamily = "Segoe UI";
+        public string FontFamily { get => _fontFamily; set { if (_fontFamily != value) { _fontFamily = value; OnPropertyChanged(); } } }
+
+        private double _fontSize = 14;
+        public double FontSize { get => _fontSize; set { if (Math.Abs(_fontSize - value) > 0.01) { _fontSize = value; OnPropertyChanged(); } } }
 
         public string Title => string.IsNullOrWhiteSpace(Label) ? FieldKey : $"{Label} ({FieldKey})";
 

@@ -11,7 +11,6 @@ namespace Agt.Desktop.Views
         public PropertiesPanel() => InitializeComponent();
     }
 
-    // Lokální konvertory (viz xmlns:local)
     public class IntEqualsToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
