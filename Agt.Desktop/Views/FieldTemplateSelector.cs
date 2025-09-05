@@ -1,23 +1,19 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using Agt.Desktop.ViewModels;
 
-namespace Agt.Desktop.Views;
-
-public class FieldTemplateSelector : DataTemplateSelector
+namespace Agt.Desktop.Views
 {
-    public DataTemplate? TextTemplate { get; set; }
-    public DataTemplate? NumberTemplate { get; set; }
-    public DataTemplate? DateTemplate { get; set; }
-    public override DataTemplate SelectTemplate(object item, DependencyObject container)
+    public class FieldTemplateSelector : DataTemplateSelector
     {
-        var fi = (FieldInstance)item;
-        return fi.Field.Type switch
+        public string? DefaultKey { get; set; } = "DefaultFieldTemplate";
+        public override DataTemplate SelectTemplate(object item, DependencyObject container)
         {
-            "text" => TextTemplate!,
-            "number" => NumberTemplate!,
-            "date" => DateTemplate!,
-            _ => TextTemplate!
-        };
+            if (container is FrameworkElement fe && !string.IsNullOrEmpty(DefaultKey))
+            {
+                var dt = fe.TryFindResource(DefaultKey) as DataTemplate;
+                if (dt != null) return dt;
+            }
+            return base.SelectTemplate(item, container);
+        }
     }
 }

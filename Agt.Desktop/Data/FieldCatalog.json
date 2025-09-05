@@ -1,0 +1,85 @@
+[
+  {
+    "Key": "label",
+    "Category": "Základní",
+    "DisplayName": "Popisek",
+    "Icon": "🏷",
+    "Defaults": {
+      "Label": "Popisek",
+      "Width": 160,
+      "Height": 28,
+      "FieldKey": "label1"
+    }
+  },
+  {
+    "Key": "textbox",
+    "Category": "Vstup",
+    "DisplayName": "Textové pole",
+    "Icon": "🔤",
+    "Defaults": {
+      "Label": "Jméno",
+      "Placeholder": "Zadej jméno",
+      "Width": 280,
+      "FieldKey": "firstName"
+    }
+  },
+  {
+    "Key": "textarea",
+    "Category": "Vstup",
+    "DisplayName": "Víceřádkové",
+    "Icon": "📝",
+    "Defaults": {
+      "Label": "Poznámka",
+      "Rows": 4,
+      "Height": 100,
+      "Width": 380,
+      "FieldKey": "note"
+    }
+  },
+  {
+    "Key": "combobox",
+    "Category": "Výběr",
+    "DisplayName": "Seznam",
+    "Icon": "▾",
+    "Defaults": {
+      "Label": "Stát",
+      "Options": [ "CZ", "SK", "PL" ],
+      "FieldKey": "country"
+    }
+  },
+  {
+    "Key": "checkbox",
+    "Category": "Výběr",
+    "DisplayName": "Zaškrtávátko",
+    "Icon": "☑",
+    "Defaults": {
+      "Label": "Souhlasím",
+      "IsCheckedDefault": false,
+      "FieldKey": "agree"
+    }
+  },
+  {
+    "Key": "date",
+    "Category": "Vstup",
+    "DisplayName": "Datum",
+    "Icon": "📅",
+    "Defaults": {
+      "Label": "Datum narození",
+      "Format": "yyyy-MM-dd",
+      "FieldKey": "birthDate"
+    }
+  },
+  {
+    "Key": "number",
+    "Category": "Vstup",
+    "DisplayName": "Číslo",
+    "Icon": "#️⃣",
+    "Defaults": {
+      "Label": "Věk",
+      "Min": 0,
+      "Max": 120,
+      "Decimals": 0,
+      "FieldKey": "age"
+    }
+  }
+]

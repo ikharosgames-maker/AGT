@@ -1,0 +1,98 @@
+﻿<UserControl x:Class="Agt.Desktop.Views.DesignerCanvas"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:m="clr-namespace:Agt.Desktop.Models">
+    <Grid>
+        <ItemsControl x:Name="ItemsHost" ItemsSource="{Binding Items}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Canvas Background="Transparent"
+                  AllowDrop="True"
+                  Drop="RootCanvas_Drop"
+                  DragOver="RootCanvas_DragOver"
+                  MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                  MouseRightButtonDown="Canvas_MouseRightButtonDown"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.Resources>
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
+                </Style>
+
+                <!-- Label -->
+                <DataTemplate DataType="{x:Type m:LabelField}">
+                    <Border Background="#00000000" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <TextBlock Text="{Binding Label}" FontSize="{Binding FontSize}" />
+                    </Border>
+                </DataTemplate>
+
+                <!-- TextBox -->
+                <DataTemplate DataType="{x:Type m:TextBoxField}">
+                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                        <TextBox Width="{Binding Width}" Height="{Binding Height}" 
+                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                     Tag="{Binding FieldKey}"
+                     ToolTip="{Binding Placeholder}"/>
+                    </StackPanel>
+                </DataTemplate>
+
+                <!-- TextArea -->
+                <DataTemplate DataType="{x:Type m:TextAreaField}">
+                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                        <TextBox Width="{Binding Width}" Height="{Binding Height}"
+                     AcceptsReturn="True" TextWrapping="Wrap"
+                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                     Tag="{Binding FieldKey}"
+                     ToolTip="{Binding Placeholder}"/>
+                    </StackPanel>
+                </DataTemplate>
+
+                <!-- ComboBox -->
+                <DataTemplate DataType="{x:Type m:ComboBoxField}">
+                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                        <ComboBox Width="{Binding Width}" IsEditable="{Binding IsEditable}"
+                      SelectedValue="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                      Tag="{Binding FieldKey}"
+                      ItemsSource="{Binding Options}"/>
+                    </StackPanel>
+                </DataTemplate>
+
+                <!-- CheckBox -->
+                <DataTemplate DataType="{x:Type m:CheckBoxField}">
+                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsCheckedDefault, UpdateSourceTrigger=PropertyChanged}"
+                    MouseLeftButtonDown="Item_MouseLeftButtonDown"/>
+                </DataTemplate>
+
+                <!-- Date -->
+                <DataTemplate DataType="{x:Type m:DateField}">
+                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                        <DatePicker Width="{Binding Width}" SelectedDateFormat="Short"
+                        Tag="{Binding FieldKey}"/>
+                    </StackPanel>
+                </DataTemplate>
+
+                <!-- Number -->
+                <DataTemplate DataType="{x:Type m:NumberField}">
+                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                        <TextBox Width="{Binding Width}" Height="{Binding Height}"
+                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                     Tag="{Binding FieldKey}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.Resources>
+
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                    <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+        </ItemsControl>
+    </Grid>
+</UserControl>

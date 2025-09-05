@@ -29,7 +29,11 @@ public partial class FormViewModel : ObservableObject
         LoadAsyncCommand = new AsyncRelayCommand(LoadAsync);
         SaveAsyncCommand = new AsyncRelayCommand(SaveAsync);
     }
-
+    public async Task<bool> TryLoadAsync()
+    {
+        try { await LoadAsync(); return true; }
+        catch { return false; } // tichý fallback v MVP
+    }
     public async Task LoadAsync()
     {
         IsBusy = true;
