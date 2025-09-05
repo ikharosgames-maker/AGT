@@ -57,7 +57,7 @@
 		<Compile Include="Views\ComponentsListView.xaml.cs" />
 		<Compile Include="Views\NewBlockDialog.xaml.cs" />
 		<Compile Include="Views\FieldTemplateSelector.cs" />
-		<Compile Include="Adorners\SelectionToolbarAdorner.cs" />
+		<Compile Include="Views\Adorners\SelectionToolbarAdorner.cs" />
 
 		<Compile Include="Converters\BoolToVisibilityConverter.cs" />
 		<Compile Include="Converters\CountGreaterOrEqualConverter.cs" />

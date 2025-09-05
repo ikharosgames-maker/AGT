@@ -2,25 +2,21 @@
 {
     public class LabelField : FieldComponentBase
     {
-        public LabelField() { TypeKey = "label"; Height = 28; }
-
-        private double _fontSize = 14;
-        public double FontSize { get => _fontSize; set { if (_fontSize != value) { _fontSize = value; OnPropertyChanged(); } } }
-
-        public override FieldComponentBase Clone()
-            => new LabelField
-            {
-                X = X,
-                Y = Y,
-                Width = Width,
-                Height = Height,
-                ZIndex = ZIndex,
-                FieldKey = FieldKey,
-                Label = Label,
-                Required = Required,
-                Placeholder = Placeholder,
-                DefaultValue = DefaultValue,
-                FontSize = FontSize
-            };
+        public double FontSize { get; set; } = 14;
+        public LabelField() { TypeKey = "label"; Height = 24; Width = 160; }
+        public override FieldComponentBase Clone() => new LabelField
+        {
+            FieldKey = FieldKey,
+            Label = Label,
+            Required = Required,
+            Placeholder = Placeholder,
+            DefaultValue = DefaultValue,
+            FontSize = FontSize,
+            X = X,
+            Y = Y,
+            Width = Width,
+            Height = Height,
+            ZIndex = ZIndex
+        };
     }
 }

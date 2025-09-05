@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 
 namespace Agt.Desktop.Converters
 {
-    public class CountGreaterOrEqualConverter : IValueConverter
+    public sealed class CountGreaterOrEqualConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var count = value is int i ? i : 0;
-            var threshold = 1;
-            if (parameter != null && int.TryParse(parameter.ToString(), out var t)) threshold = t;
-            return count >= threshold;
+            var v = (value is int i) ? i : 0;
+            var p = 0; int.TryParse(parameter?.ToString(), out p);
+            return v >= p ? Visibility.Visible : Visibility.Collapsed;
         }
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotSupportedException();

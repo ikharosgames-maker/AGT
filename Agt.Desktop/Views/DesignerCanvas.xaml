@@ -1,7 +1,12 @@
 ﻿<UserControl x:Class="Agt.Desktop.Views.DesignerCanvas"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:m="clr-namespace:Agt.Desktop.Models">
+             xmlns:m="clr-namespace:Agt.Desktop.Models"
+             xmlns:conv="clr-namespace:Agt.Desktop.Converters">
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+
     <Grid>
         <ItemsControl x:Name="ItemsHost" ItemsSource="{Binding Items}">
             <ItemsControl.ItemsPanel>
@@ -35,16 +40,13 @@
                     </Style.Triggers>
                 </Style>
 
-                <!-- Společné kousky šablon: overlay s Thumbs -->
                 <DataTemplate x:Key="OverlayTemplate">
                     <Grid>
-                        <!-- Průhledný „Move“ overlay -->
                         <Thumb DragDelta="MoveThumb_DragDelta"
                    DragStarted="MoveThumb_DragStarted"
                    DragCompleted="MoveThumb_DragCompleted"
                    Cursor="SizeAll" Opacity="0"
                    Background="Transparent"/>
-                        <!-- Viditelný resize grip (pravý-dolní roh) -->
                         <Thumb Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                    Margin="0" Cursor="SizeNWSE"
                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"
@@ -147,7 +149,6 @@
                 </DataTemplate>
             </ItemsControl.Resources>
 
-            <!-- Kontextové menu pro plátno / výběr -->
             <ItemsControl.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Smazat" Command="{Binding DeleteCommand}"/>

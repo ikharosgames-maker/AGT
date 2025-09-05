@@ -1,34 +1,34 @@
-﻿using System.Windows;
+﻿using System;
+using System.Globalization;
+using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using Agt.Desktop.Models;
+using System.Windows.Data;
 
 namespace Agt.Desktop.Views
 {
     public partial class PropertiesPanel : UserControl
     {
-        public PropertiesPanel()
-        {
-            InitializeComponent();
-        }
+        public PropertiesPanel() => InitializeComponent();
+    }
 
-        private void RemoveOption_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is not Button btn) return;
-            if (btn.CommandParameter is not string value) return;
-            if (btn.DataContext is ComboBoxField cb)
-                cb.Options.Remove(value);
-        }
+    // Lokální konvertory (viz xmlns:local)
+    public class IntEqualsToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => (value?.ToString() == parameter?.ToString()) ? Visibility.Visible : Visibility.Collapsed;
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
 
-        private void AddOption_KeyDown(object sender, KeyEventArgs e)
+    public class IntGreaterOrEqualToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (e.Key != Key.Enter) return;
-            if (sender is not TextBox tb) return;
-            var text = tb.Text?.Trim();
-            if (string.IsNullOrEmpty(text)) return;
-            if (tb.Tag is ComboBoxField cb)
-                cb.Options.Add(text);
-            tb.Clear();
+            if (!int.TryParse(value?.ToString(), out var v)) return Visibility.Collapsed;
+            if (!int.TryParse(parameter?.ToString(), out var p)) p = 0;
+            return v >= p ? Visibility.Visible : Visibility.Collapsed;
         }
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
     }
 }

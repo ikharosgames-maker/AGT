@@ -7,18 +7,23 @@ namespace Agt.Desktop.Views
 {
     public partial class ComponentLibraryView : UserControl
     {
+        private FieldCatalogService Catalog => (FieldCatalogService)Application.Current.Resources["FieldCatalog"];
+
         public ComponentLibraryView()
         {
             InitializeComponent();
+            List.ItemsSource = Catalog.Items;
+            List.PreviewMouseMove += List_PreviewMouseMove;
         }
 
-        private void Item_MouseMove(object sender, MouseEventArgs e)
+        private void List_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton != MouseButtonState.Pressed) return;
-            if (sender is not FrameworkElement fe) return;
-            if (fe.DataContext is not FieldCatalogService.CatalogItem item) return;
+            if (List.SelectedItem is not FieldCatalogService.FieldDescriptor it) return;
 
-            DragDrop.DoDragDrop(this, new DataObject("field/key", item.Key), DragDropEffects.Copy);
+            var data = new DataObject();
+            data.SetData("field/key", it.Key);
+            DragDrop.DoDragDrop(this, data, DragDropEffects.Copy);
         }
     }
 }

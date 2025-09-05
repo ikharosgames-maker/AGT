@@ -18,7 +18,6 @@ namespace Agt.Desktop.Views
     {
         private SelectionService _selection => (SelectionService)Application.Current.Resources["SelectionService"];
         private SelectionToolbarAdorner? _toolbarAdorner;
-
         private DesignerViewModel? VM => DataContext as DesignerViewModel;
 
         public DesignerCanvas()
@@ -45,14 +44,51 @@ namespace Agt.Desktop.Views
                 UpdateGridBackground();
         }
 
-        // --- Grid background (programově, kvůli bindingu na GridSize) ---
+        // Najde skutečný panel (Canvas) generovaný ItemsPanelTemplate
+        private Panel? GetItemsPanel()
+        {
+            if (ItemsHost == null) return null;
+
+            // Najdi ItemsPresenter v templatu ItemsControl
+            ItemsHost.ApplyTemplate();
+            var presenter = FindVisualChild<ItemsPresenter>(ItemsHost);
+            if (presenter == null)
+            {
+                presenter = ItemsHost.Template.FindName("ItemsPresenter", ItemsHost) as ItemsPresenter;
+                if (presenter == null)
+                {
+                    presenter = new ItemsPresenter();
+                    presenter.ApplyTemplate();
+                }
+            }
+
+            presenter.ApplyTemplate();
+            var panel = VisualTreeHelper.GetChild(presenter, 0) as Panel;
+            return panel;
+        }
+
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) return t;
+                var sub = FindVisualChild<T>(child);
+                if (sub != null) return sub;
+            }
+            return null;
+        }
+
+        // Grid background
         private void UpdateGridBackground()
         {
-            if (VM == null || ItemsHost == null) return;
+            if (VM == null) return;
+            var panel = GetItemsPanel();
+            if (panel == null) return;
 
             if (!VM.ShowGrid)
             {
-                (ItemsHost.ItemsPanelRoot as Panel)!.Background = Brushes.Transparent;
+                panel.Background = Brushes.Transparent;
                 return;
             }
 
@@ -77,30 +113,29 @@ namespace Agt.Desktop.Views
                 Stretch = Stretch.None
             };
 
-            (ItemsHost.ItemsPanelRoot as Panel)!.Background = brush;
+            panel.Background = brush;
         }
 
-        // --- Drag from library ---
+        // Drag from library
         private void RootCanvas_DragOver(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent("field/key")) e.Effects = DragDropEffects.Copy;
-            else e.Effects = DragDropEffects.None;
+            e.Effects = e.Data.GetDataPresent("field/key") ? DragDropEffects.Copy : DragDropEffects.None;
             e.Handled = true;
         }
 
         private void RootCanvas_Drop(object sender, DragEventArgs e)
         {
-            if (!e.Data.GetDataPresent("field/key")) return;
-            if (VM == null) return;
+            if (!e.Data.GetDataPresent("field/key") || VM == null) return;
+            var panel = GetItemsPanel(); if (panel == null) return;
 
             var key = (string)e.Data.GetData("field/key")!;
-            var pos = e.GetPosition((IInputElement)sender);
+            var pos = e.GetPosition(panel);
             VM.CreateFromLibrary(key, pos);
             e.Handled = true;
             UpdateFloatingBar();
         }
 
-        // --- Výběr ---
+        // Výběr
         private void Item_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var fe = sender as FrameworkElement;
@@ -130,7 +165,7 @@ namespace Agt.Desktop.Views
             // pravý klik nemění výběr
         }
 
-        // --- Floating bar nad výběrem ---
+        // Floating bar
         private void UpdateFloatingBar()
         {
             var layer = AdornerLayer.GetAdornerLayer(this);
@@ -164,14 +199,16 @@ namespace Agt.Desktop.Views
             return new Rect(new Point(minX, minY), new Point(maxX, maxY));
         }
 
-        // --- Move / Resize (Thumb handlers) ---
+        // Move / Resize
         private Point _dragStart;
-        private double _origX, _origY, _origW, _origH;
+        private double _origX, _origY;
 
         private void MoveThumb_DragStarted(object sender, DragStartedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not FieldComponentBase f) return;
-            _dragStart = Mouse.GetPosition(ItemsHost.ItemsPanelRoot);
+            var panel = GetItemsPanel(); if (panel == null) return;
+
+            _dragStart = Mouse.GetPosition(panel);
             _origX = f.X; _origY = f.Y;
         }
 
@@ -179,8 +216,9 @@ namespace Agt.Desktop.Views
         {
             if ((sender as FrameworkElement)?.DataContext is not FieldComponentBase f) return;
             if (VM == null) return;
+            var panel = GetItemsPanel(); if (panel == null) return;
 
-            var cur = Mouse.GetPosition(ItemsHost.ItemsPanelRoot);
+            var cur = Mouse.GetPosition(panel);
             var dx = cur.X - _dragStart.X;
             var dy = cur.Y - _dragStart.Y;
 
@@ -198,7 +236,7 @@ namespace Agt.Desktop.Views
 
         private void MoveThumb_DragCompleted(object sender, DragCompletedEventArgs e)
         {
-            // nic – ponecháno pro budoucí undo/redo
+            // rezerva pro undo/redo
         }
 
         private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
@@ -217,19 +255,6 @@ namespace Agt.Desktop.Views
 
             f.Width = dw;
             f.Height = dh;
-        }
-
-        // --- Pomocný converter v menu (porovnání GridSize) ---
-        public class EqualToConverter : System.Windows.Data.IValueConverter
-        {
-            public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-            {
-                if (value == null || parameter == null) return false;
-                return value.ToString() == parameter.ToString();
-            }
-
-            public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-                => throw new NotSupportedException();
         }
     }
 }

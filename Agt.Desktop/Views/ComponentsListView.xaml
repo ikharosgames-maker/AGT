@@ -5,7 +5,6 @@
         <ListBox x:Name="List"
              ItemsSource="{Binding Items}"
              DisplayMemberPath="Title"
-             MouseDoubleClick="List_MouseDoubleClick"
              SelectionMode="Extended"/>
     </Grid>
 </UserControl>

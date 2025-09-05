@@ -32,9 +32,10 @@ namespace Agt.Desktop.Views.Adorners
         protected override Size ArrangeOverride(Size finalSize)
         {
             var size = _toolbar.DesiredSize;
-            var left = _bounds.Left + (_bounds.Width - size.Width) / 2;
-            var top = _bounds.Top - size.Height - 8;
-            if (top < 0) top = _bounds.Bottom + 8;
+            var left = _bounds.Left + (_bounds.Width - size.Width) / 2.0;
+            var top = _bounds.Top - size.Height - 8.0;
+            if (top < 0) top = _bounds.Bottom + 8.0;
+
             _toolbar.Arrange(new Rect(new Point(left, top), size));
             return finalSize;
         }

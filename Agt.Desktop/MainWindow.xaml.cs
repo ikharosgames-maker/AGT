@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
-using Agt.Desktop.Models;
 using Agt.Desktop.ViewModels;
 
 namespace Agt.Desktop
@@ -17,7 +16,13 @@ namespace Agt.Desktop
             InitializeComponent();
             DataContext = new DesignerViewModel();
 
-            // Vyžádej nový blok při startu (nemá-li už nějaký)
+            // Klíčová změna: počkáme, až je okno zobrazené
+            Loaded += MainWindow_Loaded;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Zavoláme NewBlock po zobrazení okna, aby šlo nastavit Owner
             if (VM.CurrentBlock == null)
                 NewBlock();
         }
@@ -26,17 +31,29 @@ namespace Agt.Desktop
 
         private void NewBlock()
         {
-            var dlg = new Views.NewBlockDialog { Owner = this };
+            var dlg = new Views.NewBlockDialog();
+
+            // Owner nastavíme jen pokud je hlavní okno skutečně zobrazené
+            if (IsLoaded && Visibility == Visibility.Visible)
+            {
+                dlg.Owner = this;
+                dlg.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            }
+            else
+            {
+                dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+
             if (dlg.ShowDialog() == true && dlg.ResultBlock != null)
             {
                 VM.CurrentBlock = dlg.ResultBlock;
                 VM.Items.Clear();
                 VM.StatusText = $"Založen blok {VM.CurrentBlock.Name} ({VM.CurrentBlock.Id})";
             }
-            else
+            else if (VM.CurrentBlock == null)
             {
-                if (VM.CurrentBlock == null)
-                    Close();
+                // Pokud uživatel zruší bez existujícího bloku, zavřeme aplikaci.
+                Close();
             }
         }
 
@@ -76,9 +93,6 @@ namespace Agt.Desktop
                 VM.GridSize = size;
         }
 
-        private void AutoLayout_OnClick(object sender, RoutedEventArgs e)
-        {
-            VM.AutoLayout(); // jednoduchý návrh – rozloží do sloupců
-        }
+        private void AutoLayout_OnClick(object sender, RoutedEventArgs e) => VM.AutoLayout();
     }
 }

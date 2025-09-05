@@ -1,24 +1,24 @@
 ﻿<UserControl x:Class="Agt.Desktop.Views.PropertiesPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:m="clr-namespace:Agt.Desktop.Models">
+             xmlns:m="clr-namespace:Agt.Desktop.Models"
+             xmlns:local="clr-namespace:Agt.Desktop.Views">
+    <UserControl.Resources>
+        <local:IntEqualsToVisibilityConverter x:Key="EqVis"/>
+        <local:IntGreaterOrEqualToVisibilityConverter x:Key="GeVis"/>
+    </UserControl.Resources>
+
     <Grid Margin="10">
-        <!-- Nikdo nevybrán -->
-        <StackPanel Visibility="{Binding Source={StaticResource SelectionService}, Path=Count,
-                                      Converter={StaticResource CountToVisibility}, ConverterParameter=Invert:1}">
+        <!-- Nic vybráno -->
+        <StackPanel Visibility="{Binding SelectedCount, Converter={StaticResource EqVis}, ConverterParameter=0}">
             <TextBlock Text="Nic není vybráno" FontWeight="SemiBold" Margin="0,0,0,8"/>
             <TextBlock Text="Tip: Ctrl-klik přidá/odebere položku výběru."/>
         </StackPanel>
 
         <!-- Jedna položka -->
-        <ContentControl Visibility="{Binding Source={StaticResource SelectionService}, Path=Count,
-                                        Converter={StaticResource CountToVisibility}, ConverterParameter=1}">
-            <ContentControl.Content>
-                <Binding Source="{StaticResource SelectionService}" Path="SelectedItems[0]"/>
-            </ContentControl.Content>
-
+        <ContentControl Visibility="{Binding SelectedCount, Converter={StaticResource EqVis}, ConverterParameter=1}"
+                    Content="{Binding SelectedItem}">
             <ContentControl.Resources>
-                <!-- Základ -->
                 <DataTemplate DataType="{x:Type m:FieldComponentBase}">
                     <StackPanel>
                         <TextBlock Text="Základní" FontWeight="SemiBold" Margin="0,0,0,8"/>
@@ -46,16 +46,13 @@
                         </UniformGrid>
                     </StackPanel>
                 </DataTemplate>
-
-                <!-- Specializace podle typu (Label/TextBox/...) – stejné jako dřív, lze rozšířit -->
             </ContentControl.Resources>
         </ContentControl>
 
-        <!-- Více vybraných -->
-        <StackPanel Visibility="{Binding Source={StaticResource SelectionService}, Path=Count,
-                                      Converter={StaticResource CountToVisibility}, ConverterParameter=2}">
-            <TextBlock Text="{Binding Source={StaticResource SelectionService}, Path=Count, StringFormat={}{0} vybraných}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-            <TextBlock Text="Použij horní ‚floating‘ nabídku nebo kontextové menu pro hromadné akce."/>
+        <!-- Více položek -->
+        <StackPanel Visibility="{Binding SelectedCount, Converter={StaticResource GeVis}, ConverterParameter=2}">
+            <TextBlock Text="{Binding SelectedCount, StringFormat={}{0} vybraných}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+            <TextBlock Text="Použij floating panel nebo kontextové menu pro hromadné akce."/>
         </StackPanel>
     </Grid>
 </UserControl>

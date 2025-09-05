@@ -5,33 +5,25 @@ using System.Windows.Data;
 
 namespace Agt.Desktop.Converters
 {
-    public class CountToVisibilityConverter : IValueConverter
+    public sealed class CountToVisibilityConverter : IValueConverter
     {
+        // parameter: "n"  (viditelné pokud Count == n)
+        // parameter: "Invert:n" (viditelné pokud Count != n)
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var count = value is int i ? i : 0;
-            var param = parameter?.ToString() ?? "1";
+            var v = (value is int i) ? i : 0;
+            var s = parameter?.ToString() ?? "0";
             var invert = false;
-
-            if (param.Contains(":"))
+            if (s.StartsWith("Invert:", StringComparison.OrdinalIgnoreCase))
             {
-                var parts = param.Split(':');
-                invert = parts[0].Equals("Invert", StringComparison.OrdinalIgnoreCase) ||
-                         parts[0].Equals("Less", StringComparison.OrdinalIgnoreCase);
-                if (int.TryParse(parts[^1], out var thr2))
-                    return ToVis(invert ? count < thr2 : count >= thr2);
-                return ToVis(invert ? count < 1 : count >= 1);
+                invert = true; s = s.Substring("Invert:".Length);
             }
-
-            if (int.TryParse(param, out var thr))
-                return ToVis(count >= thr);
-
-            return ToVis(count >= 1);
+            int n; int.TryParse(s, out n);
+            var show = (v == n);
+            if (invert) show = !show;
+            return show ? Visibility.Visible : Visibility.Collapsed;
         }
-
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotSupportedException();
-
-        private static Visibility ToVis(bool v) => v ? Visibility.Visible : Visibility.Collapsed;
     }
 }

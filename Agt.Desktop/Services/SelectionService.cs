@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Agt.Desktop.Models;
@@ -49,6 +48,7 @@ namespace Agt.Desktop.Services
                 SelectedItems.Add(item);
                 if (item is FieldComponentBase f) f.IsSelected = true;
             }
+            OnPropertyChanged(nameof(Count));
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

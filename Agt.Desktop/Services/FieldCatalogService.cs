@@ -1,50 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
+﻿using System.Collections.ObjectModel;
 
 namespace Agt.Desktop.Services
 {
     public class FieldCatalogService
     {
-        public record CatalogItem(string Key, string Category, string DisplayName, string Icon, Dictionary<string, object>? Defaults, Dictionary<string, object>? Meta);
+        public record FieldDescriptor(string Key, string DisplayName, object? Defaults);
 
-        public IReadOnlyList<CatalogItem> Items { get; private set; } = new List<CatalogItem>();
+        public ObservableCollection<FieldDescriptor> Items { get; } = new();
 
-        private static string CatalogPath =>
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "FieldCatalog.json");
-
-        public FieldCatalogService() => LoadOrCreate();
-
-        private void LoadOrCreate()
+        public FieldCatalogService()
         {
-            try
-            {
-                if (!File.Exists(CatalogPath))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(CatalogPath)!);
-                    File.WriteAllText(CatalogPath, GetDefaultJson());
-                }
-                var json = File.ReadAllText(CatalogPath);
-                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                Items = JsonSerializer.Deserialize<List<CatalogItem>>(json, opts) ?? new List<CatalogItem>();
-            }
-            catch
-            {
-                Items = new List<CatalogItem>();
-            }
+            // Základní „číselník“ komponent (lze později načítat z DB/JSON)
+            Items.Add(new FieldDescriptor("label", "Popisek (Label)", new { FontSize = 14 }));
+            Items.Add(new FieldDescriptor("textbox", "Textové pole (TextBox)", new { Placeholder = "Zadejte text…" }));
+            Items.Add(new FieldDescriptor("textarea", "Textová oblast", new { Placeholder = "Více řádků…" }));
+            Items.Add(new FieldDescriptor("combobox", "Rozbalovací seznam", new { IsEditable = false, Options = new[] { "A", "B", "C" } }));
+            Items.Add(new FieldDescriptor("checkbox", "Zaškrtávátko", new { IsCheckedDefault = false }));
+            Items.Add(new FieldDescriptor("date", "Datum", null));
+            Items.Add(new FieldDescriptor("number", "Číslo", null));
         }
-
-        private static string GetDefaultJson() => @"
-[
-  { ""Key"": ""label"",    ""Category"": ""Základní"", ""DisplayName"": ""Popisek"",         ""Icon"": ""🏷"", ""Defaults"": { ""Label"": ""Popisek"", ""Width"": 160, ""Height"": 28, ""FieldKey"": ""label1"" } },
-  { ""Key"": ""textbox"",  ""Category"": ""Vstup"",    ""DisplayName"": ""Textové pole"",    ""Icon"": ""🔤"", ""Defaults"": { ""Label"": ""Jméno"", ""Placeholder"": ""Zadej jméno"", ""Width"": 280, ""FieldKey"": ""firstName"" } },
-  { ""Key"": ""textarea"", ""Category"": ""Vstup"",    ""DisplayName"": ""Víceřádkové"",     ""Icon"": ""📝"", ""Defaults"": { ""Label"": ""Poznámka"", ""Rows"": 4, ""Height"": 100, ""Width"": 380, ""FieldKey"": ""note"" } },
-  { ""Key"": ""combobox"", ""Category"": ""Výběr"",    ""DisplayName"": ""Seznam"",          ""Icon"": ""▾"",  ""Defaults"": { ""Label"": ""Stát"", ""Options"": [""CZ"",""SK"",""PL""], ""FieldKey"": ""country"" } },
-  { ""Key"": ""checkbox"", ""Category"": ""Výběr"",    ""DisplayName"": ""Zaškrtávátko"",    ""Icon"": ""☑"",  ""Defaults"": { ""Label"": ""Souhlasím"", ""IsCheckedDefault"": false, ""FieldKey"": ""agree"" } },
-  { ""Key"": ""date"",     ""Category"": ""Vstup"",    ""DisplayName"": ""Datum"",           ""Icon"": ""📅"", ""Defaults"": { ""Label"": ""Datum narození"", ""Format"": ""yyyy-MM-dd"", ""FieldKey"": ""birthDate"" } },
-  { ""Key"": ""number"",   ""Category"": ""Vstup"",    ""DisplayName"": ""Číslo"",           ""Icon"": ""#️⃣"", ""Defaults"": { ""Label"": ""Věk"", ""Min"": 0, ""Max"": 120, ""Decimals"": 0, ""FieldKey"": ""age"" } }
-]
-";
     }
 }

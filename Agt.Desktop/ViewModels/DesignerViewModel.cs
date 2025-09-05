@@ -17,7 +17,7 @@ namespace Agt.Desktop.ViewModels
         private Block? _currentBlock;
         public Block? CurrentBlock { get => _currentBlock; set => SetProperty(ref _currentBlock, value); }
 
-        // Mřížka
+        // Grid
         private bool _showGrid = true;
         public bool ShowGrid { get => _showGrid; set => SetProperty(ref _showGrid, value); }
 
@@ -30,6 +30,12 @@ namespace Agt.Desktop.ViewModels
         private string _statusText = "Připraveno";
         public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
 
+        // Výběr – zpřístupněno pro XAML (PropertiesPanel)
+        private readonly SelectionService _selection;
+        public int SelectedCount => _selection.Count;
+        public FieldComponentBase? SelectedItem => _selection.SelectedItems.FirstOrDefault() as FieldComponentBase;
+
+        // Příkazy
         public IRelayCommand GroupCommand { get; }
         public IRelayCommand AlignLeftCommand { get; }
         public IRelayCommand BringToFrontCommand { get; }
@@ -37,7 +43,6 @@ namespace Agt.Desktop.ViewModels
         public IRelayCommand DuplicateCommand { get; }
         public IAsyncRelayCommand DeleteCommand { get; }
 
-        private readonly SelectionService _selection;
         private readonly FieldCatalogService _catalog;
         private readonly FieldFactory _factory;
 
@@ -46,6 +51,12 @@ namespace Agt.Desktop.ViewModels
             _selection = (SelectionService)Application.Current.Resources["SelectionService"];
             _catalog = (FieldCatalogService)Application.Current.Resources["FieldCatalog"];
             _factory = (FieldFactory)Application.Current.Resources["FieldFactory"];
+
+            _selection.PropertyChanged += (_, __) =>
+            {
+                OnPropertyChanged(nameof(SelectedCount));
+                OnPropertyChanged(nameof(SelectedItem));
+            };
 
             GroupCommand = new RelayCommand(OnGroup, () => _selection.Count >= 2);
             AlignLeftCommand = new RelayCommand(OnAlignLeft, () => _selection.Count >= 2);
@@ -69,11 +80,11 @@ namespace Agt.Desktop.ViewModels
             StatusText = $"Vložen prvek: {desc?.DisplayName ?? key}";
         }
 
-        private void OnGroup() => StatusText = "Seskupení: TODO (další iterace)";
+        private void OnGroup() => StatusText = "Seskupení: TBD";
 
         private void OnAlignLeft()
         {
-            var selected = _selection.SelectedItems.Cast<FieldComponentBase>().ToList();
+            var selected = _selection.SelectedItems.OfType<FieldComponentBase>().ToList();
             if (selected.Count < 2) return;
             var minX = selected.Min(i => i.X);
             foreach (var it in selected) it.X = minX;
@@ -82,25 +93,25 @@ namespace Agt.Desktop.ViewModels
 
         private void OnBringToFront()
         {
-            var selected = _selection.SelectedItems.Cast<FieldComponentBase>().ToList();
+            var selected = _selection.SelectedItems.OfType<FieldComponentBase>().ToList();
             if (selected.Count == 0) return;
             var max = Items.Count == 0 ? 0 : Items.Max(i => i.ZIndex);
             foreach (var it in selected) it.ZIndex = ++max;
-            StatusText = "Přenesení dopředu.";
+            StatusText = "Dopředu.";
         }
 
         private void OnSendToBack()
         {
-            var selected = _selection.SelectedItems.Cast<FieldComponentBase>().ToList();
+            var selected = _selection.SelectedItems.OfType<FieldComponentBase>().ToList();
             if (selected.Count == 0) return;
             var min = Items.Count == 0 ? 0 : Items.Min(i => i.ZIndex);
             foreach (var it in selected) it.ZIndex = --min;
-            StatusText = "Přenesení dozadu.";
+            StatusText = "Dozadu.";
         }
 
         private void OnDuplicate()
         {
-            var selected = _selection.SelectedItems.Cast<FieldComponentBase>().ToList();
+            var selected = _selection.SelectedItems.OfType<FieldComponentBase>().ToList();
             if (selected.Count == 0) return;
             var max = Items.Count == 0 ? 0 : Items.Max(i => i.ZIndex);
             _selection.Clear();
@@ -116,14 +127,14 @@ namespace Agt.Desktop.ViewModels
 
         private Task OnDeleteAsync()
         {
-            var selected = _selection.SelectedItems.Cast<FieldComponentBase>().ToList();
+            var selected = _selection.SelectedItems.OfType<FieldComponentBase>().ToList();
             foreach (var it in selected) Items.Remove(it);
             _selection.Clear();
             StatusText = "Smazáno.";
             return Task.CompletedTask;
         }
 
-        // --- Export / Import (velmi jednoduché DTO) ---
+        // --- Export / Import ---
         public record Dto(Guid BlockId, string BlockName, double GridSize, bool ShowGrid, bool SnapToGrid, ItemDto[] Items);
         public record ItemDto(string TypeKey, Guid Id, string FieldKey, string Label, double X, double Y, double Width, double Height, int ZIndex, string? DefaultValue);
 
@@ -152,11 +163,10 @@ namespace Agt.Desktop.ViewModels
                 created.DefaultValue = it.DefaultValue ?? "";
                 Items.Add(created);
             }
-            _selection.Clear();
             StatusText = $"Načten blok {CurrentBlock.Name}";
         }
 
-        // --- Jednoduchý „auto layout“ – 2 sloupce, vert. mezera GridSize ---
+        // --- Auto layout (jednoduchý návrh) ---
         public void AutoLayout()
         {
             if (Items.Count == 0) return;
