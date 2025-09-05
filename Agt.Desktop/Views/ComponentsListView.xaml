@@ -1,0 +1,11 @@
+﻿<UserControl x:Class="Agt.Desktop.Views.ComponentsListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="6">
+        <ListBox x:Name="List"
+             ItemsSource="{Binding Items}"
+             DisplayMemberPath="Title"
+             MouseDoubleClick="List_MouseDoubleClick"
+             SelectionMode="Extended"/>
+    </Grid>
+</UserControl>

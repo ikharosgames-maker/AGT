@@ -6,7 +6,6 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<RootNamespace>Agt.Desktop</RootNamespace>
-		<!-- DŮLEŽITÉ: přepínáme na explicitní položky -->
 		<EnableDefaultItems>false</EnableDefaultItems>
 	</PropertyGroup>
 
@@ -14,7 +13,7 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 	</ItemGroup>
 
-	<!-- XAML stránky -->
+	<!-- XAML -->
 	<ItemGroup>
 		<ApplicationDefinition Include="App.xaml" />
 		<Page Include="MainWindow.xaml" />
@@ -22,12 +21,20 @@
 		<Page Include="Views\PropertiesPanel.xaml" />
 		<Page Include="Views\FloatingCommandBar.xaml" />
 		<Page Include="Views\ComponentLibraryView.xaml" />
+		<Page Include="Views\ComponentsListView.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\NewBlockDialog.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 	</ItemGroup>
 
-	<!-- C# kód -->
+	<!-- C# -->
 	<ItemGroup>
 		<Compile Include="App.xaml.cs" />
 		<Compile Include="MainWindow.xaml.cs" />
+
+		<Compile Include="Models\Block.cs" />
 		<Compile Include="Models\FieldComponentBase.cs" />
 		<Compile Include="Models\LabelField.cs" />
 		<Compile Include="Models\TextBoxField.cs" />
@@ -47,6 +54,8 @@
 		<Compile Include="Views\PropertiesPanel.xaml.cs" />
 		<Compile Include="Views\FloatingCommandBar.xaml.cs" />
 		<Compile Include="Views\ComponentLibraryView.xaml.cs" />
+		<Compile Include="Views\ComponentsListView.xaml.cs" />
+		<Compile Include="Views\NewBlockDialog.xaml.cs" />
 		<Compile Include="Views\FieldTemplateSelector.cs" />
 		<Compile Include="Adorners\SelectionToolbarAdorner.cs" />
 
@@ -57,7 +66,7 @@
 		<Compile Include="Behaviors\AutoContrastForeground.cs" />
 	</ItemGroup>
 
-	<!-- Obsah (Data) -->
+	<!-- Data -->
 	<ItemGroup>
 		<None Include="Data\FieldCatalog.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

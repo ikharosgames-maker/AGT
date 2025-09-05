@@ -11,88 +11,155 @@
                   Drop="RootCanvas_Drop"
                   DragOver="RootCanvas_DragOver"
                   MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
-                  MouseRightButtonDown="Canvas_MouseRightButtonDown"/>
+                  ContextMenuOpening="Canvas_ContextMenuOpening"/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
 
-            <ItemsControl.Resources>
+            <ItemsControl.ItemContainerStyle>
                 <Style TargetType="ContentPresenter">
                     <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
+                    <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                    <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
                 </Style>
+            </ItemsControl.ItemContainerStyle>
+
+            <ItemsControl.Resources>
+                <Style x:Key="DesignerItemStyle" TargetType="Border">
+                    <Setter Property="Background" Value="#00000000"/>
+                    <Setter Property="BorderBrush" Value="#66B3E5FC"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                            <Setter Property="BorderThickness" Value="1.5"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+
+                <!-- Společné kousky šablon: overlay s Thumbs -->
+                <DataTemplate x:Key="OverlayTemplate">
+                    <Grid>
+                        <!-- Průhledný „Move“ overlay -->
+                        <Thumb DragDelta="MoveThumb_DragDelta"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragCompleted="MoveThumb_DragCompleted"
+                   Cursor="SizeAll" Opacity="0"
+                   Background="Transparent"/>
+                        <!-- Viditelný resize grip (pravý-dolní roh) -->
+                        <Thumb Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Margin="0" Cursor="SizeNWSE"
+                   Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"
+                   DragDelta="ResizeThumb_DragDelta"/>
+                    </Grid>
+                </DataTemplate>
 
                 <!-- Label -->
                 <DataTemplate DataType="{x:Type m:LabelField}">
-                    <Border Background="#00000000" MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                        <TextBlock Text="{Binding Label}" FontSize="{Binding FontSize}" />
+                    <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <Grid>
+                            <TextBlock Text="{Binding Label}" FontSize="{Binding FontSize}" />
+                            <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
+                        </Grid>
                     </Border>
                 </DataTemplate>
 
                 <!-- TextBox -->
                 <DataTemplate DataType="{x:Type m:TextBoxField}">
-                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
-                        <TextBox Width="{Binding Width}" Height="{Binding Height}" 
-                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
-                     Tag="{Binding FieldKey}"
-                     ToolTip="{Binding Placeholder}"/>
-                    </StackPanel>
+                    <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <Grid>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <TextBox Width="{Binding Width}" Height="{Binding Height}" 
+                         Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="{Binding FieldKey}" ToolTip="{Binding Placeholder}"/>
+                            </StackPanel>
+                            <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
 
                 <!-- TextArea -->
                 <DataTemplate DataType="{x:Type m:TextAreaField}">
-                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
-                        <TextBox Width="{Binding Width}" Height="{Binding Height}"
-                     AcceptsReturn="True" TextWrapping="Wrap"
-                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
-                     Tag="{Binding FieldKey}"
-                     ToolTip="{Binding Placeholder}"/>
-                    </StackPanel>
+                    <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <Grid>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <TextBox Width="{Binding Width}" Height="{Binding Height}"
+                         AcceptsReturn="True" TextWrapping="Wrap"
+                         Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="{Binding FieldKey}" ToolTip="{Binding Placeholder}"/>
+                            </StackPanel>
+                            <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
 
                 <!-- ComboBox -->
                 <DataTemplate DataType="{x:Type m:ComboBoxField}">
-                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
-                        <ComboBox Width="{Binding Width}" IsEditable="{Binding IsEditable}"
-                      SelectedValue="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
-                      Tag="{Binding FieldKey}"
-                      ItemsSource="{Binding Options}"/>
-                    </StackPanel>
+                    <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <Grid>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <ComboBox Width="{Binding Width}" IsEditable="{Binding IsEditable}"
+                          SelectedValue="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                          Tag="{Binding FieldKey}" ItemsSource="{Binding Options}"/>
+                            </StackPanel>
+                            <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
 
                 <!-- CheckBox -->
                 <DataTemplate DataType="{x:Type m:CheckBoxField}">
-                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsCheckedDefault, UpdateSourceTrigger=PropertyChanged}"
-                    MouseLeftButtonDown="Item_MouseLeftButtonDown"/>
+                    <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <Grid>
+                            <CheckBox Content="{Binding Label}" IsChecked="{Binding IsCheckedDefault, UpdateSourceTrigger=PropertyChanged}"/>
+                            <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
 
                 <!-- Date -->
                 <DataTemplate DataType="{x:Type m:DateField}">
-                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
-                        <DatePicker Width="{Binding Width}" SelectedDateFormat="Short"
-                        Tag="{Binding FieldKey}"/>
-                    </StackPanel>
+                    <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <Grid>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <DatePicker Width="{Binding Width}" SelectedDateFormat="Short" Tag="{Binding FieldKey}"/>
+                            </StackPanel>
+                            <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
 
                 <!-- Number -->
                 <DataTemplate DataType="{x:Type m:NumberField}">
-                    <StackPanel MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
-                        <TextBox Width="{Binding Width}" Height="{Binding Height}"
-                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
-                     Tag="{Binding FieldKey}"/>
-                    </StackPanel>
+                    <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+                        <Grid>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,2"/>
+                                <TextBox Width="{Binding Width}" Height="{Binding Height}"
+                         Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="{Binding FieldKey}"/>
+                            </StackPanel>
+                            <ContentPresenter ContentTemplate="{StaticResource OverlayTemplate}"/>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
             </ItemsControl.Resources>
 
-            <ItemsControl.ItemContainerStyle>
-                <Style TargetType="ContentPresenter">
-                    <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                    <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
-                </Style>
-            </ItemsControl.ItemContainerStyle>
+            <!-- Kontextové menu pro plátno / výběr -->
+            <ItemsControl.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Smazat" Command="{Binding DeleteCommand}"/>
+                    <MenuItem Header="Duplikovat" Command="{Binding DuplicateCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="Dopředu" Command="{Binding BringToFrontCommand}"/>
+                    <MenuItem Header="Dozadu" Command="{Binding SendToBackCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="Zarovnat vlevo" Command="{Binding AlignLeftCommand}"/>
+                </ContextMenu>
+            </ItemsControl.ContextMenu>
+
         </ItemsControl>
     </Grid>
 </UserControl>

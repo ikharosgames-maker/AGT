@@ -15,11 +15,15 @@ namespace Agt.Desktop.Models
         private double _height = 40; public double Height { get => _height; set { if (_height != value) { _height = value; OnPropertyChanged(); } } }
         private int _zIndex; public int ZIndex { get => _zIndex; set { if (_zIndex != value) { _zIndex = value; OnPropertyChanged(); } } }
 
-        private string _fieldKey = ""; public string FieldKey { get => _fieldKey; set { if (_fieldKey != value) { _fieldKey = value; OnPropertyChanged(); } } }
-        private string _label = "Label"; public string Label { get => _label; set { if (_label != value) { _label = value; OnPropertyChanged(); } } }
+        private string _fieldKey = ""; public string FieldKey { get => _fieldKey; set { if (_fieldKey != value) { _fieldKey = value; OnPropertyChanged(); OnPropertyChanged(nameof(Title)); } } }
+        private string _label = "Label"; public string Label { get => _label; set { if (_label != value) { _label = value; OnPropertyChanged(); OnPropertyChanged(nameof(Title)); } } }
         private bool _required; public bool Required { get => _required; set { if (_required != value) { _required = value; OnPropertyChanged(); } } }
         private string _placeholder = ""; public string Placeholder { get => _placeholder; set { if (_placeholder != value) { _placeholder = value; OnPropertyChanged(); } } }
         private string _defaultValue = ""; public string DefaultValue { get => _defaultValue; set { if (_defaultValue != value) { _defaultValue = value; OnPropertyChanged(); } } }
+
+        private bool _isSelected; public bool IsSelected { get => _isSelected; set { if (_isSelected != value) { _isSelected = value; OnPropertyChanged(); } } }
+
+        public string Title => string.IsNullOrWhiteSpace(Label) ? FieldKey : $"{Label} ({FieldKey})";
 
         public abstract FieldComponentBase Clone();
 

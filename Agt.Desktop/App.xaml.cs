@@ -8,7 +8,7 @@ namespace Agt.Desktop
     {
         protected override void OnStartup(StartupEventArgs e)
         {
-            // 1) Nejprve zaregistrujeme všechno, co XAML potřebuje
+            // 1) Sdílené zdroje pro XAML
             Resources["SelectionService"] = new SelectionService();
             Resources["FieldCatalog"] = new FieldCatalogService();
             Resources["FieldFactory"] = new FieldFactory();
@@ -17,7 +17,7 @@ namespace Agt.Desktop
             Resources["CountGte"] = new CountGreaterOrEqualConverter();
             Resources["CountToVisibility"] = new CountToVisibilityConverter();
 
-            // 2) Až teď vytvoříme hlavní okno – XAML už Statické zdroje najde
+            // 2) Hlavní okno
             var main = new MainWindow();
             main.Show();
 

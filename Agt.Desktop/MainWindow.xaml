@@ -2,41 +2,88 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:Agt.Desktop.Views"
-        Title="AGT – Návrhář formulářů" Width="1200" Height="800"
+        Title="AGT – Návrhář formulářů" Width="1280" Height="860"
         Background="#121212" Foreground="#EEE"
         WindowStartupLocation="CenterScreen">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="380"/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="44"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="28"/>
-        </Grid.RowDefinitions>
+    <DockPanel>
 
-        <DockPanel Grid.Row="0" Grid.ColumnSpan="3" Background="#1E1E1E">
-            <TextBlock Text="AGT – Návrhář datových formulářů" Margin="12,0" VerticalAlignment="Center" FontWeight="SemiBold"/>
+        <!-- Menu strip -->
+        <Menu DockPanel.Dock="Top" Background="#1E1E1E">
+            <MenuItem Header="_Soubor">
+                <MenuItem Header="_Nový blok…" Click="NewBlock_OnClick"/>
+                <Separator/>
+                <MenuItem Header="_Uložit (JSON)…" Click="SaveJson_OnClick"/>
+                <MenuItem Header="_Načíst (JSON)…" Click="LoadJson_OnClick"/>
+                <Separator/>
+                <MenuItem Header="_Konec" Click="Exit_OnClick"/>
+            </MenuItem>
+
+            <MenuItem Header="_Úpravy">
+                <MenuItem Header="_Smazat" Command="{Binding DeleteCommand}"/>
+                <MenuItem Header="_Duplikovat" Command="{Binding DuplicateCommand}"/>
+                <Separator/>
+                <MenuItem Header="Do_předu" Command="{Binding BringToFrontCommand}"/>
+                <MenuItem Header="Do_zadu" Command="{Binding SendToBackCommand}"/>
+                <Separator/>
+                <MenuItem Header="Zarovnat v_levo" Command="{Binding AlignLeftCommand}"/>
+            </MenuItem>
+
+            <MenuItem Header="_Zobrazení">
+                <MenuItem Header="Zobrazit _mřížku" IsCheckable="True" IsChecked="{Binding ShowGrid}"/>
+                <MenuItem Header="_Přichytávat na mřížku" IsCheckable="True" IsChecked="{Binding SnapToGrid}"/>
+                <MenuItem Header="Velikost mřížky">
+                    <MenuItem Header="4"  IsCheckable="True" IsChecked="{Binding GridSize, Converter={x:Static views:DesignerCanvas.EqualToConverter}, ConverterParameter=4}"  Click="GridSize_Click"/>
+                    <MenuItem Header="8"  IsCheckable="True" IsChecked="{Binding GridSize, Converter={x:Static views:DesignerCanvas.EqualToConverter}, ConverterParameter=8}"  Click="GridSize_Click"/>
+                    <MenuItem Header="10" IsCheckable="True" IsChecked="{Binding GridSize, Converter={x:Static views:DesignerCanvas.EqualToConverter}, ConverterParameter=10}" Click="GridSize_Click"/>
+                    <MenuItem Header="12" IsCheckable="True" IsChecked="{Binding GridSize, Converter={x:Static views:DesignerCanvas.EqualToConverter}, ConverterParameter=12}" Click="GridSize_Click"/>
+                    <MenuItem Header="16" IsCheckable="True" IsChecked="{Binding GridSize, Converter={x:Static views:DesignerCanvas.EqualToConverter}, ConverterParameter=16}" Click="GridSize_Click"/>
+                </MenuItem>
+            </MenuItem>
+
+            <MenuItem Header="_Layout">
+                <MenuItem Header="_Auto layout (návrh)" Click="AutoLayout_OnClick"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Top bar -->
+        <DockPanel DockPanel.Dock="Top" Background="#1A1A1A" Height="40">
+            <TextBlock Margin="12,0" VerticalAlignment="Center" FontWeight="SemiBold">
+        <Run Text="Blok: "/>
+        <Run Text="{Binding CurrentBlock.Name, FallbackValue=(není založen)}"/>
+        <Run Text="  ·  "/>
+        <Run Text="{Binding StatusText, FallbackValue=Připraveno}"/>
+            </TextBlock>
         </DockPanel>
 
-        <Border Grid.Row="1" Grid.Column="0" BorderBrush="#333" BorderThickness="0,0,1,0" Background="#1A1A1A">
-            <views:ComponentLibraryView/>
-        </Border>
+        <!-- Obsah -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="420"/>
+            </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="1" Grid.Column="1" Background="#181818">
-            <views:DesignerCanvas/>
+            <!-- Levý panel: Knihovna / Seznam -->
+            <Grid Grid.Column="0" Background="#1A1A1A">
+                <TabControl Background="#1A1A1A">
+                    <TabItem Header="Knihovna">
+                        <views:ComponentLibraryView/>
+                    </TabItem>
+                    <TabItem Header="Seznam">
+                        <views:ComponentsListView/>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+
+            <!-- Plátno -->
+            <Grid Grid.Column="1" Background="#181818">
+                <views:DesignerCanvas/>
+            </Grid>
+
+            <!-- Properties -->
+            <Border Grid.Column="2" BorderBrush="#333" BorderThickness="1,0,0,0" Background="#1A1A1A">
+                <views:PropertiesPanel/>
+            </Border>
         </Grid>
-
-        <Border Grid.Row="1" Grid.Column="2" BorderBrush="#333" BorderThickness="1,0,0,0" Background="#1A1A1A">
-            <views:PropertiesPanel/>
-        </Border>
-
-        <StatusBar Grid.Row="2" Grid.ColumnSpan="3" Background="#1E1E1E">
-            <StatusBarItem>
-                <TextBlock Text="{Binding StatusText, FallbackValue=Připraveno}"/>
-            </StatusBarItem>
-        </StatusBar>
-    </Grid>
+    </DockPanel>
 </Window>
