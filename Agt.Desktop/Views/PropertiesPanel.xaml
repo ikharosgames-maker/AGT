@@ -4,7 +4,6 @@
              xmlns:m="clr-namespace:Agt.Desktop.Models"
              xmlns:local="clr-namespace:Agt.Desktop.Views">
     <UserControl.Resources>
-        <!-- INSTANCOVAT a používat přes StaticResource -->
         <local:IntEqualsToVisibilityConverter x:Key="EqVis"/>
         <local:IntGreaterOrEqualToVisibilityConverter x:Key="GeVis"/>
     </UserControl.Resources>
@@ -26,6 +25,8 @@
                         <StackPanel>
                             <TextBlock Text="Vlastnosti" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <UniformGrid Columns="2" Margin="0,0,0,12">
+                                <TextBlock Text="Name"/>
+                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBlock Text="FieldKey"/>
                                 <TextBox Text="{Binding FieldKey, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBlock Text="Label"/>
@@ -63,13 +64,13 @@
                 </ContentControl.Resources>
             </ContentControl>
 
-            <!-- Více položek: společné vlastnosti s hromadnou aplikací -->
+            <!-- Více položek -->
             <StackPanel Visibility="{Binding SelectedCount, Converter={StaticResource GeVis}, ConverterParameter=2}">
                 <TextBlock Text="{Binding SelectedCount, StringFormat={}{0} vybraných}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-
                 <TextBlock Text="Společné vlastnosti (ponech prázdné to, co nechceš měnit)" Margin="0,0,0,6"/>
-
                 <UniformGrid Columns="2" Margin="0,0,0,12">
+                    <TextBlock Text="Name"/>
+                    <TextBox Text="{Binding BulkName, UpdateSourceTrigger=PropertyChanged}"/>
                     <TextBlock Text="Label"/>
                     <TextBox Text="{Binding BulkLabel, UpdateSourceTrigger=PropertyChanged}"/>
                     <TextBlock Text="FieldKey"/>
@@ -87,7 +88,6 @@
                     <TextBlock Text="Výška"/>
                     <TextBox Text="{Binding BulkHeight, UpdateSourceTrigger=PropertyChanged}"/>
                 </UniformGrid>
-
                 <Button Content="Použít na výběr" HorizontalAlignment="Left" Command="{Binding ApplyBulkCommand}"/>
             </StackPanel>
 

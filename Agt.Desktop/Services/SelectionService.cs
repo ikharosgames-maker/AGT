@@ -50,6 +50,16 @@ namespace Agt.Desktop.Services
             }
             OnPropertyChanged(nameof(Count));
         }
+        public void ReplaceWith(IEnumerable<object> items)
+        {
+            // odznačit staré
+            foreach (var s in SelectedItems.ToList())
+                if (!items.Contains(s)) Toggle(s);
+
+            // přidat nové
+            foreach (var s in items)
+                if (!IsSelected(s)) Toggle(s);
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string? n = null)

@@ -21,8 +21,8 @@
         </Grid.RowDefinitions>
 
         <!-- Hlavní Menu: vždy viditelné, kontrastní -->
-        <Menu Grid.Row="0" Background="#222222" Foreground="#FFFFFF" FontSize="13">
-            <MenuItem Header="_Soubor">
+        <Menu Grid.Row="0" Background="#222222" Foreground="#FFFFFF" FontSize="13" IsHitTestVisible="True">
+        <MenuItem Header="_Soubor">
                 <MenuItem Header="_Nový blok…" Click="NewBlock_OnClick"/>
                 <MenuItem Header="_Otevřít…" Click="LoadJson_OnClick"/>
                 <MenuItem Header="_Uložit…" Click="SaveJson_OnClick"/>

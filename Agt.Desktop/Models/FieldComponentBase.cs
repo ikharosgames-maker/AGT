@@ -16,16 +16,23 @@ namespace Agt.Desktop.Models
         private double _height = 40; public double Height { get => _height; set { if (_height != value) { _height = value; OnPropertyChanged(); } } }
         private int _zIndex; public int ZIndex { get => _zIndex; set { if (_zIndex != value) { _zIndex = value; OnPropertyChanged(); } } }
 
-        private string _fieldKey = ""; public string FieldKey { get => _fieldKey; set { if (_fieldKey != value) { _fieldKey = value; OnPropertyChanged(); OnPropertyChanged(nameof(Title)); } } }
-        private string _label = "Label"; public string Label { get => _label; set { if (_label != value) { _label = value; OnPropertyChanged(); OnPropertyChanged(nameof(Title)); } } }
+        // Name = název komponenty (typ_blok_label_index)
+        private string _name = "";
+        public string Name { get => _name; set { if (_name != value) { _name = value; OnPropertyChanged(); OnPropertyChanged(nameof(Title)); } } }
+
+        // FieldKey můžeš používat pro mapování do backendu; nechávám zvlášť
+        private string _fieldKey = ""; public string FieldKey { get => _fieldKey; set { if (_fieldKey != value) { _fieldKey = value; OnPropertyChanged(); } } }
+
+        // UI popisek (u textboxu atd. zobrazený text vedle vstupu)
+        private string _label = "Label"; public string Label { get => _label; set { if (_label != value) { _label = value; OnPropertyChanged(); } } }
         private bool _required; public bool Required { get => _required; set { if (_required != value) { _required = value; OnPropertyChanged(); } } }
         private string _placeholder = ""; public string Placeholder { get => _placeholder; set { if (_placeholder != value) { _placeholder = value; OnPropertyChanged(); } } }
         private string _defaultValue = ""; public string DefaultValue { get => _defaultValue; set { if (_defaultValue != value) { _defaultValue = value; OnPropertyChanged(); } } }
 
         private bool _isSelected; public bool IsSelected { get => _isSelected; set { if (_isSelected != value) { _isSelected = value; OnPropertyChanged(); } } }
 
-        // Nové stylové vlastnosti
-        private Brush _background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
+        // Styl
+        private Brush _background = Brushes.Transparent;
         public Brush Background { get => _background; set { if (_background != value) { _background = value; OnPropertyChanged(); } } }
 
         private Brush _foreground = Brushes.White;
@@ -37,7 +44,8 @@ namespace Agt.Desktop.Models
         private double _fontSize = 14;
         public double FontSize { get => _fontSize; set { if (Math.Abs(_fontSize - value) > 0.01) { _fontSize = value; OnPropertyChanged(); } } }
 
-        public string Title => string.IsNullOrWhiteSpace(Label) ? FieldKey : $"{Label} ({FieldKey})";
+        // Title použijeme pro seznam komponent vlevo
+        public string Title => string.IsNullOrWhiteSpace(Name) ? $"{TypeKey} ({Label})" : Name;
 
         public abstract FieldComponentBase Clone();
 

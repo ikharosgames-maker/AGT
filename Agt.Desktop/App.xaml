@@ -1,5 +1,18 @@
 ﻿<Application x:Class="Agt.Desktop.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- bez StartupUri, zdroje registrujeme v App.xaml.cs ještě před vytvořením MainWindow -->
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:services="clr-namespace:Agt.Desktop.Services"
+             xmlns:conv="clr-namespace:Agt.Desktop.Converters"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+
+        <!-- Služby dostupné globálně -->
+        <services:SelectionService x:Key="SelectionService"/>
+        <services:FieldCatalogService x:Key="FieldCatalog"/>
+        <services:FieldFactory x:Key="FieldFactory"/>
+
+        <!-- Případně běžně používané konvertory -->
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:AutoContrastForegroundConverter x:Key="AutoContrast"/>
+    </Application.Resources>
 </Application>
