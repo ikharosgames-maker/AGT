@@ -57,6 +57,17 @@ namespace Agt.Desktop
                 MessageBox.Show("Soubor nelze načíst.");
             }
         }
+        private void GridPlus_OnClick(object sender, RoutedEventArgs e)
+        {
+            var vm = (DesignerViewModel)DataContext;
+            vm.GridSize = vm.GridSize + 2;
+        }
+
+        private void GridMinus_OnClick(object sender, RoutedEventArgs e)
+        {
+            var vm = (DesignerViewModel)DataContext;
+            vm.GridSize = vm.GridSize > 2 ? vm.GridSize - 2 : 2;
+        }
 
         private void Exit_OnClick(object sender, RoutedEventArgs e) => Close();
 

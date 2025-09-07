@@ -87,6 +87,11 @@
                     <TextBox Text="{Binding BulkWidth, UpdateSourceTrigger=PropertyChanged}"/>
                     <TextBlock Text="Výška"/>
                     <TextBox Text="{Binding BulkHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Anchor"/>
+                    <TextBox Text="{Binding Anchor, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Dock"/>
+                    <TextBox Text="{Binding Dock, UpdateSourceTrigger=PropertyChanged}"/>
+
                 </UniformGrid>
                 <Button Content="Použít na výběr" HorizontalAlignment="Left" Command="{Binding ApplyBulkCommand}"/>
             </StackPanel>

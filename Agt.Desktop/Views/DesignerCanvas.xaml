@@ -7,15 +7,13 @@
              Focusable="False" IsTabStop="False">
     <UserControl.Resources>
 
-        <!-- Konvertory -->
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
-        <!-- POZOR: musíš mít v App.xaml i <conv:AutoContrastForegroundConverter x:Key="AutoContrast"/> -->
 
-        <!-- Styl rámečku vybrané položky -->
         <Style x:Key="DesignerItemStyle" TargetType="Border">
             <Setter Property="Background" Value="{Binding Background}"/>
             <Setter Property="BorderBrush" Value="#66B3E5FC"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
                     <Setter Property="BorderThickness" Value="1.5"/>
@@ -23,42 +21,42 @@
             </Style.Triggers>
         </Style>
 
-        <!-- Overlay (drag + resize) -->
         <DataTemplate x:Key="Tpl_Overlay">
             <Grid>
                 <Thumb DragDelta="MoveThumb_DragDelta"
                DragStarted="MoveThumb_DragStarted"
                DragCompleted="MoveThumb_DragCompleted"
-               Cursor="SizeAll" Opacity="0"
-               Background="Transparent"/>
+               Cursor="SizeAll" Opacity="0" Background="Transparent"/>
                 <Thumb Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-               Margin="0" Cursor="SizeNWSE"
+               Cursor="SizeNWSE"
                Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"
                DragDelta="ResizeThumb_DragDelta"/>
             </Grid>
         </DataTemplate>
 
-        <!-- TEMPLATES: definované PŘED selektorem -->
+        <!-- LABEL -->
         <DataTemplate x:Key="Tpl_Label">
-            <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+            <Border Style="{StaticResource DesignerItemStyle}"
+              MouseLeftButtonDown="Item_MouseLeftButtonDown">
                 <Grid>
-                    <TextBlock Text="{Binding Label}"
-                     FontSize="{Binding FontSize}"
-                     FontFamily="{Binding FontFamily}"
+                    <TextBlock Text="{Binding Label}" IsHitTestVisible="False"
+                     FontSize="{Binding FontSize}" FontFamily="{Binding FontFamily}"
                      Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
                     <ContentPresenter ContentTemplate="{StaticResource Tpl_Overlay}"/>
                 </Grid>
             </Border>
         </DataTemplate>
 
+        <!-- TEXTBOX -->
         <DataTemplate x:Key="Tpl_TextBox">
-            <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+            <Border Style="{StaticResource DesignerItemStyle}"
+              MouseLeftButtonDown="Item_MouseLeftButtonDown">
                 <Grid>
                     <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                        Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <TextBox Width="{Binding Width}" Height="{Binding Height}"
+                        <TextBox Width="{Binding Width}" Height="{Binding Height}" IsHitTestVisible="False"
                      Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
                      Background="{Binding Background}"
                      Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
@@ -70,14 +68,17 @@
             </Border>
         </DataTemplate>
 
+        <!-- TEXTAREA -->
         <DataTemplate x:Key="Tpl_TextArea">
-            <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+            <Border Style="{StaticResource DesignerItemStyle}"
+              MouseLeftButtonDown="Item_MouseLeftButtonDown">
                 <Grid>
                     <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                        Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
                         <TextBox Width="{Binding Width}" Height="{Binding Height}" AcceptsReturn="True" TextWrapping="Wrap"
+                     IsHitTestVisible="False"
                      Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
                      Background="{Binding Background}"
                      Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
@@ -89,14 +90,16 @@
             </Border>
         </DataTemplate>
 
+        <!-- COMBOBOX -->
         <DataTemplate x:Key="Tpl_ComboBox">
-            <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+            <Border Style="{StaticResource DesignerItemStyle}"
+              MouseLeftButtonDown="Item_MouseLeftButtonDown">
                 <Grid>
                     <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                        Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <ComboBox Width="{Binding Width}" IsEditable="{Binding IsEditable}"
+                        <ComboBox Width="{Binding Width}" IsEditable="{Binding IsEditable}" IsHitTestVisible="False"
                       SelectedValue="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
                       Background="{Binding Background}"
                       Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
@@ -108,10 +111,12 @@
             </Border>
         </DataTemplate>
 
+        <!-- CHECKBOX -->
         <DataTemplate x:Key="Tpl_CheckBox">
-            <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+            <Border Style="{StaticResource DesignerItemStyle}"
+              MouseLeftButtonDown="Item_MouseLeftButtonDown">
                 <Grid>
-                    <CheckBox Content="{Binding Label}"
+                    <CheckBox Content="{Binding Label}" IsHitTestVisible="False"
                     IsChecked="{Binding IsCheckedDefault, UpdateSourceTrigger=PropertyChanged}"
                     Background="{Binding Background}"
                     Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
@@ -121,14 +126,17 @@
             </Border>
         </DataTemplate>
 
+        <!-- DATE -->
         <DataTemplate x:Key="Tpl_Date">
-            <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+            <Border Style="{StaticResource DesignerItemStyle}"
+              MouseLeftButtonDown="Item_MouseLeftButtonDown">
                 <Grid>
                     <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                        Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <DatePicker Width="{Binding Width}" SelectedDateFormat="Short" Tag="{Binding FieldKey}"
+                        <DatePicker Width="{Binding Width}" IsHitTestVisible="False"
+                        SelectedDateFormat="Short" Tag="{Binding FieldKey}"
                         Background="{Binding Background}"
                         Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
                     </StackPanel>
@@ -137,14 +145,16 @@
             </Border>
         </DataTemplate>
 
+        <!-- NUMBER -->
         <DataTemplate x:Key="Tpl_Number">
-            <Border Style="{StaticResource DesignerItemStyle}" MouseLeftButtonDown="Item_MouseLeftButtonDown">
+            <Border Style="{StaticResource DesignerItemStyle}"
+              MouseLeftButtonDown="Item_MouseLeftButtonDown">
                 <Grid>
                     <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2"
+                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
                        Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <TextBox Width="{Binding Width}" Height="{Binding Height}"
+                        <TextBox Width="{Binding Width}" Height="{Binding Height}" IsHitTestVisible="False"
                      Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
                      Background="{Binding Background}"
                      Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
@@ -156,7 +166,7 @@
             </Border>
         </DataTemplate>
 
-        <!-- AŽ TEĎ: selector, který odkazuje na výše definované Tpl_* -->
+        <!-- Selector -->
         <local:FieldTemplateSelector x:Key="FieldSelector"
                                  TplLabel="{StaticResource Tpl_Label}"
                                  TplTextBox="{StaticResource Tpl_TextBox}"
@@ -167,7 +177,7 @@
                                  TplNumber="{StaticResource Tpl_Number}"/>
     </UserControl.Resources>
 
-    <Grid Focusable="False" IsHitTestVisible="True">
+    <Grid Focusable="False">
         <Canvas x:Name="LassoLayer" IsHitTestVisible="False" />
 
         <ItemsControl x:Name="ItemsHost"
@@ -199,18 +209,6 @@
                     <Setter Property="IsHitTestVisible" Value="True"/>
                 </Style>
             </ItemsControl.ItemContainerStyle>
-
-            <ItemsControl.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Smazat" Command="{Binding DeleteCommand}"/>
-                    <MenuItem Header="Duplikovat" Command="{Binding DuplicateCommand}"/>
-                    <Separator/>
-                    <MenuItem Header="Dopředu" Command="{Binding BringToFrontCommand}"/>
-                    <MenuItem Header="Dozadu" Command="{Binding SendToBackCommand}"/>
-                    <Separator/>
-                    <MenuItem Header="Zarovnat vlevo" Command="{Binding AlignLeftCommand}"/>
-                </ContextMenu>
-            </ItemsControl.ContextMenu>
         </ItemsControl>
     </Grid>
 </UserControl>

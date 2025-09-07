@@ -43,7 +43,22 @@
             <MenuItem Header="_Zobrazení">
                 <MenuItem Header="Zobrazit _mřížku" IsCheckable="True" IsChecked="{Binding ShowGrid}"/>
                 <MenuItem Header="_Přichytávat na mřížku" IsCheckable="True" IsChecked="{Binding SnapToGrid}"/>
+                <Separator/>
+                <MenuItem Header="Mřížka −" Click="GridMinus_OnClick"/>
+                <MenuItem Header="Mřížka +" Click="GridPlus_OnClick"/>
+                <Separator/>
+                <MenuItem Header="Velikost mřížky:">
+                    <MenuItem.HeaderTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" >
+                                <TextBlock Text="Velikost mřížky: " />
+                                <TextBlock Text="{Binding GridSize}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </MenuItem.HeaderTemplate>
+                </MenuItem>
             </MenuItem>
+
 
             <MenuItem Header="_Layout">
                 <MenuItem Header="_Auto layout" Click="AutoLayout_OnClick"/>
