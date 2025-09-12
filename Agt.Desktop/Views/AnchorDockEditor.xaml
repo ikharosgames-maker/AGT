@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:m="clr-namespace:Agt.Desktop.Models"
-             MinWidth="180" MinHeight="120">
+             MinWidth="220" MinHeight="160">
     <Grid x:Name="LayoutRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -10,10 +10,14 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="10"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- ANCHOR (ponecháno) -->
         <TextBlock Text="Anchor" FontWeight="SemiBold"/>
-
         <Border Grid.Row="2" BorderBrush="#666" BorderThickness="1" Padding="6">
             <Grid>
                 <Grid.RowDefinitions>
@@ -37,14 +41,60 @@
             </Grid>
         </Border>
 
+        <!-- DOCK (VS-like „kompas“ z ToggleButtonů) -->
         <TextBlock Grid.Row="4" Text="Dock" FontWeight="SemiBold" Margin="0,0,0,6"/>
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="48,0,0,0">
-            <RadioButton GroupName="Dock" Content="None"   Tag="{x:Static m:DockTo.None}"   Checked="Dock_Checked" Margin="0,0,8,0"/>
-            <RadioButton GroupName="Dock" Content="Left"   Tag="{x:Static m:DockTo.Left}"   Checked="Dock_Checked" Margin="0,0,8,0"/>
-            <RadioButton GroupName="Dock" Content="Top"    Tag="{x:Static m:DockTo.Top}"    Checked="Dock_Checked" Margin="0,0,8,0"/>
-            <RadioButton GroupName="Dock" Content="Right"  Tag="{x:Static m:DockTo.Right}"  Checked="Dock_Checked" Margin="0,0,8,0"/>
-            <RadioButton GroupName="Dock" Content="Bottom" Tag="{x:Static m:DockTo.Bottom}" Checked="Dock_Checked" Margin="0,0,8,0"/>
-            <RadioButton GroupName="Dock" Content="Fill"   Tag="{x:Static m:DockTo.Fill}"   Checked="Dock_Checked"/>
-        </StackPanel>
+
+        <!-- Kompas -->
+        <Grid Grid.Row="6" Width="140" Height="140">
+            <Border Background="{DynamicResource FieldBackgroundBrush}" BorderBrush="#666" BorderThickness="1" CornerRadius="6"/>
+            <Border Margin="24" Background="#22000000" CornerRadius="2"/>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Top -->
+                <ToggleButton x:Name="DockTop" Grid.Row="0" Grid.Column="1" Margin="2"
+                              ToolTip="Dock Top" Click="DockToggle_Click">
+                    <Border Width="48" Height="22" Background="#44FFFFFF" BorderBrush="#88FFFFFF" BorderThickness="1" CornerRadius="2"/>
+                </ToggleButton>
+
+                <!-- Bottom -->
+                <ToggleButton x:Name="DockBottom" Grid.Row="2" Grid.Column="1" Margin="2"
+                              ToolTip="Dock Bottom" Click="DockToggle_Click">
+                    <Border Width="48" Height="22" Background="#44FFFFFF" BorderBrush="#88FFFFFF" BorderThickness="1" CornerRadius="2"/>
+                </ToggleButton>
+
+                <!-- Left -->
+                <ToggleButton x:Name="DockLeft" Grid.Row="1" Grid.Column="0" Margin="2"
+                              ToolTip="Dock Left" Click="DockToggle_Click">
+                    <Border Width="22" Height="48" Background="#44FFFFFF" BorderBrush="#88FFFFFF" BorderThickness="1" CornerRadius="2"/>
+                </ToggleButton>
+
+                <!-- Right -->
+                <ToggleButton x:Name="DockRight" Grid.Row="1" Grid.Column="2" Margin="2"
+                              ToolTip="Dock Right" Click="DockToggle_Click">
+                    <Border Width="22" Height="48" Background="#44FFFFFF" BorderBrush="#88FFFFFF" BorderThickness="1" CornerRadius="2"/>
+                </ToggleButton>
+
+                <!-- Fill -->
+                <ToggleButton x:Name="DockFill" Grid.Row="1" Grid.Column="1" Margin="2"
+                              ToolTip="Dock Fill" Click="DockToggle_Click">
+                    <Border Width="48" Height="48" Background="#44FFFFFF" BorderBrush="#88FFFFFF" BorderThickness="1" CornerRadius="2"/>
+                </ToggleButton>
+            </Grid>
+        </Grid>
+
+        <!-- None -->
+        <ToggleButton x:Name="DockNone" Grid.Row="8" Content="None" Width="70" HorizontalAlignment="Center"
+                      Click="DockToggle_Click" />
     </Grid>
 </UserControl>

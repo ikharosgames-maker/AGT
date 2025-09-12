@@ -1,125 +1,93 @@
-﻿using System.Globalization;
+﻿using System;
+using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 
-namespace Agt.Desktop.Views;
-
-public partial class ColorPickerWindow : Window
+namespace Agt.Desktop.Views
 {
-    public double Hue { get; private set; }          // 0..360
-    public double Saturation { get; private set; }   // 0..1
-    public double Lightness { get; private set; }    // 0..1
-
-    public string SelectedHex { get; private set; } = "#FFFFFF";
-
-    bool _updating = false;
-
-    public ColorPickerWindow(double hue = 0, double saturation = 1, double lightness = 0.5)
+    public partial class ColorPickerWindow : Window, INotifyPropertyChanged
     {
-        InitializeComponent();
-        Hue = hue; Saturation = saturation; Lightness = lightness;
-        ApplyToUI();
-        RefreshPreview();
-    }
+        private byte _a, _r, _g, _b;
+        private string _hex = "#FFFFFFFF";
 
-    private void ApplyToUI()
-    {
-        _updating = true;
-        HueSlider.Value = Hue;
-        SatSlider.Value = Saturation;
-        LitSlider.Value = Lightness;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        HueBox.Text = ((int)Hue).ToString(CultureInfo.InvariantCulture);
-        SatBox.Text = Saturation.ToString(CultureInfo.InvariantCulture);
-        LitBox.Text = Lightness.ToString(CultureInfo.InvariantCulture);
-        _updating = false;
-    }
+        public Brush PreviewBrush => new SolidColorBrush(Color.FromArgb(_a, _r, _g, _b));
 
-    private void RefreshPreview()
-    {
-        var c = FromHsl(Hue, Saturation, Lightness);
-        Preview.Background = new SolidColorBrush(c);
-        SelectedHex = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
-        HexBox.Text = SelectedHex;
-    }
+        public byte A { get => _a; set { _a = value; OnChanged(); } }
+        public byte R { get => _r; set { _r = value; OnChanged(); } }
+        public byte G { get => _g; set { _g = value; OnChanged(); } }
+        public byte B { get => _b; set { _b = value; OnChanged(); } }
 
-    private static Color FromHsl(double h, double s, double l)
-    {
-        h = (h % 360 + 360) % 360;
-        double c = (1 - System.Math.Abs(2 * l - 1)) * s;
-        double x = c * (1 - System.Math.Abs((h / 60) % 2 - 1));
-        double m = l - c / 2;
-
-        double r, g, b;
-        if (h < 60) { r = c; g = x; b = 0; }
-        else if (h < 120) { r = x; g = c; b = 0; }
-        else if (h < 180) { r = 0; g = c; b = x; }
-        else if (h < 240) { r = 0; g = x; b = c; }
-        else if (h < 300) { r = x; g = 0; b = c; }
-        else { r = c; g = 0; b = x; }
-
-        byte R = (byte)System.Math.Round((r + m) * 255);
-        byte G = (byte)System.Math.Round((g + m) * 255);
-        byte B = (byte)System.Math.Round((b + m) * 255);
-        return Color.FromRgb(R, G, B);
-    }
-
-    /* --- UI handlers --- */
-    private void HueSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_updating) return;
-        Hue = e.NewValue; ApplyToUI(); RefreshPreview();
-    }
-    private void SatSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_updating) return;
-        Saturation = e.NewValue; ApplyToUI(); RefreshPreview();
-    }
-    private void LitSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_updating) return;
-        Lightness = e.NewValue; ApplyToUI(); RefreshPreview();
-    }
-
-    private void HueBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        if (_updating) return;
-        if (double.TryParse(HueBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+        public string Hex
         {
-            Hue = System.Math.Max(0, System.Math.Min(360, v)); ApplyToUI(); RefreshPreview();
+            get => _hex;
+            set { _hex = value; OnChanged(); }
         }
-    }
-    private void SatBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        if (_updating) return;
-        if (double.TryParse(SatBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+
+        public SolidColorBrush Result { get; private set; } = new SolidColorBrush(Colors.White);
+
+        public ColorPickerWindow(SolidColorBrush? initial)
         {
-            Saturation = System.Math.Max(0, System.Math.Min(1, v)); ApplyToUI(); RefreshPreview();
+            InitializeComponent();
+            if (initial != null)
+            {
+                A = initial.Color.A; R = initial.Color.R; G = initial.Color.G; B = initial.Color.B;
+                Hex = $"#{A:X2}{R:X2}{G:X2}{B:X2}";
+            }
+            DataContext = this;
         }
-    }
-    private void LitBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        if (_updating) return;
-        if (double.TryParse(LitBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+
+        private void OnChanged()
         {
-            Lightness = System.Math.Max(0, System.Math.Min(1, v)); ApplyToUI(); RefreshPreview();
+            Hex = $"#{A:X2}{R:X2}{G:X2}{B:X2}";
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(A)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(R)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(G)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(B)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Hex)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewBrush)));
         }
-    }
 
-    private void CopyHex_Click(object sender, RoutedEventArgs e)
-    {
-        Clipboard.SetText(SelectedHex);
-    }
+        private static bool TryParseHex(string input, out Color color)
+        {
+            color = Colors.White;
+            if (string.IsNullOrWhiteSpace(input)) return false;
 
-    private void Ok_Click(object sender, RoutedEventArgs e)
-    {
-        DialogResult = true;
-        Close();
-    }
+            var s = input.Trim();
+            if (!s.StartsWith("#")) s = "#" + s;
 
-    private void Cancel_Click(object sender, RoutedEventArgs e)
-    {
-        DialogResult = false;
-        Close();
+            if (s.Length == 7) // #RRGGBB -> doplníme A
+                s = "#FF" + s.Substring(1);
+
+            if (s.Length != 9) return false;
+
+            try
+            {
+                byte a = byte.Parse(s.Substring(1, 2), NumberStyles.HexNumber);
+                byte r = byte.Parse(s.Substring(3, 2), NumberStyles.HexNumber);
+                byte g = byte.Parse(s.Substring(5, 2), NumberStyles.HexNumber);
+                byte b = byte.Parse(s.Substring(7, 2), NumberStyles.HexNumber);
+                color = Color.FromArgb(a, r, g, b);
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private void ApplyHex_Click(object sender, RoutedEventArgs e)
+        {
+            if (TryParseHex(Hex, out var c))
+            {
+                _a = c.A; _r = c.R; _g = c.G; _b = c.B;
+                OnChanged();
+            }
+        }
+
+        private void Ok_Click(object sender, RoutedEventArgs e)
+        {
+            Result = new SolidColorBrush(Color.FromArgb(A, R, G, B));
+            DialogResult = true;
+        }
     }
 }

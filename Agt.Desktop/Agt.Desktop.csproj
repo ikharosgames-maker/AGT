@@ -21,6 +21,9 @@
 		<Page Include="Views\AnchorDockEditor.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
+		<Page Include="Views\ColorPickerWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Include="Views\DesignerCanvas.xaml" />
 		<Page Include="Views\PropertiesPanel.xaml" />
 		<Page Include="Views\FloatingCommandBar.xaml" />
@@ -37,6 +40,7 @@
 	<ItemGroup>
 		<Compile Include="App.xaml.cs" />
 		<Compile Include="Converters\AutoContrastForegroundConverter.cs" />
+		<Compile Include="Converters\BrushToHexConverter.cs" />
 		<Compile Include="Converters\IntEqualsToVisibilityConverter.cs" />
 		<Compile Include="Converters\IntGreaterOrEqualToVisibilityConverter.cs" />
 		<Compile Include="MainWindow.xaml.cs" />
@@ -60,7 +64,11 @@
 
 		<Compile Include="Views\AnchorDockEditor.xaml.cs" />
 
+		<Compile Include="Views\ColorPickerWindow.xaml.cs" />
+
 		<Compile Include="Views\DesignerCanvas.xaml.cs" />
+
+		<Compile Include="Views\PropertiesPanel.Pickers.cs" />
 		<Compile Include="Views\PropertiesPanel.xaml.cs" />
 		<Compile Include="Views\FloatingCommandBar.xaml.cs" />
 		<Compile Include="Views\ComponentLibraryView.xaml.cs" />

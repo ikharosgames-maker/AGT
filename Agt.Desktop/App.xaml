@@ -36,7 +36,7 @@
             </Style.Triggers>
         </Style>
 
-        <!-- ListBox/ListView – čitelné barvy v knihovně/seznamu komponent -->
+        <!-- Listy: čitelný text -->
         <Style TargetType="{x:Type ListBox}">
             <Setter Property="Foreground" Value="{DynamicResource ControlTextBrush}"/>
             <Setter Property="Background" Value="{DynamicResource FieldBackgroundBrush}"/>
@@ -44,6 +44,26 @@
         <Style TargetType="{x:Type ListView}">
             <Setter Property="Foreground" Value="{DynamicResource ControlTextBrush}"/>
             <Setter Property="Background" Value="{DynamicResource FieldBackgroundBrush}"/>
+        </Style>
+        <Style TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Foreground" Value="{DynamicResource ControlTextBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="{x:Type ListViewItem}">
+            <Setter Property="Foreground" Value="{DynamicResource ControlTextBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
     </Application.Resources>

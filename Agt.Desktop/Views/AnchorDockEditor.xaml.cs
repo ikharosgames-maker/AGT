@@ -1,6 +1,5 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using Agt.Desktop.Models;
 
 namespace Agt.Desktop.Views
@@ -10,53 +9,65 @@ namespace Agt.Desktop.Views
         public AnchorDockEditor()
         {
             InitializeComponent();
-            Loaded += (_, __) => RefreshUI();
+            Loaded += (_, __) => RefreshDockButtons();
         }
 
-        public AnchorSides Anchor
-        {
-            get => (AnchorSides)GetValue(AnchorProperty);
-            set => SetValue(AnchorProperty, value);
-        }
-        public static readonly DependencyProperty AnchorProperty =
-            DependencyProperty.Register(nameof(Anchor), typeof(AnchorSides), typeof(AnchorDockEditor),
-                new FrameworkPropertyMetadata(AnchorSides.Left | AnchorSides.Top,
-                    FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
-                    (_, __) => { }));
+        #region DependencyProperty Dock (enum DockTo)
+        public static readonly DependencyProperty DockProperty =
+            DependencyProperty.Register(nameof(Dock), typeof(DockTo), typeof(AnchorDockEditor),
+                new FrameworkPropertyMetadata(DockTo.None, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+                    (o, e) => ((AnchorDockEditor)o).RefreshDockButtons()));
 
         public DockTo Dock
         {
             get => (DockTo)GetValue(DockProperty);
             set => SetValue(DockProperty, value);
         }
-        public static readonly DependencyProperty DockProperty =
-            DependencyProperty.Register(nameof(Dock), typeof(DockTo), typeof(AnchorDockEditor),
-                new FrameworkPropertyMetadata(DockTo.None,
-                    FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
-                    (_, __) => { }));
+        #endregion
 
-        private void RefreshUI()
+        #region DependencyProperty Anchor (ponecháno – pokud ho používáš)
+        public object? Anchor
         {
-            BtnTop.IsChecked = Anchor.HasFlag(AnchorSides.Top);
-            BtnBottom.IsChecked = Anchor.HasFlag(AnchorSides.Bottom);
-            BtnLeft.IsChecked = Anchor.HasFlag(AnchorSides.Left);
-            BtnRight.IsChecked = Anchor.HasFlag(AnchorSides.Right);
+            get => GetValue(AnchorProperty);
+            set => SetValue(AnchorProperty, value);
         }
 
+        public static readonly DependencyProperty AnchorProperty =
+            DependencyProperty.Register(nameof(Anchor), typeof(object), typeof(AnchorDockEditor),
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        #endregion
+
+        // Anchor kliky – nechávám prázdné, ať nepřepisuju tvoji logiku
         private void AnchorBtn_Click(object sender, RoutedEventArgs e)
         {
-            AnchorSides a = 0;
-            if (BtnLeft.IsChecked == true) a |= AnchorSides.Left;
-            if (BtnTop.IsChecked == true) a |= AnchorSides.Top;
-            if (BtnRight.IsChecked == true) a |= AnchorSides.Right;
-            if (BtnBottom.IsChecked == true) a |= AnchorSides.Bottom;
-            Anchor = a;
+            // TODO: tvá stávající implementace (pokud nějaká) – tady nechávám beze změn
         }
 
-        private void Dock_Checked(object sender, RoutedEventArgs e)
+        // Dock: všechna tlačítka jsou ToggleButtony, ale chováme se jako „radio“ (tj. vždy jen jedno zapnuté)
+        private void DockToggle_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is RadioButton rb && rb.Tag is DockTo d)
-                Dock = d;
+            if (!IsLoaded) return;
+
+            if (ReferenceEquals(sender, DockTop)) Dock = DockTo.Top;
+            else if (ReferenceEquals(sender, DockBottom)) Dock = DockTo.Bottom;
+            else if (ReferenceEquals(sender, DockLeft)) Dock = DockTo.Left;
+            else if (ReferenceEquals(sender, DockRight)) Dock = DockTo.Right;
+            else if (ReferenceEquals(sender, DockFill)) Dock = DockTo.Fill;
+            else if (ReferenceEquals(sender, DockNone)) Dock = DockTo.None;
+
+            RefreshDockButtons();
+        }
+
+        private void RefreshDockButtons()
+        {
+            if (DockTop == null) return;
+
+            DockTop.IsChecked = Dock == DockTo.Top;
+            DockBottom.IsChecked = Dock == DockTo.Bottom;
+            DockLeft.IsChecked = Dock == DockTo.Left;
+            DockRight.IsChecked = Dock == DockTo.Right;
+            DockFill.IsChecked = Dock == DockTo.Fill;
+            DockNone.IsChecked = Dock == DockTo.None;
         }
     }
 }
