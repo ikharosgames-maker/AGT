@@ -12,32 +12,38 @@
 
         <!-- Konvertory -->
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
-        <conv:AutoContrastForegroundConverter x:Key="AutoContrast"/>
 
-        <!-- Theme (barvy se dosadí v App.xaml.cs) -->
+        <!-- Theme (Canvas/mřížka) -->
         <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#202020"/>
         <SolidColorBrush x:Key="FieldBackgroundBrush"  Color="#2E2E2E"/>
         <SolidColorBrush x:Key="ControlTextBrush"      Color="#FFFFFF"/>
         <SolidColorBrush x:Key="GridDotBrush"          Color="#40FFFFFF"/>
-        <SolidColorBrush x:Key="MenuBackgroundBrush"   Color="#2A2A2A"/>
-        <SolidColorBrush x:Key="MenuTextBrush"         Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="MenuHoverBrush"        Color="#404040"/>
 
-        <!-- Menu / MenuItem styly přebarvitelné motivem -->
+        <!-- Menu – systémové barvy -->
         <Style TargetType="Menu">
-            <Setter Property="Background" Value="{DynamicResource MenuBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource MenuTextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.MenuBrushKey}}"/>
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.MenuTextBrushKey}}"/>
         </Style>
-
         <Style TargetType="MenuItem">
-            <Setter Property="Foreground" Value="{DynamicResource MenuTextBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource MenuBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.MenuTextBrushKey}}"/>
+            <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.MenuBrushKey}}"/>
             <Setter Property="BorderBrush" Value="{x:Null}"/>
             <Style.Triggers>
                 <Trigger Property="IsHighlighted" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
                 </Trigger>
             </Style.Triggers>
+        </Style>
+
+        <!-- ListBox/ListView – čitelné barvy v knihovně/seznamu komponent -->
+        <Style TargetType="{x:Type ListBox}">
+            <Setter Property="Foreground" Value="{DynamicResource ControlTextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource FieldBackgroundBrush}"/>
+        </Style>
+        <Style TargetType="{x:Type ListView}">
+            <Setter Property="Foreground" Value="{DynamicResource ControlTextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource FieldBackgroundBrush}"/>
         </Style>
 
     </Application.Resources>

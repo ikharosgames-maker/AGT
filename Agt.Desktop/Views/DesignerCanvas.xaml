@@ -4,11 +4,7 @@
              xmlns:m="clr-namespace:Agt.Desktop.Models"
              xmlns:local="clr-namespace:Agt.Desktop.Views">
     <Grid>
-        <!-- Vrstvy: ItemsHost + overlay pro lasso -->
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
+        <!-- Items -->
         <ItemsControl x:Name="ItemsHost"
                   ItemsSource="{Binding Items}">
             <ItemsControl.ItemsPanel>
@@ -35,24 +31,28 @@
             </ItemsControl.ItemContainerStyle>
 
             <ItemsControl.Resources>
+
                 <!-- LABEL -->
                 <DataTemplate DataType="{x:Type m:LabelField}">
-                    <Grid Width="{Binding Width}" Height="{Binding Height}">
-                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}"
+                PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
+                        <!-- obsah -->
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,0">
                             <TextBlock Text="{Binding Label}"
                          Foreground="{Binding Foreground}"
                          FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                         VerticalAlignment="Center" Margin="6,0,6,0"/>
+                         VerticalAlignment="Center"/>
                         </Border>
-
-                        <!-- pohyb -->
+                        <!-- selection overlay -->
+                        <Border BorderBrush="#2E86FF" BorderThickness="2" CornerRadius="2"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
+                        <!-- move/resize -->
                         <Thumb Opacity="0.01" Background="Transparent"
                    DragStarted="MoveThumb_DragStarted"
                    DragDelta="MoveThumb_DragDelta"
                    DragCompleted="MoveThumb_DragCompleted"/>
-
-                        <!-- resize pravý-dolní -->
-                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0"
+                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                    Background="#999" Cursor="SizeNWSE"
                    DragDelta="ResizeThumb_DragDelta"/>
                     </Grid>
@@ -60,13 +60,27 @@
 
                 <!-- TEXTBOX -->
                 <DataTemplate DataType="{x:Type m:TextBoxField}">
-                    <Grid Width="{Binding Width}" Height="{Binding Height}">
-                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
-                            <TextBox Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                       Foreground="{Binding Foreground}"
-                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                       BorderThickness="0" VerticalContentAlignment="Center"/>
+                    <Grid Width="{Binding Width}" Height="{Binding Height}"
+                PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                           Foreground="{Binding Foreground}"
+                           FontFamily="{Binding FontFamily}"/>
+                                <TextBox Grid.Row="1"
+                         Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Foreground="{Binding Foreground}"
+                         FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                         BorderThickness="0" VerticalContentAlignment="Center"/>
+                            </Grid>
                         </Border>
+                        <Border BorderBrush="#2E86FF" BorderThickness="2" CornerRadius="2"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
                         <Thumb Opacity="0.01" Background="Transparent"
                    DragStarted="MoveThumb_DragStarted"
                    DragDelta="MoveThumb_DragDelta"
@@ -79,14 +93,28 @@
 
                 <!-- TEXTAREA -->
                 <DataTemplate DataType="{x:Type m:TextAreaField}">
-                    <Grid Width="{Binding Width}" Height="{Binding Height}">
-                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
-                            <TextBox Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                       AcceptsReturn="True" TextWrapping="Wrap"
-                       Foreground="{Binding Foreground}"
-                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                       BorderThickness="0" VerticalContentAlignment="Top"/>
+                    <Grid Width="{Binding Width}" Height="{Binding Height}"
+                PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                           Foreground="{Binding Foreground}"
+                           FontFamily="{Binding FontFamily}"/>
+                                <TextBox Grid.Row="1"
+                         Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True" TextWrapping="Wrap"
+                         Foreground="{Binding Foreground}"
+                         FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                         BorderThickness="0" VerticalContentAlignment="Top"/>
+                            </Grid>
                         </Border>
+                        <Border BorderBrush="#2E86FF" BorderThickness="2" CornerRadius="2"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
                         <Thumb Opacity="0.01" Background="Transparent"
                    DragStarted="MoveThumb_DragStarted"
                    DragDelta="MoveThumb_DragDelta"
@@ -99,13 +127,27 @@
 
                 <!-- COMBOBOX -->
                 <DataTemplate DataType="{x:Type m:ComboBoxField}">
-                    <Grid Width="{Binding Width}" Height="{Binding Height}">
-                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
-                            <ComboBox IsEditable="{Binding IsEditable}"
-                        Foreground="{Binding Foreground}"
-                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                        ItemsSource="{Binding Options}"/>
+                    <Grid Width="{Binding Width}" Height="{Binding Height}"
+                PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                           Foreground="{Binding Foreground}"
+                           FontFamily="{Binding FontFamily}"/>
+                                <ComboBox Grid.Row="1"
+                          IsEditable="{Binding IsEditable}"
+                          ItemsSource="{Binding Options}"
+                          Foreground="{Binding Foreground}"
+                          FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
+                            </Grid>
                         </Border>
+                        <Border BorderBrush="#2E86FF" BorderThickness="2" CornerRadius="2"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
                         <Thumb Opacity="0.01" Background="Transparent"
                    DragStarted="MoveThumb_DragStarted"
                    DragDelta="MoveThumb_DragDelta"
@@ -118,13 +160,17 @@
 
                 <!-- CHECKBOX -->
                 <DataTemplate DataType="{x:Type m:CheckBoxField}">
-                    <Grid Width="{Binding Width}" Height="{Binding Height}">
-                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="4">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}"
+                PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
                             <CheckBox IsChecked="{Binding IsCheckedDefault}"
                         Content="{Binding Label}" VerticalAlignment="Center"
                         Foreground="{Binding Foreground}"
                         FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
                         </Border>
+                        <Border BorderBrush="#2E86FF" BorderThickness="2" CornerRadius="2"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
                         <Thumb Opacity="0.01" Background="Transparent"
                    DragStarted="MoveThumb_DragStarted"
                    DragDelta="MoveThumb_DragDelta"
@@ -137,10 +183,23 @@
 
                 <!-- DATE -->
                 <DataTemplate DataType="{x:Type m:DateField}">
-                    <Grid Width="{Binding Width}" Height="{Binding Height}">
-                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
-                            <DatePicker/>
+                    <Grid Width="{Binding Width}" Height="{Binding Height}"
+                PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                           Foreground="{Binding Foreground}"
+                           FontFamily="{Binding FontFamily}"/>
+                                <DatePicker Grid.Row="1"/>
+                            </Grid>
                         </Border>
+                        <Border BorderBrush="#2E86FF" BorderThickness="2" CornerRadius="2"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
                         <Thumb Opacity="0.01" Background="Transparent"
                    DragStarted="MoveThumb_DragStarted"
                    DragDelta="MoveThumb_DragDelta"
@@ -153,13 +212,27 @@
 
                 <!-- NUMBER -->
                 <DataTemplate DataType="{x:Type m:NumberField}">
-                    <Grid Width="{Binding Width}" Height="{Binding Height}">
-                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
-                            <TextBox Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                       Foreground="{Binding Foreground}"
-                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                       BorderThickness="0" VerticalContentAlignment="Center"/>
+                    <Grid Width="{Binding Width}" Height="{Binding Height}"
+                PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                           Foreground="{Binding Foreground}"
+                           FontFamily="{Binding FontFamily}"/>
+                                <TextBox Grid.Row="1"
+                         Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Foreground="{Binding Foreground}"
+                         FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                         BorderThickness="0" VerticalContentAlignment="Center"/>
+                            </Grid>
                         </Border>
+                        <Border BorderBrush="#2E86FF" BorderThickness="2" CornerRadius="2"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
                         <Thumb Opacity="0.01" Background="Transparent"
                    DragStarted="MoveThumb_DragStarted"
                    DragDelta="MoveThumb_DragDelta"
@@ -169,10 +242,11 @@
                    DragDelta="ResizeThumb_DragDelta"/>
                     </Grid>
                 </DataTemplate>
+
             </ItemsControl.Resources>
         </ItemsControl>
 
-        <!-- Lasso vrstva -->
+        <!-- Lasso overlay -->
         <Canvas x:Name="LassoLayer" IsHitTestVisible="False"/>
     </Grid>
 </UserControl>

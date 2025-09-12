@@ -103,7 +103,7 @@ namespace Agt.Desktop.Views
             panel.Background = brush;
         }
 
-        // --------- Drag&Drop z knihovny ----------
+        // --- DnD z knihovny ---
         private void RootCanvas_DragOver(object sender, DragEventArgs e)
         {
             e.Effects = e.Data.GetDataPresent("field/key") ? DragDropEffects.Copy : DragDropEffects.None;
@@ -121,10 +121,10 @@ namespace Agt.Desktop.Views
             e.Handled = true;
         }
 
-        // --------- Výběr klikem (neblokovat Thumb) ----------
+        // --- Klik/CTRL-klik (neblokovat Thumb) ---
         private void Item_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.OriginalSource is Thumb) return; // přenecháme drag Thumbu
+            if (e.OriginalSource is Thumb) return; // drag přes Thumb má prioritu
 
             var fe = sender as FrameworkElement;
             var item = fe?.DataContext;
@@ -136,14 +136,15 @@ namespace Agt.Desktop.Views
                 Selection.SelectSingle(item);
         }
 
-        // --------- Lasso ----------
+        // --- Lasso ---
         private Point? _lassoStart;
         private readonly RectangleGeometry _lassoRectGeom = new();
+        private UIElement? _lassoCapturedOn;
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var panel = GetItemsPanel(); if (panel == null) return;
-            if (e.Source != sender) return;
+            if (e.Source != sender) return; // pouze klik do „prázdna“
 
             if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
                 Selection.Clear();
@@ -161,7 +162,10 @@ namespace Agt.Desktop.Views
             };
             LassoLayer.Children.Clear();
             LassoLayer.Children.Add(path);
-            CaptureMouse();
+
+            // ✔ Capture na skutečný Canvas (ne na UserControl)
+            _lassoCapturedOn = sender as UIElement;
+            _lassoCapturedOn?.CaptureMouse();
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -193,10 +197,11 @@ namespace Agt.Desktop.Views
             _lassoStart = null;
             _lassoRectGeom.Rect = Rect.Empty;
             LassoLayer.Children.Clear();
-            if (IsMouseCaptured) ReleaseMouseCapture();
+            _lassoCapturedOn?.ReleaseMouseCapture();
+            _lassoCapturedOn = null;
         }
 
-        // --------- Move ----------
+        // --- Move ---
         private Point _dragStart;
         private double _origX, _origY;
 
@@ -240,7 +245,7 @@ namespace Agt.Desktop.Views
             if (IsMouseCaptured) ReleaseMouseCapture();
         }
 
-        // --------- Resize ----------
+        // --- Resize ---
         private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not FieldComponentBase f) return;
@@ -266,10 +271,9 @@ namespace Agt.Desktop.Views
             f.Height = dh;
         }
 
-        // --------- Context menu placeholder ----------
         private void Canvas_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            // (doplň později dynamické položky)
+            // TODO: doplnit položky menu
         }
     }
 }
