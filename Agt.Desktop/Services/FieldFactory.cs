@@ -1,60 +1,41 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Windows;
+using System.Windows.Media;
 using Agt.Desktop.Models;
 
 namespace Agt.Desktop.Services
 {
     public class FieldFactory
     {
+        private static SolidColorBrush DefaultFieldBrush =>
+            (Application.Current?.Resources["FieldBackgroundBrush"] as SolidColorBrush)
+            ?? new SolidColorBrush(Color.FromRgb(0x2E, 0x2E, 0x2E));
+
         public FieldComponentBase Create(string key, double x, double y, object? defaults)
         {
-            FieldComponentBase i = key switch
+            FieldComponentBase f = key switch
             {
-                "label" => new LabelField(),
-                "textbox" => new TextBoxField(),
-                "textarea" => new TextAreaField(),
-                "combobox" => new ComboBoxField(),
-                "checkbox" => new CheckBoxField(),
-                "date" => new DateField(),
-                "number" => new NumberField(),
-                _ => new TextBoxField()
+                "label" => new LabelField { Width = 160, Height = 22 },
+                "textbox" => new TextBoxField { Width = 260, Height = 28 },
+                "textarea" => new TextAreaField { Width = 360, Height = 90 },
+                "combobox" => new ComboBoxField { Width = 260, Height = 28 },
+                "checkbox" => new CheckBoxField { Width = 160, Height = 22 },
+                "date" => new DateField { Width = 200, Height = 28 },
+                "number" => new NumberField { Width = 200, Height = 28 },
+                _ => new LabelField { Width = 160, Height = 22 }
             };
 
-            i.X = x; i.Y = y;
+            f.TypeKey = key;
+            f.X = x; f.Y = y;
+            f.Background = DefaultFieldBrush;
 
-            if (defaults != null)
-                ApplyDefaults(i, defaults);
+            // Pojmenování: typ_blok_label_index (index přidává DesignerViewModel při vkládání, zde necháme základ)
+            f.Name = $"{key}_item";
+            f.FieldKey = $"{key}_item";
 
-            return i;
-        }
+            // defaulty z knihovny (pokud nějaké přijdou)
+            // TODO: promítnout podle tvé struktury
 
-        private static void ApplyDefaults(FieldComponentBase target, object defaults)
-        {
-            var tProps = target.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            var dType = defaults.GetType();
-
-            foreach (var d in dType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            {
-                var tp = tProps.FirstOrDefault(p => string.Equals(p.Name, d.Name, StringComparison.OrdinalIgnoreCase));
-                if (tp == null || !tp.CanWrite) continue;
-
-                var val = d.GetValue(defaults);
-                if (val is IEnumerable<string> strEnum &&
-                    tp.PropertyType.IsGenericType &&
-                    tp.PropertyType.GetGenericTypeDefinition() == typeof(System.Collections.ObjectModel.ObservableCollection<>))
-                {
-                    var addMethod = tp.PropertyType.GetMethod("Add");
-                    var inst = Activator.CreateInstance(tp.PropertyType);
-                    foreach (var s in strEnum) addMethod!.Invoke(inst, new object?[] { s });
-                    tp.SetValue(target, inst);
-                    continue;
-                }
-
-                tp.SetValue(target, val);
-            }
+            return f;
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using Agt.Desktop.Models;
 using Agt.Desktop.Services;
 using Agt.Desktop.ViewModels;
@@ -14,7 +15,7 @@ namespace Agt.Desktop.Views
 {
     public partial class DesignerCanvas : UserControl
     {
-        private SelectionService _selection => (SelectionService)Application.Current.Resources["SelectionService"];
+        private SelectionService Selection => (SelectionService)Application.Current.Resources["SelectionService"];
         private DesignerViewModel? VM => DataContext as DesignerViewModel;
 
         public DesignerCanvas()
@@ -22,20 +23,17 @@ namespace Agt.Desktop.Views
             InitializeComponent();
             Loaded += DesignerCanvas_Loaded;
             Unloaded += DesignerCanvas_Unloaded;
+            SizeChanged += (_, __) => UpdateGridBackground();
         }
 
         private void DesignerCanvas_Loaded(object sender, RoutedEventArgs e)
         {
-            // Pro jistotu: žádný capture nesmí zůstat
-            try { if (Mouse.Captured != null) Mouse.Capture(null); } catch { /* ignore */ }
-
             if (VM != null) VM.PropertyChanged += VM_PropertyChanged;
             UpdateGridBackground();
         }
 
         private void DesignerCanvas_Unloaded(object sender, RoutedEventArgs e)
         {
-            try { if (Mouse.Captured != null) Mouse.Capture(null); } catch { /* ignore */ }
             if (VM != null) VM.PropertyChanged -= VM_PropertyChanged;
             ClearLasso();
         }
@@ -46,7 +44,6 @@ namespace Agt.Desktop.Views
                 UpdateGridBackground();
         }
 
-        // ---------- pomocné ----------
         private Panel? GetItemsPanel()
         {
             ItemsHost.ApplyTemplate();
@@ -70,29 +67,32 @@ namespace Agt.Desktop.Views
 
         private void UpdateGridBackground()
         {
-            if (VM == null) return;
-            var panel = GetItemsPanel(); if (panel == null) return;
+            var panel = GetItemsPanel();
+            if (panel == null) return;
 
-            if (!VM.ShowGrid)
+            var baseBrush = Application.Current.Resources["CanvasBackgroundBrush"] as SolidColorBrush ?? Brushes.Gray;
+            if (VM == null || !VM.ShowGrid)
             {
-                panel.Background = Brushes.Transparent;
+                panel.Background = baseBrush;
                 return;
             }
 
-            var size = Math.Max(2, VM.GridSize);
-            var brush = new DrawingBrush(new GeometryDrawing
+            int size = Math.Max(2, (int)VM.GridSize);
+            var dot = Application.Current.Resources["GridDotBrush"] as SolidColorBrush ?? new SolidColorBrush(Color.FromArgb(64, 255, 255, 255));
+
+            var group = new DrawingGroup();
+            group.Children.Add(new GeometryDrawing
             {
-                Geometry = new GeometryGroup
-                {
-                    Children = new GeometryCollection
-                    {
-                        new RectangleGeometry(new Rect(0, 0, size, size)),
-                        new RectangleGeometry(new Rect(0,0,1,1))
-                    }
-                },
-                Pen = null,
-                Brush = new SolidColorBrush(Color.FromArgb(35, 255, 255, 255))
-            })
+                Brush = new SolidColorBrush(baseBrush.Color),
+                Geometry = new RectangleGeometry(new Rect(0, 0, size, size))
+            });
+            group.Children.Add(new GeometryDrawing
+            {
+                Brush = dot,
+                Geometry = new RectangleGeometry(new Rect(0, 0, 1, 1))
+            });
+
+            var brush = new DrawingBrush(group)
             {
                 TileMode = TileMode.Tile,
                 Viewport = new Rect(0, 0, size, size),
@@ -103,7 +103,7 @@ namespace Agt.Desktop.Views
             panel.Background = brush;
         }
 
-        // ---------- Drag&Drop z knihovny ----------
+        // --------- Drag&Drop z knihovny ----------
         private void RootCanvas_DragOver(object sender, DragEventArgs e)
         {
             e.Effects = e.Data.GetDataPresent("field/key") ? DragDropEffects.Copy : DragDropEffects.None;
@@ -121,34 +121,32 @@ namespace Agt.Desktop.Views
             e.Handled = true;
         }
 
-        // ---------- Výběr klikem ----------
-        private void Item_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        // --------- Výběr klikem (neblokovat Thumb) ----------
+        private void Item_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.OriginalSource is Thumb) return; // přenecháme drag Thumbu
+
             var fe = sender as FrameworkElement;
             var item = fe?.DataContext;
             if (item == null) return;
 
             if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-                _selection.Toggle(item);
+                Selection.Toggle(item);
             else
-                _selection.SelectSingle(item);
-
-            // NEchytat capture, ať menu funguje
-            e.Handled = true;
+                Selection.SelectSingle(item);
         }
 
-        // ---------- LASSO ----------
+        // --------- Lasso ----------
         private Point? _lassoStart;
         private readonly RectangleGeometry _lassoRectGeom = new();
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            // Klik do prázdna = zrušit výběr a začít lasso (bez focení okna)
             var panel = GetItemsPanel(); if (panel == null) return;
             if (e.Source != sender) return;
 
             if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
-                _selection.Clear();
+                Selection.Clear();
 
             _lassoStart = e.GetPosition(panel);
 
@@ -163,6 +161,7 @@ namespace Agt.Desktop.Views
             };
             LassoLayer.Children.Clear();
             LassoLayer.Children.Add(path);
+            CaptureMouse();
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -177,14 +176,12 @@ namespace Agt.Desktop.Views
             var h = Math.Abs(cur.Y - _lassoStart.Value.Y);
             _lassoRectGeom.Rect = new Rect(x, y, w, h);
 
-            // 1) Sestavíme cílovou množinu bez okamžitého „toggle“
-            var target = (DataContext as DesignerViewModel)!.Items
+            var target = VM!.Items
                 .Where(it => _lassoRectGeom.Rect.Contains(new Rect(it.X, it.Y, it.Width, it.Height)))
                 .Cast<object>()
                 .ToHashSet();
 
-            // 2) Nahradíme výběr „najednou“ (SelectionService doplň metodou ReplaceWith, viz níže)
-            _selection.ReplaceWith(target);
+            Selection.ReplaceWith(target);
         }
 
         private void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) => ClearLasso();
@@ -196,37 +193,26 @@ namespace Agt.Desktop.Views
             _lassoStart = null;
             _lassoRectGeom.Rect = Rect.Empty;
             LassoLayer.Children.Clear();
-
-            // jistota: nikdo nemá capture
-            try { if (Mouse.Captured != null) Mouse.Capture(null); } catch { /* ignore */ }
+            if (IsMouseCaptured) ReleaseMouseCapture();
         }
 
-        private void Canvas_ContextMenuOpening(object sender, ContextMenuEventArgs e)
-        {
-            // pravý klik nic nemění
-        }
-
-        // ---------- Move / Resize s limity ----------
+        // --------- Move ----------
         private Point _dragStart;
-        private double _origX, _origY, _origW, _origH;
+        private double _origX, _origY;
 
         private void MoveThumb_DragStarted(object sender, DragStartedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not FieldComponentBase f) return;
-            var panel = GetItemsPanel(); if (panel == null) return;
-
-            _dragStart = Mouse.GetPosition(panel);
+            _dragStart = Mouse.GetPosition(this);
             _origX = f.X; _origY = f.Y;
-            // NEchytat globální capture – Thumb si spravuje vlastní
         }
 
         private void MoveThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not FieldComponentBase f) return;
             if (VM == null) return;
-            var panel = GetItemsPanel(); if (panel == null) return;
 
-            var cur = Mouse.GetPosition(panel);
+            var cur = Mouse.GetPosition(this);
             var dx = cur.X - _dragStart.X;
             var dy = cur.Y - _dragStart.Y;
 
@@ -239,28 +225,29 @@ namespace Agt.Desktop.Views
                 ny = Math.Round(ny / VM.GridSize) * VM.GridSize;
             }
 
-            nx = Math.Max(0, Math.Min(nx, panel.ActualWidth - f.Width));
-            ny = Math.Max(0, Math.Min(ny, panel.ActualHeight - f.Height));
+            var host = GetItemsPanel();
+            double boundW = host?.ActualWidth ?? ActualWidth;
+            double boundH = host?.ActualHeight ?? ActualHeight;
+
+            nx = Math.Max(0, Math.Min(nx, Math.Max(0, boundW - f.Width)));
+            ny = Math.Max(0, Math.Min(ny, Math.Max(0, boundH - f.Height)));
 
             f.X = nx; f.Y = ny;
         }
 
         private void MoveThumb_DragCompleted(object sender, DragCompletedEventArgs e)
         {
-            // jistota: žádný capture
-            try { if (Mouse.Captured != null) Mouse.Capture(null); } catch { /* ignore */ }
+            if (IsMouseCaptured) ReleaseMouseCapture();
         }
 
+        // --------- Resize ----------
         private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not FieldComponentBase f) return;
             if (VM == null) return;
-            var panel = GetItemsPanel(); if (panel == null) return;
 
-            _origW = f.Width; _origH = f.Height;
-
-            var dw = Math.Max(10, _origW + e.HorizontalChange);
-            var dh = Math.Max(10, _origH + e.VerticalChange);
+            var dw = Math.Max(10, f.Width + e.HorizontalChange);
+            var dh = Math.Max(10, f.Height + e.VerticalChange);
 
             if (VM.SnapToGrid && VM.GridSize > 0)
             {
@@ -268,11 +255,21 @@ namespace Agt.Desktop.Views
                 dh = Math.Max(10, Math.Round(dh / VM.GridSize) * VM.GridSize);
             }
 
-            dw = Math.Min(dw, Math.Max(10, panel.ActualWidth - f.X));
-            dh = Math.Min(dh, Math.Max(10, panel.ActualHeight - f.Y));
+            var host = GetItemsPanel();
+            double boundW = host?.ActualWidth ?? ActualWidth;
+            double boundH = host?.ActualHeight ?? ActualHeight;
+
+            dw = Math.Min(dw, Math.Max(10, boundW - f.X));
+            dh = Math.Min(dh, Math.Max(10, boundH - f.Y));
 
             f.Width = dw;
             f.Height = dh;
+        }
+
+        // --------- Context menu placeholder ----------
+        private void Canvas_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            // (doplň později dynamické položky)
         }
     }
 }

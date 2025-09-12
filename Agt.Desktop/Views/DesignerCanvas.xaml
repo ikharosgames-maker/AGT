@@ -2,213 +2,177 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:m="clr-namespace:Agt.Desktop.Models"
-             xmlns:conv="clr-namespace:Agt.Desktop.Converters"
-             xmlns:local="clr-namespace:Agt.Desktop.Views"
-             Focusable="False" IsTabStop="False">
-    <UserControl.Resources>
-
-        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
-
-        <Style x:Key="DesignerItemStyle" TargetType="Border">
-            <Setter Property="Background" Value="{Binding Background}"/>
-            <Setter Property="BorderBrush" Value="#66B3E5FC"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                    <Setter Property="BorderThickness" Value="1.5"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <DataTemplate x:Key="Tpl_Overlay">
-            <Grid>
-                <Thumb DragDelta="MoveThumb_DragDelta"
-               DragStarted="MoveThumb_DragStarted"
-               DragCompleted="MoveThumb_DragCompleted"
-               Cursor="SizeAll" Opacity="0" Background="Transparent"/>
-                <Thumb Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-               Cursor="SizeNWSE"
-               Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"
-               DragDelta="ResizeThumb_DragDelta"/>
-            </Grid>
-        </DataTemplate>
-
-        <!-- LABEL -->
-        <DataTemplate x:Key="Tpl_Label">
-            <Border Style="{StaticResource DesignerItemStyle}"
-              MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                <Grid>
-                    <TextBlock Text="{Binding Label}" IsHitTestVisible="False"
-                     FontSize="{Binding FontSize}" FontFamily="{Binding FontFamily}"
-                     Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                    <ContentPresenter ContentTemplate="{StaticResource Tpl_Overlay}"/>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- TEXTBOX -->
-        <DataTemplate x:Key="Tpl_TextBox">
-            <Border Style="{StaticResource DesignerItemStyle}"
-              MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                <Grid>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
-                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                       Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <TextBox Width="{Binding Width}" Height="{Binding Height}" IsHitTestVisible="False"
-                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
-                     Background="{Binding Background}"
-                     Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
-                     FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                     Tag="{Binding FieldKey}" ToolTip="{Binding Placeholder}"/>
-                    </StackPanel>
-                    <ContentPresenter ContentTemplate="{StaticResource Tpl_Overlay}"/>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- TEXTAREA -->
-        <DataTemplate x:Key="Tpl_TextArea">
-            <Border Style="{StaticResource DesignerItemStyle}"
-              MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                <Grid>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
-                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                       Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <TextBox Width="{Binding Width}" Height="{Binding Height}" AcceptsReturn="True" TextWrapping="Wrap"
-                     IsHitTestVisible="False"
-                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
-                     Background="{Binding Background}"
-                     Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
-                     FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                     Tag="{Binding FieldKey}" ToolTip="{Binding Placeholder}"/>
-                    </StackPanel>
-                    <ContentPresenter ContentTemplate="{StaticResource Tpl_Overlay}"/>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- COMBOBOX -->
-        <DataTemplate x:Key="Tpl_ComboBox">
-            <Border Style="{StaticResource DesignerItemStyle}"
-              MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                <Grid>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
-                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                       Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <ComboBox Width="{Binding Width}" IsEditable="{Binding IsEditable}" IsHitTestVisible="False"
-                      SelectedValue="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
-                      Background="{Binding Background}"
-                      Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
-                      FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                      Tag="{Binding FieldKey}" ItemsSource="{Binding Options}"/>
-                    </StackPanel>
-                    <ContentPresenter ContentTemplate="{StaticResource Tpl_Overlay}"/>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- CHECKBOX -->
-        <DataTemplate x:Key="Tpl_CheckBox">
-            <Border Style="{StaticResource DesignerItemStyle}"
-              MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                <Grid>
-                    <CheckBox Content="{Binding Label}" IsHitTestVisible="False"
-                    IsChecked="{Binding IsCheckedDefault, UpdateSourceTrigger=PropertyChanged}"
-                    Background="{Binding Background}"
-                    Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
-                    FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
-                    <ContentPresenter ContentTemplate="{StaticResource Tpl_Overlay}"/>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- DATE -->
-        <DataTemplate x:Key="Tpl_Date">
-            <Border Style="{StaticResource DesignerItemStyle}"
-              MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                <Grid>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
-                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                       Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <DatePicker Width="{Binding Width}" IsHitTestVisible="False"
-                        SelectedDateFormat="Short" Tag="{Binding FieldKey}"
-                        Background="{Binding Background}"
-                        Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                    </StackPanel>
-                    <ContentPresenter ContentTemplate="{StaticResource Tpl_Overlay}"/>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- NUMBER -->
-        <DataTemplate x:Key="Tpl_Number">
-            <Border Style="{StaticResource DesignerItemStyle}"
-              MouseLeftButtonDown="Item_MouseLeftButtonDown">
-                <Grid>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Label}" Margin="0,0,0,2" IsHitTestVisible="False"
-                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                       Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"/>
-                        <TextBox Width="{Binding Width}" Height="{Binding Height}" IsHitTestVisible="False"
-                     Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
-                     Background="{Binding Background}"
-                     Foreground="{Binding Background, Converter={StaticResource AutoContrast}}"
-                     FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
-                     Tag="{Binding FieldKey}"/>
-                    </StackPanel>
-                    <ContentPresenter ContentTemplate="{StaticResource Tpl_Overlay}"/>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- Selector -->
-        <local:FieldTemplateSelector x:Key="FieldSelector"
-                                 TplLabel="{StaticResource Tpl_Label}"
-                                 TplTextBox="{StaticResource Tpl_TextBox}"
-                                 TplTextArea="{StaticResource Tpl_TextArea}"
-                                 TplComboBox="{StaticResource Tpl_ComboBox}"
-                                 TplCheckBox="{StaticResource Tpl_CheckBox}"
-                                 TplDate="{StaticResource Tpl_Date}"
-                                 TplNumber="{StaticResource Tpl_Number}"/>
-    </UserControl.Resources>
-
-    <Grid Focusable="False">
-        <Canvas x:Name="LassoLayer" IsHitTestVisible="False" />
+             xmlns:local="clr-namespace:Agt.Desktop.Views">
+    <Grid>
+        <!-- Vrstvy: ItemsHost + overlay pro lasso -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
         <ItemsControl x:Name="ItemsHost"
-                  ItemsSource="{Binding Items}"
-                  ItemTemplateSelector="{StaticResource FieldSelector}"
-                  Focusable="False" IsTabStop="False">
+                  ItemsSource="{Binding Items}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <Canvas x:Name="RootCanvas"
-                  Background="Transparent"
+                    <Canvas Background="{DynamicResource CanvasBackgroundBrush}"
                   AllowDrop="True"
-                  Drop="RootCanvas_Drop"
-                  DragOver="RootCanvas_DragOver"
+                  ContextMenuOpening="Canvas_ContextMenuOpening"
                   MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
                   MouseMove="Canvas_MouseMove"
                   MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
                   MouseLeave="Canvas_MouseLeave"
                   LostMouseCapture="Canvas_LostMouseCapture"
-                  ContextMenuOpening="Canvas_ContextMenuOpening"/>
+                  DragOver="RootCanvas_DragOver"
+                  Drop="RootCanvas_Drop"/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
 
             <ItemsControl.ItemContainerStyle>
                 <Style TargetType="ContentPresenter">
-                    <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
                     <Setter Property="Canvas.Left" Value="{Binding X}"/>
                     <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
-                    <Setter Property="Focusable" Value="False"/>
-                    <Setter Property="IsHitTestVisible" Value="True"/>
+                    <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
                 </Style>
             </ItemsControl.ItemContainerStyle>
+
+            <ItemsControl.Resources>
+                <!-- LABEL -->
+                <DataTemplate DataType="{x:Type m:LabelField}">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2">
+                            <TextBlock Text="{Binding Label}"
+                         Foreground="{Binding Foreground}"
+                         FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                         VerticalAlignment="Center" Margin="6,0,6,0"/>
+                        </Border>
+
+                        <!-- pohyb -->
+                        <Thumb Opacity="0.01" Background="Transparent"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragDelta="MoveThumb_DragDelta"
+                   DragCompleted="MoveThumb_DragCompleted"/>
+
+                        <!-- resize pravý-dolní -->
+                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0"
+                   Background="#999" Cursor="SizeNWSE"
+                   DragDelta="ResizeThumb_DragDelta"/>
+                    </Grid>
+                </DataTemplate>
+
+                <!-- TEXTBOX -->
+                <DataTemplate DataType="{x:Type m:TextBoxField}">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
+                            <TextBox Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       Foreground="{Binding Foreground}"
+                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                       BorderThickness="0" VerticalContentAlignment="Center"/>
+                        </Border>
+                        <Thumb Opacity="0.01" Background="Transparent"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragDelta="MoveThumb_DragDelta"
+                   DragCompleted="MoveThumb_DragCompleted"/>
+                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Background="#999" Cursor="SizeNWSE"
+                   DragDelta="ResizeThumb_DragDelta"/>
+                    </Grid>
+                </DataTemplate>
+
+                <!-- TEXTAREA -->
+                <DataTemplate DataType="{x:Type m:TextAreaField}">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
+                            <TextBox Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       AcceptsReturn="True" TextWrapping="Wrap"
+                       Foreground="{Binding Foreground}"
+                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                       BorderThickness="0" VerticalContentAlignment="Top"/>
+                        </Border>
+                        <Thumb Opacity="0.01" Background="Transparent"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragDelta="MoveThumb_DragDelta"
+                   DragCompleted="MoveThumb_DragCompleted"/>
+                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Background="#999" Cursor="SizeNWSE"
+                   DragDelta="ResizeThumb_DragDelta"/>
+                    </Grid>
+                </DataTemplate>
+
+                <!-- COMBOBOX -->
+                <DataTemplate DataType="{x:Type m:ComboBoxField}">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
+                            <ComboBox IsEditable="{Binding IsEditable}"
+                        Foreground="{Binding Foreground}"
+                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                        ItemsSource="{Binding Options}"/>
+                        </Border>
+                        <Thumb Opacity="0.01" Background="Transparent"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragDelta="MoveThumb_DragDelta"
+                   DragCompleted="MoveThumb_DragCompleted"/>
+                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Background="#999" Cursor="SizeNWSE"
+                   DragDelta="ResizeThumb_DragDelta"/>
+                    </Grid>
+                </DataTemplate>
+
+                <!-- CHECKBOX -->
+                <DataTemplate DataType="{x:Type m:CheckBoxField}">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="4">
+                            <CheckBox IsChecked="{Binding IsCheckedDefault}"
+                        Content="{Binding Label}" VerticalAlignment="Center"
+                        Foreground="{Binding Foreground}"
+                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
+                        </Border>
+                        <Thumb Opacity="0.01" Background="Transparent"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragDelta="MoveThumb_DragDelta"
+                   DragCompleted="MoveThumb_DragCompleted"/>
+                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Background="#999" Cursor="SizeNWSE"
+                   DragDelta="ResizeThumb_DragDelta"/>
+                    </Grid>
+                </DataTemplate>
+
+                <!-- DATE -->
+                <DataTemplate DataType="{x:Type m:DateField}">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
+                            <DatePicker/>
+                        </Border>
+                        <Thumb Opacity="0.01" Background="Transparent"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragDelta="MoveThumb_DragDelta"
+                   DragCompleted="MoveThumb_DragCompleted"/>
+                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Background="#999" Cursor="SizeNWSE"
+                   DragDelta="ResizeThumb_DragDelta"/>
+                    </Grid>
+                </DataTemplate>
+
+                <!-- NUMBER -->
+                <DataTemplate DataType="{x:Type m:NumberField}">
+                    <Grid Width="{Binding Width}" Height="{Binding Height}">
+                        <Border Background="{Binding Background}" BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="2">
+                            <TextBox Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       Foreground="{Binding Foreground}"
+                       FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                       BorderThickness="0" VerticalContentAlignment="Center"/>
+                        </Border>
+                        <Thumb Opacity="0.01" Background="Transparent"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragDelta="MoveThumb_DragDelta"
+                   DragCompleted="MoveThumb_DragCompleted"/>
+                        <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Background="#999" Cursor="SizeNWSE"
+                   DragDelta="ResizeThumb_DragDelta"/>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.Resources>
         </ItemsControl>
+
+        <!-- Lasso vrstva -->
+        <Canvas x:Name="LassoLayer" IsHitTestVisible="False"/>
     </Grid>
 </UserControl>

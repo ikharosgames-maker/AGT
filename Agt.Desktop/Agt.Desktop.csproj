@@ -7,6 +7,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<RootNamespace>Agt.Desktop</RootNamespace>
 		<EnableDefaultItems>false</EnableDefaultItems>
+		<Platforms>AnyCPU;x64</Platforms>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -17,6 +18,9 @@
 	<ItemGroup>
 		<ApplicationDefinition Include="App.xaml" />
 		<Page Include="MainWindow.xaml" />
+		<Page Include="Views\AnchorDockEditor.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Include="Views\DesignerCanvas.xaml" />
 		<Page Include="Views\PropertiesPanel.xaml" />
 		<Page Include="Views\FloatingCommandBar.xaml" />
@@ -33,6 +37,8 @@
 	<ItemGroup>
 		<Compile Include="App.xaml.cs" />
 		<Compile Include="Converters\AutoContrastForegroundConverter.cs" />
+		<Compile Include="Converters\IntEqualsToVisibilityConverter.cs" />
+		<Compile Include="Converters\IntGreaterOrEqualToVisibilityConverter.cs" />
 		<Compile Include="MainWindow.xaml.cs" />
 
 		<Compile Include="Models\Block.cs" />
@@ -48,8 +54,11 @@
 		<Compile Include="Services\SelectionService.cs" />
 		<Compile Include="Services\FieldCatalogService.cs" />
 		<Compile Include="Services\FieldFactory.cs" />
+		<Compile Include="Services\ThemeService.cs" />
 
 		<Compile Include="ViewModels\DesignerViewModel.cs" />
+
+		<Compile Include="Views\AnchorDockEditor.xaml.cs" />
 
 		<Compile Include="Views\DesignerCanvas.xaml.cs" />
 		<Compile Include="Views\PropertiesPanel.xaml.cs" />
