@@ -4,11 +4,14 @@
              xmlns:m="clr-namespace:Agt.Desktop.Models"
              xmlns:views="clr-namespace:Agt.Desktop.Views"
              xmlns:conv="clr-namespace:Agt.Desktop.Converters">
-
     <UserControl.Resources>
+        <!-- původní převodníky -->
         <conv:IntEqualsToVisibilityConverter x:Key="EqVis"/>
         <conv:IntGreaterOrEqualToVisibilityConverter x:Key="GeVis"/>
         <conv:BrushToHexConverter x:Key="BrushToHex"/>
+
+        <!-- nový stringový převodník -->
+        <conv:StringEqualsToVisibilityConverter x:Key="StrEqVis"/>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -30,6 +33,7 @@
                         <StackPanel>
                             <TextBlock Text="Vlastnosti" FontWeight="SemiBold" Margin="0,0,0,8"/>
 
+                            <!-- Obecné vlastnosti -->
                             <UniformGrid Columns="2" Margin="0,0,0,12">
                                 <TextBlock Text="Name"/>
                                 <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
@@ -58,7 +62,7 @@
                                 <TextBlock Text="FontSize"/>
                                 <TextBox Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}"/>
 
-                                <!-- Foreground s náhledem + klik na čtvereček otevře dialog -->
+                                <!-- Foreground s náhledem + HEX -->
                                 <TextBlock Text="Foreground"/>
                                 <DockPanel LastChildFill="True">
                                     <Button Width="20" Height="20"
@@ -68,11 +72,10 @@
                                             Background="{Binding Foreground}"
                                             ToolTip="Změnit barvu"
                                             Click="PickForeground_Click"/>
-                                    <!-- Ponecháme původní TextBox (kód/Brush.ToString) -->
-                                    <TextBox Text="{Binding Foreground, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox Text="{Binding Foreground, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
 
-                                <!-- Background s náhledem + klik na čtvereček otevře dialog -->
+                                <!-- Background s náhledem + HEX -->
                                 <TextBlock Text="Background"/>
                                 <DockPanel LastChildFill="True">
                                     <Button Width="20" Height="20"
@@ -82,7 +85,7 @@
                                             Background="{Binding Background}"
                                             ToolTip="Změnit barvu"
                                             Click="PickBackground_Click"/>
-                                    <TextBox Text="{Binding Background, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox Text="{Binding Background, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
 
                                 <TextBlock Text="Šířka"/>
@@ -101,10 +104,11 @@
                                 <TextBox Text="{Binding Y, UpdateSourceTrigger=PropertyChanged}"/>
                             </UniformGrid>
 
-                            <!-- CheckBox specifické vlastnosti
-                                 (teď je to správně uvnitř DataTemplate, binding jde na SelectedItem.TypeKey) -->
-                            <StackPanel Margin="0,8,0,12"
-                                        Visibility="{Binding TypeKey, Converter={StaticResource EqVis}, ConverterParameter=checkbox}">
+                            <!-- Dynamické – specifické vlastnosti podle TypeKey -->
+
+                            <!-- CHECKBOX -->
+                            <StackPanel Margin="0,0,0,12"
+                                        Visibility="{Binding TypeKey, Converter={StaticResource StrEqVis}, ConverterParameter=checkbox}">
                                 <TextBlock Text="Zaškrtávátko" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                 <UniformGrid Columns="2">
                                     <TextBlock Text="Checked (výchozí)"/>
@@ -112,7 +116,39 @@
                                 </UniformGrid>
                             </StackPanel>
 
-                            <!-- Anchor/Dock editor – nový VS-like vzhled -->
+                            <!-- TEXTBOX -->
+                            <StackPanel Margin="0,0,0,12"
+                                        Visibility="{Binding TypeKey, Converter={StaticResource StrEqVis}, ConverterParameter=textbox}">
+                                <TextBlock Text="TextBox" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <UniformGrid Columns="2">
+                                    <TextBlock Text="Max length"/>
+                                    <TextBox Text="{Binding MaxLength, UpdateSourceTrigger=PropertyChanged}"/>
+                                </UniformGrid>
+                            </StackPanel>
+
+                            <!-- TEXTAREA -->
+                            <StackPanel Margin="0,0,0,12"
+                                        Visibility="{Binding TypeKey, Converter={StaticResource StrEqVis}, ConverterParameter=textarea}">
+                                <TextBlock Text="TextArea" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <UniformGrid Columns="2">
+                                    <TextBlock Text="Rows"/>
+                                    <TextBox Text="{Binding Rows, UpdateSourceTrigger=PropertyChanged}"/>
+                                </UniformGrid>
+                            </StackPanel>
+
+                            <!-- COMBOBOX -->
+                            <StackPanel Margin="0,0,0,12"
+                                        Visibility="{Binding TypeKey, Converter={StaticResource StrEqVis}, ConverterParameter=combobox}">
+                                <TextBlock Text="ComboBox" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <UniformGrid Columns="2">
+                                    <TextBlock Text="Editable"/>
+                                    <CheckBox IsChecked="{Binding IsEditable, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="Options (CSV)"/>
+                                    <TextBox Text="{Binding OptionsCsv, UpdateSourceTrigger=PropertyChanged}"/>
+                                </UniformGrid>
+                            </StackPanel>
+
+                            <!-- Anchor/Dock editor -->
                             <views:AnchorDockEditor Anchor="{Binding Anchor, Mode=TwoWay}"
                                                     Dock="{Binding Dock, Mode=TwoWay}"
                                                     Margin="0,4,0,0"/>
@@ -145,23 +181,22 @@
 
                     <TextBlock Text="Foreground"/>
                     <DockPanel LastChildFill="True">
-                        <Border Width="20" Height="20" Margin="0,0,6,0" DockPanel.Dock="Left"
-            BorderBrush="#666" BorderThickness="1"
-            Background="{Binding Foreground}"
-            ToolTip="Změnit barvu"
-            MouseLeftButtonUp="PickForeground_Click"/>
-                        <TextBox Text="{Binding Foreground, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Width="20" Height="20" Margin="0,0,6,0" DockPanel.Dock="Left"
+                                BorderBrush="#666" BorderThickness="1"
+                                Background="{Binding BulkForeground}"
+                                ToolTip="Změnit barvu"
+                                Click="PickBulkForeground_Click"/>
+                        <TextBox Text="{Binding BulkForeground, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </DockPanel>
 
-                    <!-- Background: náhled + HEX -->
                     <TextBlock Text="Background"/>
                     <DockPanel LastChildFill="True">
-                        <Border Width="20" Height="20" Margin="0,0,6,0" DockPanel.Dock="Left"
-            BorderBrush="#666" BorderThickness="1"
-            Background="{Binding Background}"
-            ToolTip="Změnit barvu"
-            MouseLeftButtonUp="PickBackground_Click"/>
-                        <TextBox Text="{Binding Background, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Width="20" Height="20" Margin="0,0,6,0" DockPanel.Dock="Left"
+                                BorderBrush="#666" BorderThickness="1"
+                                Background="{Binding BulkBackground}"
+                                ToolTip="Změnit barvu"
+                                Click="PickBulkBackground_Click"/>
+                        <TextBox Text="{Binding BulkBackground, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </DockPanel>
 
                     <TextBlock Text="Šířka"/>

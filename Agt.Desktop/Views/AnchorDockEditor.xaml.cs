@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using Agt.Desktop.Models;
 
 namespace Agt.Desktop.Views
@@ -16,23 +17,17 @@ namespace Agt.Desktop.Views
             };
         }
 
-        // --- Dock ---
-        public static readonly DependencyProperty DockProperty =
-            DependencyProperty.Register(nameof(Dock), typeof(DockTo), typeof(AnchorDockEditor),
-                new FrameworkPropertyMetadata(DockTo.None, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
-                    (o, e) => ((AnchorDockEditor)o).RefreshDockButtons()));
+        // ===== Dependency Properties =====
 
-        public DockTo Dock
-        {
-            get => (DockTo)GetValue(DockProperty);
-            set => SetValue(DockProperty, value);
-        }
-
-        // --- Anchor (flags) ---
         public static readonly DependencyProperty AnchorProperty =
-            DependencyProperty.Register(nameof(Anchor), typeof(AnchorSides), typeof(AnchorDockEditor),
-                new FrameworkPropertyMetadata(AnchorSides.Left | AnchorSides.Top, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
-                    (o, e) => ((AnchorDockEditor)o).RefreshAnchorButtons()));
+            DependencyProperty.Register(
+                nameof(Anchor),
+                typeof(AnchorSides),
+                typeof(AnchorDockEditor),
+                new FrameworkPropertyMetadata(
+                    AnchorSides.Left | AnchorSides.Top,
+                    FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+                    OnAnchorChanged));
 
         public AnchorSides Anchor
         {
@@ -40,25 +35,50 @@ namespace Agt.Desktop.Views
             set => SetValue(AnchorProperty, value);
         }
 
+        private static void OnAnchorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var ctl = (AnchorDockEditor)d;
+            ctl.RefreshAnchorButtons();
+        }
+
+        public static readonly DependencyProperty DockProperty =
+            DependencyProperty.Register(
+                nameof(Dock),
+                typeof(DockTo),
+                typeof(AnchorDockEditor),
+                new FrameworkPropertyMetadata(
+                    DockTo.None,
+                    FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+                    OnDockChanged));
+
+        public DockTo Dock
+        {
+            get => (DockTo)GetValue(DockProperty);
+            set => SetValue(DockProperty, value);
+        }
+
+        private static void OnDockChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var ctl = (AnchorDockEditor)d;
+            ctl.RefreshDockButtons();
+        }
+
+        // ===== Anchor UI =====
+
         private void AnchorBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (!IsLoaded) return;
+            if (sender is not ToggleButton btn) return;
 
             var a = Anchor;
-            void Toggle(AnchorSides flag, bool on)
-            {
-                if (on) a |= flag;
-                else a &= ~flag;
-            }
 
-            if (ReferenceEquals(sender, BtnTop))
-                Toggle(AnchorSides.Top, BtnTop.IsChecked == true);
-            else if (ReferenceEquals(sender, BtnBottom))
-                Toggle(AnchorSides.Bottom, BtnBottom.IsChecked == true);
-            else if (ReferenceEquals(sender, BtnLeft))
-                Toggle(AnchorSides.Left, BtnLeft.IsChecked == true);
-            else if (ReferenceEquals(sender, BtnRight))
-                Toggle(AnchorSides.Right, BtnRight.IsChecked == true);
+            if (btn == BtnLeft) a ^= AnchorSides.Left;
+            if (btn == BtnTop) a ^= AnchorSides.Top;
+            if (btn == BtnRight) a ^= AnchorSides.Right;
+            if (btn == BtnBottom) a ^= AnchorSides.Bottom;
+
+            // nikdy nenech prázdné — vrať default Left|Top
+            if (a == AnchorSides.None)
+                a = AnchorSides.Left | AnchorSides.Top;
 
             Anchor = a;
             RefreshAnchorButtons();
@@ -66,34 +86,38 @@ namespace Agt.Desktop.Views
 
         private void RefreshAnchorButtons()
         {
-            if (BtnTop == null) return;
-            BtnTop.IsChecked = (Anchor & AnchorSides.Top) == AnchorSides.Top;
-            BtnBottom.IsChecked = (Anchor & AnchorSides.Bottom) == AnchorSides.Bottom;
             BtnLeft.IsChecked = (Anchor & AnchorSides.Left) == AnchorSides.Left;
+            BtnTop.IsChecked = (Anchor & AnchorSides.Top) == AnchorSides.Top;
             BtnRight.IsChecked = (Anchor & AnchorSides.Right) == AnchorSides.Right;
+            BtnBottom.IsChecked = (Anchor & AnchorSides.Bottom) == AnchorSides.Bottom;
         }
+
+        // ===== Dock UI =====
 
         private void DockToggle_Click(object sender, RoutedEventArgs e)
         {
-            if (!IsLoaded) return;
+            if (sender is not ToggleButton btn) return;
 
-            if (ReferenceEquals(sender, DockTop)) Dock = DockTo.Top;
-            else if (ReferenceEquals(sender, DockBottom)) Dock = DockTo.Bottom;
-            else if (ReferenceEquals(sender, DockLeft)) Dock = DockTo.Left;
-            else if (ReferenceEquals(sender, DockRight)) Dock = DockTo.Right;
-            else if (ReferenceEquals(sender, DockFill)) Dock = DockTo.Fill;
+            var requested = DockTo.None;
+            if (btn == DockLeft) requested = DockTo.Left;
+            else if (btn == DockTop) requested = DockTo.Top;
+            else if (btn == DockRight) requested = DockTo.Right;
+            else if (btn == DockBottom) requested = DockTo.Bottom;
+            else if (btn == DockFill) requested = DockTo.Fill;
+
+            // opakovaný klik na aktivní = vypnout (None)
+            Dock = (Dock == requested) ? DockTo.None : requested;
 
             RefreshDockButtons();
         }
 
         private void RefreshDockButtons()
         {
-            if (DockTop == null) return;
-
-            DockTop.IsChecked = Dock == DockTo.Top;
-            DockBottom.IsChecked = Dock == DockTo.Bottom;
+            // exkluzivita & vizuální stav
             DockLeft.IsChecked = Dock == DockTo.Left;
+            DockTop.IsChecked = Dock == DockTo.Top;
             DockRight.IsChecked = Dock == DockTo.Right;
+            DockBottom.IsChecked = Dock == DockTo.Bottom;
             DockFill.IsChecked = Dock == DockTo.Fill;
         }
     }
