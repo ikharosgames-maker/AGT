@@ -21,9 +21,16 @@ namespace Agt.Desktop.Views
         public DesignerCanvas()
         {
             InitializeComponent();
+
+            // původní handlery
             Loaded += DesignerCanvas_Loaded;
             Unloaded += DesignerCanvas_Unloaded;
             SizeChanged += (_, __) => UpdateGridBackground();
+
+            // háky na partial Anchor/Dock (metody jsou v DesignerCanvas.AnchorDock.cs)
+            Loaded += AnchorDock_OnLoaded;
+            Unloaded += AnchorDock_OnUnloaded;
+            SizeChanged += AnchorDock_OnSizeChanged;
         }
 
         private void DesignerCanvas_Loaded(object sender, RoutedEventArgs e)
@@ -44,6 +51,7 @@ namespace Agt.Desktop.Views
                 UpdateGridBackground();
         }
 
+        // ===== Items panel =====
         private Panel? GetItemsPanel()
         {
             ItemsHost.ApplyTemplate();
@@ -65,6 +73,7 @@ namespace Agt.Desktop.Views
             return null;
         }
 
+        // ===== Grid background =====
         private void UpdateGridBackground()
         {
             var panel = GetItemsPanel();
@@ -103,7 +112,7 @@ namespace Agt.Desktop.Views
             panel.Background = brush;
         }
 
-        // --- DnD z knihovny ---
+        // ===== DnD z knihovny =====
         private void RootCanvas_DragOver(object sender, DragEventArgs e)
         {
             e.Effects = e.Data.GetDataPresent("field/key") ? DragDropEffects.Copy : DragDropEffects.None;
@@ -121,7 +130,7 @@ namespace Agt.Desktop.Views
             e.Handled = true;
         }
 
-        // --- Klik/CTRL-klik (neblokovat Thumb) ---
+        // ===== Klik/CTRL-klik (neblokovat Thumb) =====
         private void Item_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.OriginalSource is Thumb) return; // drag přes Thumb má prioritu
@@ -136,7 +145,7 @@ namespace Agt.Desktop.Views
                 Selection.SelectSingle(item);
         }
 
-        // --- Lasso ---
+        // ===== Lasso =====
         private Point? _lassoStart;
         private readonly RectangleGeometry _lassoRectGeom = new();
         private UIElement? _lassoCapturedOn;
@@ -144,7 +153,7 @@ namespace Agt.Desktop.Views
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var panel = GetItemsPanel(); if (panel == null) return;
-            if (e.Source != sender) return; // pouze klik do „prázdna“
+            if (e.Source != sender) return; // jen klik do „prázdna“
 
             if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
                 Selection.Clear();
@@ -163,7 +172,6 @@ namespace Agt.Desktop.Views
             LassoLayer.Children.Clear();
             LassoLayer.Children.Add(path);
 
-            // ✔ Capture na skutečný Canvas (ne na UserControl)
             _lassoCapturedOn = sender as UIElement;
             _lassoCapturedOn?.CaptureMouse();
         }
@@ -201,15 +209,20 @@ namespace Agt.Desktop.Views
             _lassoCapturedOn = null;
         }
 
-        // --- Move ---
+        // ===== Move/Resize =====
         private Point _dragStart;
         private double _origX, _origY;
+
+        private bool _suspendAnchorDock;
+        private bool ShouldSuspendAnchorDock() => _suspendAnchorDock; // čte partial AnchorDock
 
         private void MoveThumb_DragStarted(object sender, DragStartedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not FieldComponentBase f) return;
             _dragStart = Mouse.GetPosition(this);
             _origX = f.X; _origY = f.Y;
+
+            _suspendAnchorDock = true; // během drag neaplikovat Anchor/Dock
         }
 
         private void MoveThumb_DragDelta(object sender, DragDeltaEventArgs e)
@@ -242,10 +255,19 @@ namespace Agt.Desktop.Views
 
         private void MoveThumb_DragCompleted(object sender, DragCompletedEventArgs e)
         {
+            _suspendAnchorDock = false;
+
+            if ((sender as FrameworkElement)?.DataContext is FieldComponentBase f)
+            {
+                var parent = GetItemsPanel();
+                var size = new Size(parent?.ActualWidth ?? ActualWidth, parent?.ActualHeight ?? ActualHeight);
+                AnchorDockService.ResetBaseline(f, size);
+                AnchorDockService.Apply(f, size);
+            }
+
             if (IsMouseCaptured) ReleaseMouseCapture();
         }
 
-        // --- Resize ---
         private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not FieldComponentBase f) return;
@@ -269,11 +291,15 @@ namespace Agt.Desktop.Views
 
             f.Width = dw;
             f.Height = dh;
+
+            // udrž bounds + anchor/dock konzistenci
+            var size = new Size(boundW, boundH);
+            AnchorDockService.Apply(f, size);
         }
 
         private void Canvas_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            // TODO: doplnit položky menu
+            // TODO: context menu (Smazat/Duplikovat/…)
         }
     }
 }

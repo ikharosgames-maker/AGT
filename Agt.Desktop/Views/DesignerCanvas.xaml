@@ -2,7 +2,12 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:m="clr-namespace:Agt.Desktop.Models"
-             xmlns:local="clr-namespace:Agt.Desktop.Views">
+             xmlns:local="clr-namespace:Agt.Desktop.Views"
+             Loaded="AnchorDock_OnLoaded"
+             Unloaded="AnchorDock_OnUnloaded"
+             SizeChanged="AnchorDock_OnSizeChanged">
+
+
     <Grid>
         <!-- Items -->
         <ItemsControl x:Name="ItemsHost"

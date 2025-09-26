@@ -44,6 +44,7 @@
 		<Compile Include="Converters\IntEqualsToVisibilityConverter.cs" />
 		<Compile Include="Converters\IntGreaterOrEqualToVisibilityConverter.cs" />
 		<Compile Include="MainWindow.xaml.cs" />
+		<Compile Include="Models\AnchorOptions.cs" />
 
 		<Compile Include="Models\Block.cs" />
 		<Compile Include="Models\FieldComponentBase.cs" />
@@ -54,6 +55,7 @@
 		<Compile Include="Models\CheckBoxField.cs" />
 		<Compile Include="Models\DateField.cs" />
 		<Compile Include="Models\NumberField.cs" />
+		<Compile Include="Services\AnchorDockService.cs" />
 
 		<Compile Include="Services\SelectionService.cs" />
 		<Compile Include="Services\FieldCatalogService.cs" />
@@ -65,6 +67,8 @@
 		<Compile Include="Views\AnchorDockEditor.xaml.cs" />
 
 		<Compile Include="Views\ColorPickerWindow.xaml.cs" />
+
+		<Compile Include="Views\DesignerCanvas.AnchorDock.cs" />
 
 		<Compile Include="Views\DesignerCanvas.xaml.cs" />
 

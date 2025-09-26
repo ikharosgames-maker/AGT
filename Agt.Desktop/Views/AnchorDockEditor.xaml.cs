@@ -9,10 +9,14 @@ namespace Agt.Desktop.Views
         public AnchorDockEditor()
         {
             InitializeComponent();
-            Loaded += (_, __) => RefreshDockButtons();
+            Loaded += (_, __) =>
+            {
+                RefreshAnchorButtons();
+                RefreshDockButtons();
+            };
         }
 
-        #region DependencyProperty Dock (enum DockTo)
+        // --- Dock ---
         public static readonly DependencyProperty DockProperty =
             DependencyProperty.Register(nameof(Dock), typeof(DockTo), typeof(AnchorDockEditor),
                 new FrameworkPropertyMetadata(DockTo.None, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
@@ -23,27 +27,52 @@ namespace Agt.Desktop.Views
             get => (DockTo)GetValue(DockProperty);
             set => SetValue(DockProperty, value);
         }
-        #endregion
 
-        #region DependencyProperty Anchor (ponecháno – pokud ho používáš)
-        public object? Anchor
+        // --- Anchor (flags) ---
+        public static readonly DependencyProperty AnchorProperty =
+            DependencyProperty.Register(nameof(Anchor), typeof(AnchorSides), typeof(AnchorDockEditor),
+                new FrameworkPropertyMetadata(AnchorSides.Left | AnchorSides.Top, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+                    (o, e) => ((AnchorDockEditor)o).RefreshAnchorButtons()));
+
+        public AnchorSides Anchor
         {
-            get => GetValue(AnchorProperty);
+            get => (AnchorSides)GetValue(AnchorProperty);
             set => SetValue(AnchorProperty, value);
         }
 
-        public static readonly DependencyProperty AnchorProperty =
-            DependencyProperty.Register(nameof(Anchor), typeof(object), typeof(AnchorDockEditor),
-                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
-        #endregion
-
-        // Anchor kliky – nechávám prázdné, ať nepřepisuju tvoji logiku
         private void AnchorBtn_Click(object sender, RoutedEventArgs e)
         {
-            // TODO: tvá stávající implementace (pokud nějaká) – tady nechávám beze změn
+            if (!IsLoaded) return;
+
+            var a = Anchor;
+            void Toggle(AnchorSides flag, bool on)
+            {
+                if (on) a |= flag;
+                else a &= ~flag;
+            }
+
+            if (ReferenceEquals(sender, BtnTop))
+                Toggle(AnchorSides.Top, BtnTop.IsChecked == true);
+            else if (ReferenceEquals(sender, BtnBottom))
+                Toggle(AnchorSides.Bottom, BtnBottom.IsChecked == true);
+            else if (ReferenceEquals(sender, BtnLeft))
+                Toggle(AnchorSides.Left, BtnLeft.IsChecked == true);
+            else if (ReferenceEquals(sender, BtnRight))
+                Toggle(AnchorSides.Right, BtnRight.IsChecked == true);
+
+            Anchor = a;
+            RefreshAnchorButtons();
         }
 
-        // Dock: všechna tlačítka jsou ToggleButtony, ale chováme se jako „radio“ (tj. vždy jen jedno zapnuté)
+        private void RefreshAnchorButtons()
+        {
+            if (BtnTop == null) return;
+            BtnTop.IsChecked = (Anchor & AnchorSides.Top) == AnchorSides.Top;
+            BtnBottom.IsChecked = (Anchor & AnchorSides.Bottom) == AnchorSides.Bottom;
+            BtnLeft.IsChecked = (Anchor & AnchorSides.Left) == AnchorSides.Left;
+            BtnRight.IsChecked = (Anchor & AnchorSides.Right) == AnchorSides.Right;
+        }
+
         private void DockToggle_Click(object sender, RoutedEventArgs e)
         {
             if (!IsLoaded) return;
@@ -53,7 +82,6 @@ namespace Agt.Desktop.Views
             else if (ReferenceEquals(sender, DockLeft)) Dock = DockTo.Left;
             else if (ReferenceEquals(sender, DockRight)) Dock = DockTo.Right;
             else if (ReferenceEquals(sender, DockFill)) Dock = DockTo.Fill;
-            else if (ReferenceEquals(sender, DockNone)) Dock = DockTo.None;
 
             RefreshDockButtons();
         }
@@ -67,7 +95,6 @@ namespace Agt.Desktop.Views
             DockLeft.IsChecked = Dock == DockTo.Left;
             DockRight.IsChecked = Dock == DockTo.Right;
             DockFill.IsChecked = Dock == DockTo.Fill;
-            DockNone.IsChecked = Dock == DockTo.None;
         }
     }
 }
