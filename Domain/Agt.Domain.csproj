@@ -4,12 +4,6 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Agt.Contracts\Agt.Contracts.csproj" />
-    <ProjectReference Include="..\Domain\Agt.Domain.csproj" />
-  </ItemGroup>
 
 </Project>

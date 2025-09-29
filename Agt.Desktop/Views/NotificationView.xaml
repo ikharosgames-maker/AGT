@@ -1,0 +1,7 @@
+﻿<UserControl x:Class="Agt.Desktop.Views.NotificationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <TextBlock Text="Notifikace – WIP" Margin="8"/>
+    </Grid>
+</UserControl>
