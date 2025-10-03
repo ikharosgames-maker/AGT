@@ -7,7 +7,7 @@ namespace Agt.Desktop.Views
         public FormEditorView()
         {
             InitializeComponent();
-            DataContext = new ViewModels.FormEditorViewModel();
+            DataContext = new ViewModels.FormProcessEditorViewModel();
         }
     }
 }
