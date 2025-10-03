@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Media;
 using Agt.Desktop.Models;
 using Agt.Desktop.Services;
+using Agt.Desktop.Adapters;
 
 namespace Agt.Desktop.ViewModels
 {
@@ -55,9 +56,9 @@ namespace Agt.Desktop.ViewModels
 
         public DesignerViewModel()
         {
-            _selection = (SelectionService)Application.Current.Resources["SelectionService"];
-            _catalog = (FieldCatalogService)Application.Current.Resources["FieldCatalog"];
-            _factory = (FieldFactory)Application.Current.Resources["FieldFactory"];
+            _selection = (SelectionService)Agt.Desktop.App.Current.Resources["SelectionService"];
+            _catalog = (FieldCatalogService)Agt.Desktop.App.Current.Resources["FieldCatalog"];
+            _factory = (FieldFactory)Agt.Desktop.App.Current.Resources["FieldFactory"];
 
             _selection.PropertyChanged += (_, __) =>
             {
@@ -65,12 +66,12 @@ namespace Agt.Desktop.ViewModels
                 OnPropertyChanged(nameof(SelectedItem));
             };
 
-            AlignLeftCommand = new RelayCommand(OnAlignLeft, () => _selection.Count >= 2);
-            BringToFrontCommand = new RelayCommand(OnBringToFront, HasAny);
-            SendToBackCommand = new RelayCommand(OnSendToBack, HasAny);
-            DuplicateCommand = new RelayCommand(OnDuplicate, HasAny);
+            AlignLeftCommand = new RelayCommandAdapter(OnAlignLeft, () => _selection.Count >= 2);
+            BringToFrontCommand = new RelayCommandAdapter(OnBringToFront, HasAny);
+            SendToBackCommand = new RelayCommandAdapter(OnSendToBack, HasAny);
+            DuplicateCommand = new RelayCommandAdapter(OnDuplicate, HasAny);
             DeleteCommand = new AsyncRelayCommand(OnDeleteAsync, HasAny);
-            ApplyBulkCommand = new RelayCommand(ApplyBulk, () => _selection.Count >= 2);
+            ApplyBulkCommand = new RelayCommandAdapter(ApplyBulk, () => _selection.Count >= 2);
         }
 
         public void NewBlock(Block block)

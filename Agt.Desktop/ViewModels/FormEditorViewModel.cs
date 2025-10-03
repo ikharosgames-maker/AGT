@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*using Agt.Desktop.Services;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -30,15 +31,22 @@ namespace Agt.Desktop.ViewModels
 
         public FormProcessEditorViewModel()
         {
-            // Paleta demo
-            Palette.Add(new PaletteItem("QC_Input", "Vstupní kontrola", "1.0.0"));
-            Palette.Add(new PaletteItem("VisualCheck", "Vizuální kontrola", "2.1.0"));
-            Palette.Add(new PaletteItem("Neshoda", "Neshoda", "1.0.0"));
-
             // Dostupní uživatelé/skupiny (DEMO) — později nahradíme AD providerem
             SeedDirectoryDemo();
         }
+        /// <summary>
+        /// Načte položky palety z knihovny bloků (JSON na disku).
+        /// Volat po vytvoření VM nebo kdykoli při „Obnovit paletu“.
+        /// </summary>
+        public void LoadPaletteFromLibrary(IBlockLibrary lib)
+        {
+            if (lib == null) return;
 
+            var items = lib.Enumerate().ToList();
+            Palette.Clear();
+            foreach (var it in items)
+                Palette.Add(new PaletteItem(it.Key, it.Name, it.Version));
+        }
         private void SeedDirectoryDemo()
         {
             // Users (demo)
@@ -349,3 +357,4 @@ namespace Agt.Desktop.ViewModels
         }
     }
 }
+*/

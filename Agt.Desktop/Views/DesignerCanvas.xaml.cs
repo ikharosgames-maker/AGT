@@ -15,7 +15,7 @@ namespace Agt.Desktop.Views
 {
     public partial class DesignerCanvas : UserControl
     {
-        private SelectionService Selection => (SelectionService)Application.Current.Resources["SelectionService"];
+        private SelectionService Selection => (SelectionService)Agt.Desktop.App.Current.Resources["SelectionService"];
         private DesignerViewModel? VM => DataContext as DesignerViewModel;
 
         public DesignerCanvas()
@@ -79,7 +79,7 @@ namespace Agt.Desktop.Views
             var panel = GetItemsPanel();
             if (panel == null) return;
 
-            var baseBrush = Application.Current.Resources["CanvasBackgroundBrush"] as SolidColorBrush ?? Brushes.Gray;
+            var baseBrush = Agt.Desktop.App.Current.Resources["CanvasBackgroundBrush"] as SolidColorBrush ?? Brushes.Gray;
             if (VM == null || !VM.ShowGrid)
             {
                 panel.Background = baseBrush;
@@ -87,7 +87,7 @@ namespace Agt.Desktop.Views
             }
 
             int size = Math.Max(2, (int)VM.GridSize);
-            var dot = Application.Current.Resources["GridDotBrush"] as SolidColorBrush ?? new SolidColorBrush(Color.FromArgb(64, 255, 255, 255));
+            var dot = Agt.Desktop.App.Current.Resources["GridDotBrush"] as SolidColorBrush ?? new SolidColorBrush(Color.FromArgb(64, 255, 255, 255));
 
             var group = new DrawingGroup();
             group.Children.Add(new GeometryDrawing

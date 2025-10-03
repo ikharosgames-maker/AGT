@@ -18,7 +18,7 @@ namespace Agt.Desktop.Services
             return true;
         }
 
-        public static void ApplyThemeResources(Application app)
+        public static void ApplyThemeResources(Agt.Desktop.App app)
         {
             bool light = IsLightTheme();
 

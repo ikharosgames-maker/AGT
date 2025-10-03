@@ -7,11 +7,11 @@ namespace Agt.Desktop.Services
     public class FieldFactory
     {
         private static SolidColorBrush DefaultFieldBrush =>
-            (Application.Current?.Resources["FieldBackgroundBrush"] as SolidColorBrush)
+            (Agt.Desktop.App.Current?.Resources["FieldBackgroundBrush"] as SolidColorBrush)
             ?? new SolidColorBrush(Color.FromRgb(0x2E, 0x2E, 0x2E));
 
         private static SolidColorBrush DefaultTextBrush =>
-            (Application.Current?.Resources["ControlTextBrush"] as SolidColorBrush)
+            (Agt.Desktop.App.Current?.Resources["ControlTextBrush"] as SolidColorBrush)
             ?? Brushes.Black;
 
         public FieldComponentBase Create(string key, double x, double y, object? defaults)

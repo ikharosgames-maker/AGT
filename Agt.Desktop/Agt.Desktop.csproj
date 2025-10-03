@@ -18,10 +18,13 @@
 	<!-- XAML -->
 	<ItemGroup>
 		<ApplicationDefinition Include="App.xaml" />
+		<Page Include="Controls\BlockPreviewControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Include="MainShell.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
-		<Page Include="MainWindow.xaml" />
+		<Page Include="Views\BlocksEditorWindow.xaml" />
 		<Page Include="Views\AnchorDockEditor.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
@@ -61,6 +64,10 @@
 	<ItemGroup>
 		<Compile Include="Adapters\RelayCommandAdapter.cs" />
 		<Compile Include="App.xaml.cs" />
+		<Compile Include="Controls\BlockPreviewControl.xaml.cs" />
+		<Compile Include="Services\BlockLibraryJson.cs" />
+		<Compile Include="Services\IBlockLibrary.cs" />
+		<Compile Include="ViewModels\SemicolonToListConverter.cs" />
 		<Compile Include="Views\ContrastForegroundConverter.cs" />
 		<Compile Include="Views\StageEdgePathConverter.cs" />
 		<Compile Include="ViewModels\FormProcessEditorViewModel.cs" />
@@ -74,7 +81,7 @@
 		<Compile Include="Converters\ReferenceEqualityConverter.cs" />
 		<Compile Include="Converters\StringEqualsToVisibilityConverter.cs" />
 		<Compile Include="MainShell.xaml.cs" />
-		<Compile Include="MainWindow.xaml.cs" />
+		<Compile Include="Views\BlocksEditorWindow.xaml.cs" />
 		<Compile Include="Models\AnchorOptions.cs" />
 
 		<Compile Include="Models\Block.cs" />
@@ -147,7 +154,6 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="Controls\" />
 	  <Folder Include="Views\Adorners\" />
 	</ItemGroup>
 	<ItemGroup>

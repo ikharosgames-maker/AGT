@@ -1,25 +1,26 @@
-﻿using System.IO;
+﻿using Agt.Desktop.Services;
+using Agt.Desktop.ViewModels;
+using Microsoft.Win32;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Win32;
-using Agt.Desktop.ViewModels;
 
-namespace Agt.Desktop
+namespace Agt.Desktop.Views
 {
-    public partial class MainWindow : Window
+    public partial class BlocksEditorWindow : Window
     {
         private DesignerViewModel VM => (DesignerViewModel)DataContext;
 
-        public MainWindow()
+        public BlocksEditorWindow()
         {
             InitializeComponent();
-            DataContext = new DesignerViewModel(); // start prázdný, blok přes Menu -> Nový blok
+            DataContext = new DesignerViewModel();
         }
 
         private void NewBlock_OnClick(object sender, RoutedEventArgs e)
         {
-            var dlg = new Views.NewBlockDialog
+            var dlg = new NewBlockDialog
             {
                 Owner = this,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -32,12 +33,22 @@ namespace Agt.Desktop
 
         private void SaveJson_OnClick(object sender, RoutedEventArgs e)
         {
-            if (VM.CurrentBlock == null) { MessageBox.Show("Nejprve založte blok."); return; }
+            if (VM.CurrentBlock == null)
+            {
+                MessageBox.Show("Nejprve založte nebo načtěte blok.");
+                return;
+            }
+
             var sfd = new SaveFileDialog { Filter = "AGT JSON (*.json)|*.json" };
             if (sfd.ShowDialog(this) != true) return;
 
             var payload = VM.ExportToDto();
+            // 1) Uložení do vybraného souboru
             File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+
+            // 2) Kopie do knihovny (sdílený katalog pro paletu formulářového editoru)
+            BlockLibraryJson.Default.SaveToLibrary(payload);
+
             VM.StatusText = $"Uloženo: {System.IO.Path.GetFileName(sfd.FileName)}";
         }
 
@@ -57,6 +68,7 @@ namespace Agt.Desktop
                 MessageBox.Show("Soubor nelze načíst.");
             }
         }
+
         private void GridPlus_OnClick(object sender, RoutedEventArgs e)
         {
             var vm = (DesignerViewModel)DataContext;

@@ -1,0 +1,25 @@
+﻿<UserControl x:Class="Agt.Desktop.Views.FlowDesignerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="260"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="320"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Background="#181818">
+            <TextBlock Text="Paleta bloků" Margin="8" FontWeight="Bold"/>
+        </StackPanel>
+
+        <Grid Grid.Column="1">
+            <Border Background="#101010">
+                <Canvas x:Name="DesignCanvas" Width="2000" Height="1200" Background="#151515"/>
+            </Border>
+        </Grid>
+
+        <StackPanel Grid.Column="2" Margin="8">
+            <TextBlock Text="Vlastnosti" FontWeight="Bold"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

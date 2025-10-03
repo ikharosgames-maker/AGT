@@ -7,7 +7,7 @@ namespace Agt.Desktop.Views
 {
     public partial class ComponentsListView : UserControl
     {
-        private SelectionService Selection => (SelectionService)Application.Current.Resources["SelectionService"];
+        private SelectionService Selection => (SelectionService)Agt.Desktop.App.Current.Resources["SelectionService"];
 
         public ComponentsListView()
         {

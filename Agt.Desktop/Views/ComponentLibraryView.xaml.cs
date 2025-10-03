@@ -19,7 +19,7 @@ namespace Agt.Desktop.Views
             // Zkuste najít katalog ve zdrojích – nejdřív lokálně, pak v App
             var catalog =
                 this.TryFindResource("FieldCatalog") as FieldCatalogService
-                ?? Application.Current?.Resources["FieldCatalog"] as FieldCatalogService;
+                ?? Agt.Desktop.App.Current?.Resources["FieldCatalog"] as FieldCatalogService;
 
             if (catalog == null)
             {

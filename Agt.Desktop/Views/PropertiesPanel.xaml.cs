@@ -63,14 +63,14 @@ namespace Agt.Desktop.Views
             // zavírání mimo
             popup.Opened += (_, __) =>
             {
-                Application.Current.MainWindow.PreviewMouseDown += CloseOnOutsideClick;
+                Agt.Desktop.App.Current.MainWindow.PreviewMouseDown += CloseOnOutsideClick;
             };
             void CloseOnOutsideClick(object? s, System.Windows.Input.MouseButtonEventArgs e)
             {
                 if (popup.IsOpen && !IsAncestorOf(popup.Child, e.OriginalSource as DependencyObject))
                 {
                     popup.IsOpen = false;
-                    Application.Current.MainWindow.PreviewMouseDown -= CloseOnOutsideClick;
+                    Agt.Desktop.App.Current.MainWindow.PreviewMouseDown -= CloseOnOutsideClick;
                 }
             }
 

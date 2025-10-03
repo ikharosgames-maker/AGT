@@ -1,0 +1,312 @@
+﻿<Window x:Class="Agt.Desktop.Views.FormProcessEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Agt.Desktop.ViewModels"
+xmlns:viewsControls="clr-namespace:Agt.Desktop.Controls"
+        Title="Editor formuláře a procesu" Height="900" Width="1400">
+    <DockPanel>
+        <!-- Menu -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_Soubor">
+                <MenuItem Header="Publikovat..." Click="OnPublish"/>
+                <Separator/>
+                <MenuItem Header="Zavřít" Click="OnClose"/>
+            </MenuItem>
+            <MenuItem Header="_Vložit">
+                <MenuItem Header="Nová Stage (Group)" Click="OnAddStage"/>
+            </MenuItem>
+            <MenuItem Header="_Zobrazit">
+                <MenuItem Header="Reset zoom" Click="OnResetZoom"/>
+                <MenuItem Header="Zarovnat na mřížku" Click="OnSnapAll"/>
+            </MenuItem>
+        </Menu>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="420"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Paleta bloků -->
+            <Border Grid.Column="0" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" BorderBrush="#333" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock Text="Paleta bloků" FontWeight="Bold" Margin="10" DockPanel.Dock="Top"/>
+                    <ListBox x:Name="PaletteList"
+                   ItemsSource="{Binding Palette}"
+                   DisplayMemberPath="Display"
+                   Margin="10"
+                   PreviewMouseMove="PaletteList_PreviewMouseMove"
+                   MouseDoubleClick="OnPaletteDoubleClick"/>
+                </DockPanel>
+            </Border>
+
+            <!-- Plátno + zoom/pan -->
+            <Grid Grid.Column="1">
+                <Border x:Name="ZoomHost"
+                Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                ClipToBounds="True" SnapsToDevicePixels="True">
+                    <Canvas x:Name="RootCanvas"
+                  Width="5000" Height="4000"
+                  Background="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}"
+                  MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                  MouseMove="Canvas_MouseMove"
+                  MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                  PreviewMouseRightButtonDown="ZoomHost_PreviewMouseRightButtonDown"
+                  MouseWheel="ZoomHost_MouseWheel">
+
+                        <!-- STAGES -->
+                        <ItemsControl ItemsSource="{Binding Graph.Stages}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                    <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
+                                    <Setter Property="Panel.ZIndex" Value="0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="Panel.ZIndex" Value="10"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="{Binding W}" Height="{Binding H}" CornerRadius="8"
+                          Background="#202020" BorderThickness="2"
+                          MouseLeftButtonDown="Stage_MouseLeftButtonDown"
+                          MouseMove="Stage_MouseMove"
+                          MouseLeftButtonUp="Stage_MouseLeftButtonUp"
+                          AllowDrop="True"
+                          Drop="Stage_Drop">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderBrush" Value="#666"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="DeepSkyBlue"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="34"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Hlavička -->
+                                            <Grid Grid.Row="0" Background="#2A2A2A" MouseLeftButtonDown="StageHeader_MouseLeftButtonDown">
+                                                <TextBlock Text="{Binding Title}" Margin="10,6" FontWeight="Bold" Foreground="White"/>
+                                            </Grid>
+
+                                            <!-- Uzly (bloky ve stage) -->
+                                            <ItemsControl ItemsSource="{Binding Blocks}">
+                                                <ItemsControl.ItemContainerStyle>
+                                                    <Style TargetType="ContentPresenter">
+                                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                        <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
+                                                    </Style>
+                                                </ItemsControl.ItemContainerStyle>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:BlockVm}">
+                                                        <viewsControls:BlockPreviewControl
+          Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}"
+          MouseLeftButtonDown="OnBlockMouseDown"
+          MouseMove="OnBlockMouseMove"
+          MouseLeftButtonUp="OnBlockMouseUp"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+
+                                            <!-- Porty -->
+                                            <Ellipse Grid.RowSpan="2" Width="12" Height="12" Fill="#5AF"
+                               HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center"
+                               MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
+                               MouseLeftButtonDown="Stage_InPort_MouseLeftButtonDown"/>
+                                            <Ellipse Grid.RowSpan="2" Width="12" Height="12" Fill="#5AF"
+                               HorizontalAlignment="Right" Margin="0,0,6,0" VerticalAlignment="Center"
+                               MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
+                               MouseLeftButtonDown="Stage_OutPort_MouseLeftButtonDown"/>
+
+                                            <!-- resize -->
+                                            <Thumb Grid.RowSpan="2"
+                             Width="16" Height="16"
+                             HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                             Margin="0,0,2,2" Cursor="SizeNWSE"
+                             DragDelta="Stage_Resize_DragDelta">
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="Thumb">
+                                                        <Border Background="#5AF" CornerRadius="3" />
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                                <Panel.ZIndex>1000</Panel.ZIndex>
+                                            </Thumb>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- HRANY -->
+                        <Canvas x:Name="EdgeLayer" Width="5000" Height="4000" Panel.ZIndex="2000"/>
+                        <Path x:Name="RubberPath" Stroke="#AAA" StrokeDashArray="4,4" StrokeThickness="1" Visibility="Collapsed" Panel.ZIndex="3000"/>
+                    </Canvas>
+                </Border>
+            </Grid>
+
+            <!-- Pravý panel -->
+            <Border Grid.Column="2" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" BorderBrush="#333" BorderThickness="1,0,0,0">
+                <ScrollViewer>
+                    <StackPanel Margin="12" x:Name="RightPanelRoot">
+                        <TextBlock Text="Vlastnosti" FontWeight="Bold"/>
+                        <Separator Margin="0,6,0,10"/>
+
+                        <!-- Vlastnosti STAGE -->
+                        <StackPanel DataContext="{Binding SelectedStage}">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <TextBlock Text="Vybraná stage" FontWeight="Bold"/>
+                            <TextBlock Text="Název" Margin="0,4,0,0"/>
+                            <TextBox Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <!-- Přiřazení: SKUPINY -->
+                            <GroupBox Header="Přiřazení skupin" Margin="0,10,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="48"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBox x:Name="TbGroupFilter" Grid.Column="0" Grid.Row="0" Margin="0,0,6,6" 
+                           TextChanged="OnGroupFilterChanged"/>
+                                    <TextBlock Grid.Column="2" Grid.Row="0" Margin="6,0,0,6" 
+                             VerticalAlignment="Center" Opacity="0.7" Text="Přiřazeno"/>
+
+                                    <ListBox x:Name="LbAvailGroups" Grid.Column="0" Grid.Row="1" 
+                           ItemsSource="{Binding DataContext.AvailableGroups, ElementName=RightPanelRoot}" 
+                           SelectionMode="Extended" Height="140"/>
+                                    <StackPanel Grid.Column="1" Grid.Row="1" VerticalAlignment="Center">
+                                        <Button Content="&gt;&gt;" Margin="0,0,0,6" Click="OnAddGroups"/>
+                                        <Button Content="&lt;&lt;" Click="OnRemoveGroups"/>
+                                    </StackPanel>
+                                    <ListBox x:Name="LbAssignedGroups" Grid.Column="2" Grid.Row="1"
+                           ItemsSource="{Binding AssignedGroups}" SelectionMode="Extended" Height="140"/>
+                                </Grid>
+                            </GroupBox>
+
+                            <!-- Přiřazení: UŽIVATELÉ -->
+                            <GroupBox Header="Přiřazení uživatelů" Margin="0,10,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="48"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBox x:Name="TbUserFilter" Grid.Column="0" Grid.Row="0" Margin="0,0,6,6" 
+                           TextChanged="OnUserFilterChanged"/>
+                                    <TextBlock Grid.Column="2" Grid.Row="0" Margin="6,0,0,6" 
+                             VerticalAlignment="Center" Opacity="0.7" Text="Přiřazeno"/>
+
+                                    <ListBox x:Name="LbAvailUsers" Grid.Column="0" Grid.Row="1"
+                           ItemsSource="{Binding DataContext.AvailableUsers, ElementName=RightPanelRoot}" 
+                           SelectionMode="Extended" Height="160"/>
+                                    <StackPanel Grid.Column="1" Grid.Row="1" VerticalAlignment="Center">
+                                        <Button Content="&gt;&gt;" Margin="0,0,0,6" Click="OnAddUsers"/>
+                                        <Button Content="&lt;&lt;" Click="OnRemoveUsers"/>
+                                    </StackPanel>
+                                    <ListBox x:Name="LbAssignedUsers" Grid.Column="2" Grid.Row="1"
+                           ItemsSource="{Binding AssignedUsers}" SelectionMode="Extended" Height="160"/>
+                                </Grid>
+                            </GroupBox>
+
+                            <!-- Další běhová nastavení -->
+                            <TextBlock Text="Start mód" Margin="0,10,0,0"/>
+                            <ComboBox SelectedItem="{Binding StartMode, Mode=TwoWay}">
+                                <ComboBoxItem Content="Manual"/>
+                                <ComboBoxItem Content="AutoOnPrevComplete"/>
+                                <ComboBoxItem Content="AutoOnCondition"/>
+                            </ComboBox>
+
+                            <TextBlock Text="SLA (hodin)" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding SLAHours, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <CheckBox Content="Povolit Reopen" IsChecked="{Binding AllowReopen, Mode=TwoWay}" Margin="0,8,0,0"/>
+                            <CheckBox Content="Auto Complete po dokončení všech bloků" IsChecked="{Binding AutoCompleteOnAllBlocks, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <Separator Margin="0,12,0,12"/>
+
+                        <!-- Vlastnosti BLOKU -->
+                        <StackPanel DataContext="{Binding SelectedBlock}">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="Vybraný blok" FontWeight="Bold"/>
+                            <TextBlock Text="Titulek" />
+                            <TextBox Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="Key" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding Key}" IsReadOnly="True"/>
+                            <TextBlock Text="Version" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding Version}" IsReadOnly="True"/>
+                        </StackPanel>
+
+                        <Separator Margin="0,12,0,12"/>
+
+                        <!-- Vlastnosti HRANY -->
+                        <StackPanel DataContext="{Binding SelectedStageEdge}">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="Vybraná hrana (Stage → Stage)" FontWeight="Bold"/>
+                            <TextBlock Text="Podmínka (JSON)"/>
+                            <TextBox AcceptsReturn="True" Height="120" Text="{Binding ConditionJson, Mode=TwoWay}"/>
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

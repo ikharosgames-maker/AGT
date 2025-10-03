@@ -1,4 +1,4 @@
-﻿<Window x:Class="Agt.Desktop.MainWindow"
+﻿<Window x:Class="Agt.Desktop.Views.BlocksEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:Agt.Desktop.Views"
@@ -14,15 +14,15 @@
             <RowDefinition Height="Auto"/>
             <!-- INFO BAR -->
             <RowDefinition Height="36"/>
-            <!-- HLAVNÍ OBSAH -->
+            <!-- OBSAH -->
             <RowDefinition Height="*"/>
-            <!-- STATUS BAR -->
-            <RowDefinition Height="26"/>
+            <!-- STATUS -->
+            <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
 
         <!-- Hlavní Menu: vždy viditelné, kontrastní -->
         <Menu Grid.Row="0" Background="#222222" Foreground="#FFFFFF" FontSize="13" IsHitTestVisible="True">
-        <MenuItem Header="_Soubor">
+            <MenuItem Header="_Soubor">
                 <MenuItem Header="_Nový blok…" Click="NewBlock_OnClick"/>
                 <MenuItem Header="_Otevřít…" Click="LoadJson_OnClick"/>
                 <MenuItem Header="_Uložit…" Click="SaveJson_OnClick"/>
@@ -41,82 +41,66 @@
             </MenuItem>
 
             <MenuItem Header="_Zobrazení">
-                <MenuItem Header="Zobrazit _mřížku" IsCheckable="True" IsChecked="{Binding ShowGrid}"/>
-                <MenuItem Header="_Přichytávat na mřížku" IsCheckable="True" IsChecked="{Binding SnapToGrid}"/>
-                <Separator/>
                 <MenuItem Header="Mřížka −" Click="GridMinus_OnClick"/>
                 <MenuItem Header="Mřížka +" Click="GridPlus_OnClick"/>
                 <Separator/>
                 <MenuItem Header="Velikost mřížky:">
                     <MenuItem.HeaderTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" >
-                                <TextBlock Text="Velikost mřížky: " />
-                                <TextBlock Text="{Binding GridSize}" FontWeight="SemiBold"/>
-                            </StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="Velikost mřížky:" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding GridSize}" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </DockPanel>
                         </DataTemplate>
                     </MenuItem.HeaderTemplate>
                 </MenuItem>
             </MenuItem>
-
 
             <MenuItem Header="_Layout">
                 <MenuItem Header="_Auto layout" Click="AutoLayout_OnClick"/>
             </MenuItem>
         </Menu>
 
-        <!-- Info bar -->
-        <Border Grid.Row="1" Background="#1A1A1A" BorderBrush="#333" BorderThickness="0,0,0,1">
-            <DockPanel LastChildFill="True">
-                <TextBlock Margin="12,0" VerticalAlignment="Center" FontWeight="SemiBold">
-          <Run Text="Blok: "/>
-          <Run Text="{Binding CurrentBlock.Name, FallbackValue=(nezaložen)}"/>
-          <Run Text="  ·  "/>
-          <Run Text="{Binding StatusText, FallbackValue=Připraveno}"/>
-                </TextBlock>
+        <!-- Info bar (název/ID bloku) -->
+        <Border Grid.Row="1" Background="#1F1F1F" BorderBrush="#333" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <TextBlock Margin="10,0" VerticalAlignment="Center" FontSize="12"
+                           Text="{Binding CurrentBlockTitle, FallbackValue=— žádný blok —}"/>
             </DockPanel>
         </Border>
 
-        <!-- Hlavní třísloupcový layout se splittery -->
-        <Grid Grid.Row="2" Background="#181818">
+        <!-- OBSAH: 5 sloupců – knihovna komponent, seznam, plátno, (volit.) panel, vlastnosti -->
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="320"/>
-                <ColumnDefinition Width="5"/>
-                <!-- splitter -->
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="260"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="5"/>
-                <!-- splitter -->
-                <ColumnDefinition Width="420"/>
+                <ColumnDefinition Width="0"/>
+                <!-- volitelný panel, ponecháno 0 -->
+                <ColumnDefinition Width="320"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Levý panel: knihovna + seznam -->
-            <Grid Grid.Column="0" Background="#1A1A1A">
-                <TabControl Background="#1A1A1A" Foreground="#EEE" BorderBrush="#333" BorderThickness="0">
-                    <TabItem Header="Knihovna" Background="#1A1A1A" Foreground="#EEE">
-                        <views:ComponentLibraryView/>
-                    </TabItem>
-                    <TabItem Header="Seznam" Background="#1A1A1A" Foreground="#EEE">
-                        <views:ComponentsListView/>
-                    </TabItem>
-                </TabControl>
-            </Grid>
+            <!-- Knihovna komponent -->
+            <Border Grid.Column="0" BorderBrush="#333" BorderThickness="0,0,1,0" Background="#1A1A1A">
+                <views:ComponentLibraryView/>
+            </Border>
 
-            <!-- Splitter 1 -->
-            <GridSplitter Grid.Column="1"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                    Background="#2A2A2A" Width="5"/>
+            <!-- Seznam komponent v aktuálním bloku -->
+            <Border Grid.Column="1" BorderBrush="#333" BorderThickness="0,0,1,0" Background="#1A1A1A">
+                <views:ComponentsListView/>
+            </Border>
 
-            <!-- Střed: plátno -->
-            <Grid Grid.Column="2" Background="#181818">
+            <!-- Plátno návrháře -->
+            <Border Grid.Column="2" Background="#0F0F0F" BorderBrush="#333" BorderThickness="1">
                 <views:DesignerCanvas/>
-            </Grid>
+            </Border>
 
-            <!-- Splitter 2 -->
-            <GridSplitter Grid.Column="3"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                    Background="#2A2A2A" Width="5"/>
+            <!-- (Volitelný) Panel -->
+            <!--<Border Grid.Column="3" BorderBrush="#333" BorderThickness="1,0,0,0" Background="#1A1A1A">
+                <views:SomeOptionalPanel/>
+            </Border>-->
 
-            <!-- Pravý panel: vlastnosti -->
+            <!-- Vlastnosti vybraného prvku -->
             <Border Grid.Column="4" BorderBrush="#333" BorderThickness="1,0,0,0" Background="#1A1A1A">
                 <views:PropertiesPanel/>
             </Border>

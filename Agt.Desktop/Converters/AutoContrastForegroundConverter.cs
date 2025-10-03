@@ -24,7 +24,7 @@ namespace Agt.Desktop.Converters
             // Pokud je průhledná / null, vezmeme barvu plátna
             if (bg == null || bg.Color.A == 0)
             {
-                var canvasBrush = Application.Current.Resources["CanvasBackgroundBrush"] as SolidColorBrush;
+                var canvasBrush = Agt.Desktop.App.Current.Resources["CanvasBackgroundBrush"] as SolidColorBrush;
                 bg = canvasBrush ?? new SolidColorBrush(Colors.White);
             }
 
