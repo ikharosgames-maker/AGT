@@ -1,9 +1,13 @@
 ﻿<Window x:Class="Agt.Desktop.Views.FormProcessEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Agt.Desktop.ViewModels"
-xmlns:viewsControls="clr-namespace:Agt.Desktop.Controls"
-        Title="Editor formuláře a procesu" Height="900" Width="1400">
+        xmlns:controls="clr-namespace:Agt.Desktop.Controls"
+        mc:Ignorable="d"
+        Title="Editor formuláře / procesu"
+        Width="1200" Height="800">
     <DockPanel>
         <!-- Menu -->
         <Menu DockPanel.Dock="Top">
@@ -29,33 +33,35 @@ xmlns:viewsControls="clr-namespace:Agt.Desktop.Controls"
             </Grid.ColumnDefinitions>
 
             <!-- Paleta bloků -->
-            <Border Grid.Column="0" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" BorderBrush="#333" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#333" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <TextBlock Text="Paleta bloků" FontWeight="Bold" Margin="10" DockPanel.Dock="Top"/>
                     <ListBox x:Name="PaletteList"
-                   ItemsSource="{Binding Palette}"
-                   DisplayMemberPath="Display"
-                   Margin="10"
-                   PreviewMouseMove="PaletteList_PreviewMouseMove"
-                   MouseDoubleClick="OnPaletteDoubleClick"/>
+                             ItemsSource="{Binding Palette}"
+                             DisplayMemberPath="Display"
+                             Margin="10"
+                             PreviewMouseMove="PaletteList_PreviewMouseMove"
+                             MouseDoubleClick="OnPaletteDoubleClick"/>
                 </DockPanel>
             </Border>
 
             <!-- Plátno + zoom/pan -->
             <Grid Grid.Column="1">
                 <Border x:Name="ZoomHost"
-                Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
-                ClipToBounds="True" SnapsToDevicePixels="True">
+                        Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                        ClipToBounds="True" SnapsToDevicePixels="True">
                     <Canvas x:Name="RootCanvas"
-                  Width="5000" Height="4000"
-                  Background="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}"
-                  MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
-                  MouseMove="Canvas_MouseMove"
-                  MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
-                  PreviewMouseRightButtonDown="ZoomHost_PreviewMouseRightButtonDown"
-                  MouseWheel="ZoomHost_MouseWheel">
+                            Width="5000" Height="4000"
+                            Background="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}"
+                            MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                            MouseMove="Canvas_MouseMove"
+                            MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                            PreviewMouseRightButtonDown="ZoomHost_PreviewMouseRightButtonDown"
+                            MouseWheel="ZoomHost_MouseWheel">
 
-                        <!-- STAGES -->
+                        <!-- ===================== STAGES ===================== -->
                         <ItemsControl ItemsSource="{Binding Graph.Stages}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -67,89 +73,86 @@ xmlns:viewsControls="clr-namespace:Agt.Desktop.Controls"
                                 <Style TargetType="ContentPresenter">
                                     <Setter Property="Canvas.Left" Value="{Binding X}"/>
                                     <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
-                                    <Setter Property="Panel.ZIndex" Value="0"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                            <Setter Property="Panel.ZIndex" Value="10"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
+                                    <Setter Property="Panel.ZIndex" Value="10"/>
                                 </Style>
                             </ItemsControl.ItemContainerStyle>
 
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Width="{Binding W}" Height="{Binding H}" CornerRadius="8"
-                          Background="#202020" BorderThickness="2"
-                          MouseLeftButtonDown="Stage_MouseLeftButtonDown"
-                          MouseMove="Stage_MouseMove"
-                          MouseLeftButtonUp="Stage_MouseLeftButtonUp"
-                          AllowDrop="True"
-                          Drop="Stage_Drop">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="BorderBrush" Value="#666"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="BorderBrush" Value="DeepSkyBlue"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-
+                                <DataTemplate DataType="{x:Type vm:StageVm}">
+                                    <!-- OBAL STAGE (bez zbytečných extra margin/padding navíc) -->
+                                    <Border Width="{Binding W}"
+                                            Height="{Binding H}"
+                                            BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                                            Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                                            BorderThickness="1"
+                                            MouseLeftButtonDown="Stage_MouseLeftButtonDown"
+                                            MouseMove="Stage_MouseMove"
+                                            MouseLeftButtonUp="Stage_MouseLeftButtonUp">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="34"/>
                                                 <RowDefinition Height="*"/>
                                             </Grid.RowDefinitions>
 
-                                            <!-- Hlavička -->
-                                            <Grid Grid.Row="0" Background="#2A2A2A" MouseLeftButtonDown="StageHeader_MouseLeftButtonDown">
-                                                <TextBlock Text="{Binding Title}" Margin="10,6" FontWeight="Bold" Foreground="White"/>
+                                            <!-- Hlavička stage (drag select) -->
+                                            <DockPanel Grid.Row="0"
+                                                       Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                                                       MouseLeftButtonDown="StageHeader_MouseLeftButtonDown">
+                                                <TextBlock Text="{Binding Title}" Margin="8,0" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"
+                                                           FontWeight="Bold"/>
+                                            </DockPanel>
+
+                                            <!-- Body stage (drop cíl pro bloky) -->
+                                            <Grid Grid.Row="1"
+                                                  AllowDrop="True"
+                                                  DragOver="Stage_Body_DragOver"
+                                                  Drop="Stage_Drop">
+                                                <!-- Vnitřní canvas pro BLOCKS -->
+                                                <ItemsControl ItemsSource="{Binding Blocks}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <Canvas/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemContainerStyle>
+                                                        <Style TargetType="ContentPresenter">
+                                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                            <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
+                                                            <Setter Property="Panel.ZIndex" Value="{Binding ZIndex, FallbackValue=0}"/>
+                                                        </Style>
+                                                    </ItemsControl.ItemContainerStyle>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:BlockVm}">
+                                                            <controls:BlockPreviewControl
+                                                                Width="{Binding PreviewWidth}"
+                                                                Height="{Binding PreviewHeight}"
+                                                                MouseLeftButtonDown="OnBlockMouseDown"
+                                                                MouseMove="OnBlockMouseMove"
+                                                                MouseLeftButtonUp="OnBlockMouseUp"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                             </Grid>
 
-                                            <!-- Uzly (bloky ve stage) -->
-                                            <ItemsControl ItemsSource="{Binding Blocks}">
-                                                <ItemsControl.ItemContainerStyle>
-                                                    <Style TargetType="ContentPresenter">
-                                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                                                        <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
-                                                    </Style>
-                                                </ItemsControl.ItemContainerStyle>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="{x:Type vm:BlockVm}">
-                                                        <viewsControls:BlockPreviewControl
-          Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}"
-          MouseLeftButtonDown="OnBlockMouseDown"
-          MouseMove="OnBlockMouseMove"
-          MouseLeftButtonUp="OnBlockMouseUp"/>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                            <!-- Resize thumb (pravý dolní roh) -->
+                                            <Thumb Width="12" Height="12"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                   Margin="0"
+                                                   Background="#999" Cursor="SizeNWSE"
+                                                   DragDelta="Stage_Resize_DragDelta"/>
 
-
-                                            <!-- Porty -->
-                                            <Ellipse Grid.RowSpan="2" Width="12" Height="12" Fill="#5AF"
-                               HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center"
-                               MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
-                               MouseLeftButtonDown="Stage_InPort_MouseLeftButtonDown"/>
-                                            <Ellipse Grid.RowSpan="2" Width="12" Height="12" Fill="#5AF"
-                               HorizontalAlignment="Right" Margin="0,0,6,0" VerticalAlignment="Center"
-                               MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
-                               MouseLeftButtonDown="Stage_OutPort_MouseLeftButtonDown"/>
-
-                                            <!-- resize -->
-                                            <Thumb Grid.RowSpan="2"
-                             Width="16" Height="16"
-                             HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                             Margin="0,0,2,2" Cursor="SizeNWSE"
-                             DragDelta="Stage_Resize_DragDelta">
-                                                <Thumb.Template>
-                                                    <ControlTemplate TargetType="Thumb">
-                                                        <Border Background="#5AF" CornerRadius="3" />
-                                                    </ControlTemplate>
-                                                </Thumb.Template>
-                                                <Panel.ZIndex>1000</Panel.ZIndex>
-                                            </Thumb>
+                                            <!-- Porty (IN/OUT) – střed výšky -->
+                                            <Ellipse Width="10" Height="10" Fill="#5AAFff"
+                                                     HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                     Margin="6,0,0,0"
+                                                     MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
+                                                     MouseLeftButtonDown="Stage_InPort_MouseLeftButtonDown"/>
+                                            <Ellipse Width="10" Height="10" Fill="#5AAFff"
+                                                     HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                     Margin="0,0,6,0"
+                                                     MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
+                                                     MouseLeftButtonDown="Stage_OutPort_MouseLeftButtonDown"/>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -164,7 +167,9 @@ xmlns:viewsControls="clr-namespace:Agt.Desktop.Controls"
             </Grid>
 
             <!-- Pravý panel -->
-            <Border Grid.Column="2" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" BorderBrush="#333" BorderThickness="1,0,0,0">
+            <Border Grid.Column="2"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#333" BorderThickness="1,0,0,0">
                 <ScrollViewer>
                     <StackPanel Margin="12" x:Name="RightPanelRoot">
                         <TextBlock Text="Vlastnosti" FontWeight="Bold"/>
@@ -187,7 +192,7 @@ xmlns:viewsControls="clr-namespace:Agt.Desktop.Controls"
                             <TextBlock Text="Název" Margin="0,4,0,0"/>
                             <TextBox Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
-                            <!-- Přiřazení: SKUPINY -->
+                            <!-- Skupiny -->
                             <GroupBox Header="Přiřazení skupin" Margin="0,10,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -201,23 +206,23 @@ xmlns:viewsControls="clr-namespace:Agt.Desktop.Controls"
                                     </Grid.RowDefinitions>
 
                                     <TextBox x:Name="TbGroupFilter" Grid.Column="0" Grid.Row="0" Margin="0,0,6,6" 
-                           TextChanged="OnGroupFilterChanged"/>
+                                             TextChanged="OnGroupFilterChanged"/>
                                     <TextBlock Grid.Column="2" Grid.Row="0" Margin="6,0,0,6" 
-                             VerticalAlignment="Center" Opacity="0.7" Text="Přiřazeno"/>
+                                               VerticalAlignment="Center" Opacity="0.7" Text="Přiřazeno"/>
 
                                     <ListBox x:Name="LbAvailGroups" Grid.Column="0" Grid.Row="1" 
-                           ItemsSource="{Binding DataContext.AvailableGroups, ElementName=RightPanelRoot}" 
-                           SelectionMode="Extended" Height="140"/>
+                                             ItemsSource="{Binding DataContext.AvailableGroups, ElementName=RightPanelRoot}" 
+                                             SelectionMode="Extended" Height="140"/>
                                     <StackPanel Grid.Column="1" Grid.Row="1" VerticalAlignment="Center">
                                         <Button Content="&gt;&gt;" Margin="0,0,0,6" Click="OnAddGroups"/>
                                         <Button Content="&lt;&lt;" Click="OnRemoveGroups"/>
                                     </StackPanel>
                                     <ListBox x:Name="LbAssignedGroups" Grid.Column="2" Grid.Row="1"
-                           ItemsSource="{Binding AssignedGroups}" SelectionMode="Extended" Height="140"/>
+                                             ItemsSource="{Binding AssignedGroups}" SelectionMode="Extended" Height="140"/>
                                 </Grid>
                             </GroupBox>
 
-                            <!-- Přiřazení: UŽIVATELÉ -->
+                            <!-- Uživatelé -->
                             <GroupBox Header="Přiřazení uživatelů" Margin="0,10,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -231,23 +236,23 @@ xmlns:viewsControls="clr-namespace:Agt.Desktop.Controls"
                                     </Grid.RowDefinitions>
 
                                     <TextBox x:Name="TbUserFilter" Grid.Column="0" Grid.Row="0" Margin="0,0,6,6" 
-                           TextChanged="OnUserFilterChanged"/>
+                                             TextChanged="OnUserFilterChanged"/>
                                     <TextBlock Grid.Column="2" Grid.Row="0" Margin="6,0,0,6" 
-                             VerticalAlignment="Center" Opacity="0.7" Text="Přiřazeno"/>
+                                               VerticalAlignment="Center" Opacity="0.7" Text="Přiřazeno"/>
 
                                     <ListBox x:Name="LbAvailUsers" Grid.Column="0" Grid.Row="1"
-                           ItemsSource="{Binding DataContext.AvailableUsers, ElementName=RightPanelRoot}" 
-                           SelectionMode="Extended" Height="160"/>
+                                             ItemsSource="{Binding DataContext.AvailableUsers, ElementName=RightPanelRoot}" 
+                                             SelectionMode="Extended" Height="160"/>
                                     <StackPanel Grid.Column="1" Grid.Row="1" VerticalAlignment="Center">
                                         <Button Content="&gt;&gt;" Margin="0,0,0,6" Click="OnAddUsers"/>
                                         <Button Content="&lt;&lt;" Click="OnRemoveUsers"/>
                                     </StackPanel>
                                     <ListBox x:Name="LbAssignedUsers" Grid.Column="2" Grid.Row="1"
-                           ItemsSource="{Binding AssignedUsers}" SelectionMode="Extended" Height="160"/>
+                                             ItemsSource="{Binding AssignedUsers}" SelectionMode="Extended" Height="160"/>
                                 </Grid>
                             </GroupBox>
 
-                            <!-- Další běhová nastavení -->
+                            <!-- Běhová nastavení -->
                             <TextBlock Text="Start mód" Margin="0,10,0,0"/>
                             <ComboBox SelectedItem="{Binding StartMode, Mode=TwoWay}">
                                 <ComboBoxItem Content="Manual"/>

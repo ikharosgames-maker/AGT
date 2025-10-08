@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Agt.Desktop.ViewModels;
 using System.Collections.Specialized;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using Agt.Desktop.ViewModels;
 
 namespace Agt.Desktop.Views
 {
@@ -22,8 +19,23 @@ namespace Agt.Desktop.Views
 
         // drag posun
         private Point? _dragStartCanvas;
-        private StageVm? _dragStage;
+        private bool _isDraggingBlock;
+        private Point _dragStartOnStage;       // pozice myši relativně ke stage při zahájení
+        private Vector _dragOffset;            // offset kurzor -> levý horní roh bloku
         private BlockVm? _dragBlock;
+        private StageVm? _dragStage;           // stage, do které blok patří
+
+        private FormProcessEditorViewModel? Vm => DataContext as FormProcessEditorViewModel;
+
+        private StageVm? FindOwningStage(BlockVm b)
+            => Vm?.Graph?.Stages?.FirstOrDefault(s => s.Blocks.Contains(b));
+
+        private static T? FindParent<T>(DependencyObject? child) where T : DependencyObject
+        {
+            while (child != null && child is not T)
+                child = VisualTreeHelper.GetParent(child);
+            return child as T;
+        }
 
         // linking (drag & drop)
         private bool _linking;
@@ -42,6 +54,7 @@ namespace Agt.Desktop.Views
         // throttle pro RedrawEdges
         private DateTime _lastEdgeRedraw = DateTime.MinValue;
         private const int EdgeRedrawMinMs = 16; // ~60 FPS
+
 
         public FormProcessEditorWindow()
         {
@@ -103,6 +116,43 @@ namespace Agt.Desktop.Views
                 _paletteDragging = false;
             }
         }
+        private void Stage_Body_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(PaletteItem)))
+                e.Effects = DragDropEffects.Copy;
+            else
+                e.Effects = DragDropEffects.None;
+
+            e.Handled = true;
+        }
+
+        private BlockVm PlaceBlockInStage(StageVm stage, PaletteItem palItem, double localX = 0, double localY = 0)
+        {
+            var vm = (FormProcessEditorViewModel)DataContext;
+
+            // základní pozice (uvnitř stage)
+            var (x, y) = vm.GetNextBlockPosition(stage, localX, localY);
+
+            // přidej blok do stage
+            var b = vm.AddBlock(stage, palItem.Key, palItem.Name, palItem.Version, x, y);
+
+            // vygeneruj náhled z JSON knihovny
+            vm.GeneratePreview(b);
+
+            var (nx, ny) = vm.FindNearestFreeSlot(stage,
+                                                     localX, localY,
+                                                     b.PreviewWidth, b.PreviewHeight,
+                                                     grid: 8, headerHeight: 36);
+
+            // 4) Umísti blok přesně na nalezenou pozici
+            vm.MoveBlockTo(b, stage, nx, ny, grid: 8, headerHeight: 36);
+
+            // 5) Výběr
+            vm.SelectBlock(b);
+            if (vm.SelectedStage == null) vm.SelectStage(stage);
+
+            return b;
+        }
 
         private void OnPaletteDoubleClick(object sender, MouseButtonEventArgs e)
         {
@@ -114,7 +164,7 @@ namespace Agt.Desktop.Views
 
             var st = vm.Graph.Stages.First();
             var (x, y) = vm.GetNextBlockPosition(st, 100, HeaderHeight + 20);
-            var b = vm.AddBlock(st, sel.Key, sel.Name, sel.Version, x, y);
+            var b = PlaceBlockInStage(st, sel, x, y);
             vm.GeneratePreview(b);
             RedrawEdges(force: true);
             PaletteList.SelectedItem = null;
@@ -139,7 +189,7 @@ namespace Agt.Desktop.Views
                     x = Math.Max(0, Math.Min(x, st.W - BlockW));
                     y = Math.Max(0, Math.Min(y, st.H - HeaderHeight - BlockH));
 
-                    var b = vm.AddBlock(st, sel.Key, sel.Name, sel.Version, x, y);
+                    var b = PlaceBlockInStage(st, sel, x, y);
                     vm.GeneratePreview(b);
                     PaletteList.SelectedItem = null;
                     return;
@@ -231,70 +281,164 @@ namespace Agt.Desktop.Views
                 RedrawEdges(); // throttled
             }
         }
-
-        // Block drag (omezit na stage)
-        private StageVm? GetParentStageOfBlockSender(object sender)
+        // Volné místo? – obdélník [x..x+w, y..y+h] nesmí kolidovat s jinými bloky
+        private static bool RectIntersects(double x, double y, double w, double h, BlockVm other)
         {
-            var fe = sender as FrameworkElement;
-            DependencyObject? current = fe;
-            while (current != null)
+            return !(x + w <= other.X ||
+                     other.X + other.PreviewWidth <= x ||
+                     y + h <= other.Y ||
+                     other.Y + other.PreviewHeight <= y);
+        }
+
+        private static double SnapTo(double v, double grid) => grid <= 0 ? v : Math.Round(v / grid) * grid;
+
+        /// <summary>Vrátí nejbližší volnou pozici ke zvolenému bodu (targetX/Y) pro blok o rozměru blockW/H.
+        /// Respektuje snap na grid, clamp do stage a vyhne se kolizím. Pokud to nejde na pixel přesně, dělá "spirálu".
+        /// </summary>
+        public (double X, double Y) FindNearestFreeSlot(StageVm st, double targetX, double targetY,
+                                                        double blockW, double blockH,
+                                                        double grid, double headerHeight,
+                                                        int maxIterations = 200)
+        {
+            // 1) snap cílového bodu
+            double baseX = SnapTo(targetX, grid);
+            double baseY = SnapTo(targetY, grid);
+
+            // 2) omezit do stage (základní clamp)
+            baseX = Math.Max(0, Math.Min(baseX, st.W - blockW));
+            baseY = Math.Max(0, Math.Min(baseY, st.H - headerHeight - blockH));
+
+            // 3) rychlý check — když to hned sedí, hotovo
+            bool IsFree(double x, double y)
             {
-                if (current is ContentPresenter cp && cp.DataContext is StageVm st) return st;
-                current = VisualTreeHelper.GetParent(current);
+                foreach (var other in st.Blocks)
+                {
+                    // při vkládání nový blok ještě není v kolekci → žádný self-compare netřeba
+                    if (RectIntersects(x, y, blockW, blockH, other)) return false;
+                }
+                return true;
             }
-            return null;
-        }
+            if (IsFree(baseX, baseY)) return (baseX, baseY);
 
-        private void Block_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _dragStartCanvas = ToCanvas(e.GetPosition(ZoomHost));
-            _dragBlock = (sender as FrameworkElement)?.DataContext as BlockVm;
+            // 4) spirála kolem cílového bodu: posuny v osách s postupně rostoucím poloměrem
+            //    krok = grid (nebo 8 px), aby to lícovalo se snapem
+            var step = Math.Max(1, (int)(grid > 0 ? grid : 8));
+            int radius = step;
+            int iter = 0;
 
-            var vm = (FormProcessEditorViewModel)DataContext;
-            vm.SelectBlock(_dragBlock);
-
-            (sender as FrameworkElement)?.CaptureMouse();
-            e.Handled = true;
-        }
-
-        private void Block_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (_dragBlock is null || _dragStartCanvas is null || e.LeftButton != MouseButtonState.Pressed) return;
-
-            var p = ToCanvas(e.GetPosition(ZoomHost));
-            var dx = p.X - _dragStartCanvas.Value.X;
-            var dy = p.Y - _dragStartCanvas.Value.Y;
-
-            _dragBlock.X += dx;
-            _dragBlock.Y += dy;
-
-            var vm = (FormProcessEditorViewModel)DataContext;
-            var st = GetParentStageOfBlockSender(sender);
-            if (st != null)
-                vm.ClampBlockInside(_dragBlock, st, BlockW, BlockH, HeaderHeight);
-
-            _dragStartCanvas = p;
-        }
-
-        private void Block_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            (sender as FrameworkElement)?.ReleaseMouseCapture();
-
-            if (_dragBlock != null)
+            while (iter < maxIterations && radius < 4000)
             {
-                var vm = (FormProcessEditorViewModel)DataContext;
-                _dragBlock.X = vm.Snap(_dragBlock.X, GridSize, noSnap: false);
-                _dragBlock.Y = vm.Snap(_dragBlock.Y, GridSize, noSnap: false);
+                // prohledáme „čtverec“ v daném radiusu po mřížce
+                for (int dx = -radius; dx <= radius; dx += step)
+                {
+                    // horní hrana
+                    {
+                        double x = SnapTo(baseX + dx, grid);
+                        double y = SnapTo(baseY - radius, grid);
+                        x = Math.Max(0, Math.Min(x, st.W - blockW));
+                        y = Math.Max(0, Math.Min(y, st.H - headerHeight - blockH));
+                        if (IsFree(x, y)) return (x, y);
+                        iter++;
+                        if (iter >= maxIterations) break;
+                    }
+                    // dolní hrana
+                    {
+                        double x = SnapTo(baseX + dx, grid);
+                        double y = SnapTo(baseY + radius, grid);
+                        x = Math.Max(0, Math.Min(x, st.W - blockW));
+                        y = Math.Max(0, Math.Min(y, st.H - headerHeight - blockH));
+                        if (IsFree(x, y)) return (x, y);
+                        iter++;
+                        if (iter >= maxIterations) break;
+                    }
+                }
+                for (int dy = -radius + step; dy <= radius - step; dy += step)
+                {
+                    // levá hrana
+                    {
+                        double x = SnapTo(baseX - radius, grid);
+                        double y = SnapTo(baseY + dy, grid);
+                        x = Math.Max(0, Math.Min(x, st.W - blockW));
+                        y = Math.Max(0, Math.Min(y, st.H - headerHeight - blockH));
+                        if (IsFree(x, y)) return (x, y);
+                        iter++;
+                        if (iter >= maxIterations) break;
+                    }
+                    // pravá hrana
+                    {
+                        double x = SnapTo(baseX + radius, grid);
+                        double y = SnapTo(baseY + dy, grid);
+                        x = Math.Max(0, Math.Min(x, st.W - blockW));
+                        y = Math.Max(0, Math.Min(y, st.H - headerHeight - blockH));
+                        if (IsFree(x, y)) return (x, y);
+                        iter++;
+                        if (iter >= maxIterations) break;
+                    }
+                }
 
-                var st = GetParentStageOfBlockSender(sender);
-                if (st != null)
-                    vm.ClampBlockInside(_dragBlock, st, BlockW, BlockH, HeaderHeight);
+                radius += step;
             }
 
+            // 5) nouzově vrať základ – na něm si to pak vyřeší MoveBlockTo (odtlačení)
+            return (baseX, baseY);
+        }
+
+        private Point GetMouseOnStage(FrameworkElement blockElement)
+        {
+            // Najdi Canvas, na kterém jsou vykreslené bloky uvnitř Stage (je to ItemsPanel Canvas)
+            // V praxi stačí vzít nejbližší parent Canvas z vizuálního stromu:
+            var stageCanvas = FindParent<Canvas>(blockElement);
+            return Mouse.GetPosition(stageCanvas);
+        }
+
+        private void OnBlockMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is BlockVm b)
+            {
+                _dragBlock = b;
+                _dragStage = Vm != null ? (Vm.SelectedStage ?? FindOwningStage(b)) : null;
+                if (_dragStage == null) return;
+
+                _isDraggingBlock = true;
+
+                // myš relativně ke canvasu stagi
+                _dragStartOnStage = GetMouseOnStage(fe);
+
+                // offset kurzor -> levý horní roh bloku (aby drag kopíroval polohu myši)
+                _dragOffset = (Vector)(_dragStartOnStage - new Point(b.X, b.Y));
+
+                Mouse.Capture(fe);
+                e.Handled = true;
+
+                Vm?.SelectBlock(b);
+                if (Vm?.SelectedStage == null) Vm?.SelectStage(_dragStage);
+            }
+        }
+
+        private void OnBlockMouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDraggingBlock || _dragBlock is null || _dragStage is null || Vm is null) return;
+            if (sender is not FrameworkElement fe) return;
+
+            // aktuální kurzor na stage canvasu
+            var p = GetMouseOnStage(fe);
+
+            // cílová pozice = kurzor - offset
+            var target = p - _dragOffset;
+
+            // plynulý přirozený pohyb: požádej VM, ať umístí blok přesně na target (se snapem/kolizemi/clampe)
+            Vm.MoveBlockTo(_dragBlock, _dragStage, target.X, target.Y, grid: 8, headerHeight: 36);
+        }
+
+        private void OnBlockMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            _isDraggingBlock = false;
             _dragBlock = null;
-            _dragStartCanvas = null;
+            _dragStage = null;
+            Mouse.Capture(null);
             e.Handled = true;
         }
+
 
         // Drop z palety
         private void Stage_Drop(object sender, DragEventArgs e)
@@ -316,7 +460,7 @@ namespace Agt.Desktop.Views
             x = Math.Max(0, Math.Min(x, stage.W - BlockW));
             y = Math.Max(0, Math.Min(y, stage.H - HeaderHeight - BlockH));
 
-            var b = vm.AddBlock(stage, item.Key, item.Name, item.Version, x, y);
+            var b = PlaceBlockInStage(stage, item, x, y);
             vm.GeneratePreview(b);
             PaletteList.SelectedItem = null;
         }

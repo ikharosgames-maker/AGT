@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Agt.Desktop.Models;
+using Agt.Desktop.Services;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -6,14 +8,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
-using Agt.Desktop.Services;
+using System.Windows.Media;
 
 namespace Agt.Desktop.ViewModels
 {
-
-
-
-
 
     public sealed class FormProcessEditorViewModel : ViewModelBase
     {
@@ -34,14 +32,18 @@ namespace Agt.Desktop.ViewModels
 
         public FormProcessEditorViewModel()
         {
+            // Paleta se načítá z knihovny ve window code-behind
             SeedDirectoryDemo();
         }
 
+        // ====== Knihovna bloků (paleta) ======
         public void LoadPaletteFromLibrary(IBlockLibrary lib)
         {
             if (lib == null) return;
+
+            var items = lib.Enumerate().ToList();
             Palette.Clear();
-            foreach (var it in lib.Enumerate())
+            foreach (var it in items)
                 Palette.Add(new PaletteItem(it.Key, it.Name, it.Version));
         }
 
@@ -49,19 +51,19 @@ namespace Agt.Desktop.ViewModels
         {
             foreach (var u in new[]
             {
-                "jan.novak","petr.svoboda","karel.dvorak","eva.prochazkova",
-                "lucie.kralova","martin.horak","hana.mala","ondrej.cerny",
-                "tomas.pospisil","iva.kucerova"
+                "jan.novak", "petr.svoboda", "karel.dvorak", "eva.prochazkova",
+                "lucie.kralova", "martin.horak", "hana.mala", "ondrej.cerny",
+                "tomas.pospisil", "iva.kucerova"
             }) AvailableUsers.Add(u);
 
             foreach (var g in new[]
             {
-                "QC-Operators","QC-Leads","Production-ShiftA","Production-ShiftB",
-                "Engineering-Design","Engineering-Process","Logistics","Warehouse"
+                "QC-Operators", "QC-Leads", "Production-ShiftA", "Production-ShiftB",
+                "Engineering-Design", "Engineering-Process", "Logistics", "Warehouse"
             }) AvailableGroups.Add(g);
         }
 
-        // --- API ---
+        // ====== API pro editor ======
         public void AddStage(string title, double x, double y, double w, double h)
             => Graph.Stages.Add(new StageVm { Id = Guid.NewGuid(), Title = title, X = x, Y = y, W = w, H = h });
 
@@ -85,7 +87,7 @@ namespace Agt.Desktop.ViewModels
             return null;
         }
 
-        // snap
+        // jemný snap
         public double Snap(double v, double grid, bool noSnap)
             => (noSnap || grid <= 0) ? v : Math.Round(v / grid) * grid;
 
@@ -119,27 +121,36 @@ namespace Agt.Desktop.ViewModels
         {
             foreach (var s in Graph.Stages) s.IsSelected = false;
             foreach (var s in Graph.Stages) foreach (var b in s.Blocks) b.IsSelected = false;
-            SelectedBlock = null; SelectedStageEdge = null; SelectedStage = null;
+            SelectedBlock = null;
+            SelectedStageEdge = null;
+            SelectedStage = null;
         }
 
         public void SelectStage(StageVm? s)
         {
             foreach (var st in Graph.Stages) st.IsSelected = false;
             if (s != null) s.IsSelected = true;
-            SelectedStage = s; SelectedBlock = null; SelectedStageEdge = null; Raise(nameof(Graph));
+            SelectedStage = s;
+            SelectedBlock = null;
+            SelectedStageEdge = null;
+            Raise(nameof(Graph));
         }
 
         public void SelectBlock(BlockVm? b)
         {
             foreach (var st in Graph.Stages) foreach (var bb in st.Blocks) bb.IsSelected = false;
             if (b != null) b.IsSelected = true;
-            SelectedBlock = b; SelectedStage = null; SelectedStageEdge = null; Raise(nameof(Graph));
+            SelectedBlock = b;
+            SelectedStage = null;
+            SelectedStageEdge = null;
+            Raise(nameof(Graph));
         }
 
         public void SelectEdge(StageEdgeVm? e)
         {
             SelectedStageEdge = e;
-            SelectedBlock = null; SelectedStage = null;
+            SelectedBlock = null;
+            SelectedStage = null;
             foreach (var st in Graph.Stages) foreach (var bb in st.Blocks) bb.IsSelected = false;
             foreach (var st in Graph.Stages) st.IsSelected = false;
             Raise(nameof(SelectedStageEdge));
@@ -148,35 +159,29 @@ namespace Agt.Desktop.ViewModels
         public void AddStageEdge(StageVm from, StageVm to)
             => Graph.StageEdges.Add(new StageEdgeVm { Id = Guid.NewGuid(), FromStageId = from.Id, ToStageId = to.Id, ConditionJson = @"{ ""conditions"": [] }" });
 
-        public void ClampBlockInside(BlockVm b, StageVm st, double blockW, double blockH, double header)
-        {
-            b.X = Math.Max(0, Math.Min(b.X, st.W - blockW));
-            b.Y = Math.Max(0, Math.Min(b.Y, st.H - header - blockH));
-        }
-
         public void ClampBlocksInside(StageVm st, double blockW, double blockH, double header)
         {
             foreach (var b in st.Blocks)
                 ClampBlockInside(b, st, blockW, blockH, header);
         }
 
-        // --- Porty stage (absolutní souřadnice) ---
+        // ====== Porty stage (absolutní souřadnice) ======
         private const double _portOffset = 12.0;
         public (double X, double Y) GetStageOutPortAbs(StageVm s) => (s.X + s.W - _portOffset, s.Y + s.H / 2.0);
         public (double X, double Y) GetStageInPortAbs(StageVm s) => (s.X + _portOffset, s.Y + s.H / 2.0);
 
-        // ===================== PREVIEW Z JSON KNIHOVNY (robustní, rekurzivní) =====================
-
+        // ===================== PREVIEW Z JSON KNIHOVNY =====================
+        /// <summary>
+        /// Naplní náhled bloku (rozměry + prvky) podle reálného JSONu v knihovně (Key + Version).
+        /// </summary>
         public void GeneratePreview(BlockVm b)
         {
-            b.PreviewElements.Clear();
+            b.Components.Clear();
 
             if (!BlockLibraryJson.Default.TryLoadByKeyVersion(b.Key, b.Version, out var doc, out _))
             {
-                // fallback
-                b.PreviewWidth = 320; b.PreviewHeight = 200;
-                b.PreviewElements.Add(new PreviewElementVm("Pole 1", "Text", null, 8, 8, 220, 28));
-                b.PreviewElements.Add(new PreviewElementVm("Pole 2", "Text", null, 8, 44, 220, 28));
+                b.PreviewWidth = Math.Max(b.PreviewWidth, 1);
+                b.PreviewHeight = Math.Max(b.PreviewHeight, 1);
                 return;
             }
 
@@ -184,40 +189,102 @@ namespace Agt.Desktop.ViewModels
             {
                 var root = doc!.RootElement;
 
-                // 1) Rozměr plátna
-                var size = TryExtractCanvasSize(root);
-                b.PreviewWidth = size.W > 80 ? size.W : 320;
-                b.PreviewHeight = size.H > 60 ? size.H : 200;
+                var blockName = TryGetString(root, "BlockName");
+                if (!string.IsNullOrWhiteSpace(blockName) && string.IsNullOrWhiteSpace(b.Title))
+                    b.Title = blockName!;
 
-                // 2) Extract fields (s umístěním)
-                var fields = ExtractPreviewElements(root).ToList();
-
-                if (fields.Count == 0)
+                if (!TryProp(root, "Items", out var itemsEl) || itemsEl.ValueKind != JsonValueKind.Array)
                 {
-                    // fallback
-                    b.PreviewElements.Add(new PreviewElementVm("Pole 1", "Text", null, 8, 8, 220, 28));
-                    b.PreviewElements.Add(new PreviewElementVm("Pole 2", "Text", null, 8, 44, 220, 28));
+                    b.PreviewWidth = Math.Max(b.PreviewWidth, 1);
+                    b.PreviewHeight = Math.Max(b.PreviewHeight, 1);
+                    return;
                 }
-                else
-                {
-                    foreach (var f in fields) b.PreviewElements.Add(f);
 
-                    // Pokud nenajdeme size, dopočti z bounding boxu
-                    if (size.W <= 80 || size.H <= 60)
+                double maxRight = 0, maxBottom = 0;
+
+                foreach (var it in itemsEl.EnumerateArray())
+                {
+                    var x = TryGetDouble(it, "X") ?? 0;
+                    var y = TryGetDouble(it, "Y") ?? 0;
+                    var w = TryGetDouble(it, "Width") ?? 120;
+                    var h = TryGetDouble(it, "Height") ?? 28;
+                    var z = (int)(TryGetDouble(it, "ZIndex") ?? 0);
+
+                    var typeKey = (TryGetString(it, "TypeKey") ?? "").Trim().ToLowerInvariant();
+                    var label = TryGetString(it, "Label") ?? "";
+
+                    var bgHex = TryGetString(it, "Background");
+                    var fgHex = TryGetString(it, "Foreground");
+                    var fontFam = TryGetString(it, "FontFamily");
+                    var fontSz = TryGetDouble(it, "FontSize");
+
+                    // ✅ použij systémové barvy jako výchozí
+                    Brush? bg = !string.IsNullOrWhiteSpace(bgHex) ? ToBrushSafe(bgHex) : SystemColors.ControlBrush;
+                    Brush? fg = !string.IsNullOrWhiteSpace(fgHex) ? ToBrushSafe(fgHex) : SystemColors.ControlTextBrush;
+
+                    var ff = !string.IsNullOrWhiteSpace(fontFam) ? fontFam : "Segoe UI";
+                    var fs = fontSz ?? 12;
+
+                    FieldComponentBase component = typeKey switch
                     {
-                        var maxX = fields.Max(e => e.X + e.W);
-                        var maxY = fields.Max(e => e.Y + e.H);
-                        b.PreviewWidth = Math.Max(b.PreviewWidth, maxX + 16);
-                        b.PreviewHeight = Math.Max(b.PreviewHeight, maxY + 16);
+                        "label" => new LabelField { Label = label, Width = w, Height = h, Background = bg, Foreground = fg, FontFamily = ff, FontSize = fs },
+                        "textbox" => new TextBoxField { Label = label, Width = w, Height = h, Background = bg, Foreground = fg, FontFamily = ff, FontSize = fs },
+                        "textarea" => new TextAreaField { Label = label, Width = w, Height = h, Background = bg, Foreground = fg, FontFamily = ff, FontSize = fs },
+                        "number" => new NumberField { Label = label, Width = w, Height = h, Background = bg, Foreground = fg, FontFamily = ff, FontSize = fs },
+                        "date" => new DateField { Label = label, Width = w, Height = h, Background = bg, Foreground = fg, FontFamily = ff, FontSize = fs },
+                        "combobox" => new ComboBoxField { Label = label, Width = w, Height = h, Background = bg, Foreground = fg, FontFamily = ff, FontSize = fs },
+                        "checkbox" => new CheckBoxField { Label = label, Width = w, Height = h, Background = bg, Foreground = fg, FontFamily = ff, FontSize = fs },
+                        _ => new LabelField { Label = string.IsNullOrWhiteSpace(label) ? $"[{typeKey}]" : label, Width = w, Height = h, Background = bg, Foreground = fg, FontFamily = ff, FontSize = fs }
+                    };
+
+                    component.X = x;
+                    component.Y = y;
+                    component.ZIndex = z;
+
+                    // výpočet rozměrů pro vykreslení – už BEZ labelu!
+                    double totalW = w;
+                    double totalH = h;
+
+                    switch (typeKey)
+                    {
+                        case "textbox":
+                        case "textarea":
+                        case "number":
+                        case "date":
+                        case "combobox":
+                            totalW = w + 2;   // border left/right
+                            totalH = h + 2;   // border top/bottom
+                            break;
+
+                        case "checkbox":
+                            double textW = MeasureTextWidth(label, ff, fs);
+                            totalW = Math.Max(w, 20 + 4 + textW);
+                            totalH = Math.Max(h, 20);
+                            break;
+
+                        default:
+                            totalW = w;
+                            totalH = h;
+                            break;
                     }
+
+                    component.TotalWidth = totalW;
+                    component.TotalHeight = totalH;
+
+                    b.Components.Add(component);
+
+                    maxRight = Math.Max(maxRight, x + totalW);
+                    maxBottom = Math.Max(maxBottom, y + totalH);
                 }
+
+                // výsledek – přidej 1px bezpečnostní rezervu
+                b.PreviewWidth = Math.Max(1, Math.Ceiling(maxRight) + 1);
+                b.PreviewHeight = Math.Max(1, Math.Ceiling(maxBottom) + 1);
             }
             catch
             {
-                // fallback při chybě JSONu
-                b.PreviewWidth = 320; b.PreviewHeight = 200;
-                b.PreviewElements.Add(new PreviewElementVm("Pole 1", "Text", null, 8, 8, 220, 28));
-                b.PreviewElements.Add(new PreviewElementVm("Pole 2", "Text", null, 8, 44, 220, 28));
+                b.PreviewWidth = Math.Max(b.PreviewWidth, 1);
+                b.PreviewHeight = Math.Max(b.PreviewHeight, 1);
             }
             finally
             {
@@ -225,244 +292,259 @@ namespace Agt.Desktop.ViewModels
             }
         }
 
-        // ===== helpers pro preview z JSONu =====
-        private static (double W, double H) TryExtractCanvasSize(JsonElement root)
-        {
-            // Canvas.Width/Height
-            if (TryObject(root, "Canvas") is JsonElement canvas)
-            {
-                var w = GetDouble(canvas, "Width") ?? GetDouble(canvas, "W");
-                var h = GetDouble(canvas, "Height") ?? GetDouble(canvas, "H");
-                if (w.HasValue && h.HasValue) return (w.Value, h.Value);
-            }
 
-            // Block.Size { W,H } / Definition.Size
-            foreach (var parentName in new[] { "Block", "Definition" })
-            {
-                if (TryObject(root, parentName) is JsonElement parent)
-                {
-                    if (TryObject(parent, "Size") is JsonElement size)
-                    {
-                        var w = GetDouble(size, "Width") ?? GetDouble(size, "W");
-                        var h = GetDouble(size, "Height") ?? GetDouble(size, "H");
-                        if (w.HasValue && h.HasValue) return (w.Value, h.Value);
-                    }
-                }
-            }
-
-            return (0, 0);
-        }
-        private static bool TryPathArray(JsonElement root, string[] path, out JsonElement? arr)
+        // 🔹 Pomocná metoda pro odhad šířky textu (checkbox text)
+        private static double MeasureTextWidth(string text, string fontFamily, double fontSize)
         {
-            arr = null;
-            var cur = root;
-            foreach (var seg in path)
-            {
-                if (!TryProp(cur, seg, out var v)) return false;
-                cur = v;
-            }
-            if (cur.ValueKind == JsonValueKind.Array) { arr = cur; return true; }
-            return false;
+            if (string.IsNullOrEmpty(text)) return 0;
+
+            var typeface = new System.Windows.Media.Typeface(
+                new System.Windows.Media.FontFamily(fontFamily),
+                System.Windows.FontStyles.Normal,
+                System.Windows.FontWeights.Normal,
+                System.Windows.FontStretches.Normal);
+
+#pragma warning disable CS0618
+            var ft = new System.Windows.Media.FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentUICulture,
+                System.Windows.FlowDirection.LeftToRight,
+                typeface,
+                fontSize,
+                System.Windows.Media.Brushes.Transparent,
+                1.0);
+#pragma warning restore CS0618
+
+            return Math.Ceiling(ft.Width);
         }
 
-        private static IEnumerable<PreviewElementVm> ExtractPreviewElements(JsonElement root)
+
+        // === SNAP + POHYB BEZ PŘEKRYVŮ A UVNITŘ STAGE ===
+
+
+        // === pomocné ===
+        private static bool RectIntersects(double x, double y, double w, double h, BlockVm other)
         {
-            // kandidáti kolekcí
-            var arrays = new List<JsonElement>();
-            foreach (var path in new[]
-            {
-        new[] { "Fields" },
-        new[] { "Schema", "Fields" },
-        new[] { "Block", "Fields" },
-        new[] { "Block", "Components" },
-        new[] { "Definition", "Fields" },
-        new[] { "Components" }
-    })
-            {
-                if (TryPathArray(root, path, out var arr)) arrays.Add(arr.Value);
-            }
-
-            foreach (var arr in arrays)
-            {
-                foreach (var el in arr.EnumerateArray())
-                {
-                    var label = GetString(el, "Label") ?? GetString(el, "Name") ?? GetString(el, "Title") ?? GetString(el, "Id");
-                    if (string.IsNullOrWhiteSpace(label)) continue;
-
-                    var type = NormalizeType(GetString(el, "FieldType") ?? GetString(el, "Type") ?? GetString(el, "ControlType") ?? "Text");
-                    var options = GetOptions(el, "Options") ?? GetOptions(el, "Items") ?? GetOptions(el, "Values");
-
-                    // pozice a rozměry (tolerantní názvy)
-                    var x = GetDouble(el, "X") ?? GetDouble(el, "Left") ?? 8;
-                    var y = GetDouble(el, "Y") ?? GetDouble(el, "Top") ?? 8;
-                    var w = GetDouble(el, "W") ?? GetDouble(el, "Width") ?? GuessWidth(type);
-                    var h = GetDouble(el, "H") ?? GetDouble(el, "Height") ?? GuessHeight(type);
-
-                    yield return new PreviewElementVm(label!, type, options, x, y, w, h);
-                }
-            }
-        }
-        private static JsonElement? TryObject(JsonElement el, string propName)
-        {
-            if (TryProp(el, propName, out var v) && v.ValueKind == JsonValueKind.Object)
-                return v;
-            return null;
+            return !(x + w <= other.X ||
+                     other.X + other.PreviewWidth <= x ||
+                     y + h <= other.Y ||
+                     other.Y + other.PreviewHeight <= y);
         }
 
-        private static double GuessWidth(string type) =>
-            type == "Checkbox" ? 18 : 220;
-        private static double GuessHeight(string type) =>
-            type switch { "Date" => 28, "Select" => 28, "Number" => 28, "Text" => 28, "Checkbox" => 18, _ => 28 };
-
-        private static double? GetDouble(JsonElement el, string propName)
-        {
-            if (!TryProp(el, propName, out var v)) return null;
-            return v.ValueKind switch
-            {
-                JsonValueKind.Number => v.TryGetDouble(out var d) ? d : (double?)null,
-                JsonValueKind.String => double.TryParse(v.GetString(), out var d2) ? d2 : (double?)null,
-                _ => null
-            };
-        }
-
-        private static void AddFallbackFields(BlockVm b)
-        {
-
-        }
+        private static double SnapTo(double v, double grid) => grid <= 0 ? v : Math.Round(v / grid) * grid;
 
         /// <summary>
-        /// Projde JSON do hloubky a hledá objekty, které vypadají jako field:
-        /// - mají některé z: Label/Name/Title/Placeholder
-        /// - a/nebo mají typ: FieldType/Type/ControlType/Kind/DataType
-        /// - volby: Options/Items/Values/Enum/Choices
+        /// Vrátí nejbližší volnou pozici ke (targetX,targetY) pro blok o rozměrech blockW/H.
+        /// Respektuje snap na grid, clamp do stage a vyhne se kolizím.
         /// </summary>
-        private static IEnumerable<PreviewFieldVm> CollectFieldCandidates(JsonElement root)
+        public (double X, double Y) FindNearestFreeSlot(StageVm st, double targetX, double targetY,
+                                                        double blockW, double blockH,
+                                                        double grid, double headerHeight,
+                                                        int maxIterations = 200)
         {
-            foreach (var obj in EnumerateObjectsDeep(root))
+            double baseX = SnapTo(targetX, grid);
+            double baseY = SnapTo(targetY, grid);
+
+            // základní clamp
+            const double innerPad = 4;
+            baseX = Math.Max(innerPad, Math.Min(baseX, st.W - blockW - innerPad));
+            baseY = Math.Max(headerHeight + innerPad, Math.Min(baseY, st.H - blockH - innerPad));
+
+            bool IsFree(double x, double y)
             {
-                var label = GetString(obj, "Label")
-                            ?? GetString(obj, "Name")
-                            ?? GetString(obj, "Title")
-                            ?? GetString(obj, "Placeholder");
+                foreach (var other in st.Blocks)
+                    if (RectIntersects(x, y, blockW, blockH, other)) return false;
+                return true;
+            }
+            if (IsFree(baseX, baseY)) return (baseX, baseY);
 
-                // typ
-                var type = GetString(obj, "FieldType")
-                           ?? GetString(obj, "Type")
-                           ?? GetString(obj, "ControlType")
-                           ?? GetString(obj, "Kind")
-                           ?? GetString(obj, "DataType");
+            var step = Math.Max(1, (int)(grid > 0 ? grid : 8));
+            int radius = step;
+            int iter = 0;
 
-                // pokud nemá ani label ani typ, přeskoč
-                if (string.IsNullOrWhiteSpace(label) && string.IsNullOrWhiteSpace(type))
-                    continue;
+            while (iter < maxIterations && radius < 4000)
+            {
+                for (int dx = -radius; dx <= radius; dx += step)
+                {
+                    // horní
+                    {
+                        double x = SnapTo(baseX + dx, grid);
+                        double y = SnapTo(baseY - radius, grid);
+                        x = Math.Max(innerPad, Math.Min(x, st.W - blockW - innerPad));
+                        y = Math.Max(headerHeight + innerPad, Math.Min(y, st.H - blockH - innerPad));
+                        if (IsFree(x, y)) return (x, y);
+                        if (++iter >= maxIterations) break;
+                    }
+                    // dolní
+                    {
+                        double x = SnapTo(baseX + dx, grid);
+                        double y = SnapTo(baseY + radius, grid);
+                        x = Math.Max(innerPad, Math.Min(x, st.W - blockW - innerPad));
+                        y = Math.Max(headerHeight + innerPad, Math.Min(y, st.H - blockH - innerPad));
+                        if (IsFree(x, y)) return (x, y);
+                        if (++iter >= maxIterations) break;
+                    }
+                }
+                for (int dy = -radius + step; dy <= radius - step; dy += step)
+                {
+                    // levá
+                    {
+                        double x = SnapTo(baseX - radius, grid);
+                        double y = SnapTo(baseY + dy, grid);
+                        x = Math.Max(innerPad, Math.Min(x, st.W - blockW - innerPad));
+                        y = Math.Max(headerHeight + innerPad, Math.Min(y, st.H - blockH - innerPad));
+                        if (IsFree(x, y)) return (x, y);
+                        if (++iter >= maxIterations) break;
+                    }
+                    // pravá
+                    {
+                        double x = SnapTo(baseX + radius, grid);
+                        double y = SnapTo(baseY + dy, grid);
+                        x = Math.Max(innerPad, Math.Min(x, st.W - blockW - innerPad));
+                        y = Math.Max(headerHeight + innerPad, Math.Min(y, st.H - blockH - innerPad));
+                        if (IsFree(x, y)) return (x, y);
+                        if (++iter >= maxIterations) break;
+                    }
+                }
+                radius += step;
+            }
 
-                // normalizuj typ (i z názvů WPF prvků)
-                var norm = NormalizeType(type);
+            return (baseX, baseY); // nouzově
+        }
 
-                // options
-                var options = GetOptions(obj, "Options")
-                              ?? GetOptions(obj, "Items")
-                              ?? GetOptions(obj, "Values")
-                              ?? GetOptions(obj, "Enum")
-                              ?? GetOptions(obj, "Choices");
 
-                // Pokud není label, ale víme typ, udělej generický
-                if (string.IsNullOrWhiteSpace(label)) label = $"({norm})";
+        public void ClampBlockInside(BlockVm b, StageVm st, double blockW, double blockH, double header)
+        {
+            if (b == null || st == null) return;
+            const double innerPad = 4; // malý vnitřní okraj
+            b.X = Math.Max(innerPad, Math.Min(b.X, st.W - blockW - innerPad));
+            b.Y = Math.Max(header + innerPad, Math.Min(b.Y, st.H - blockH - innerPad));
+        }
 
-                // Heuristika: ignoruj zjevně nekonfigurační objekty (např. XY souřadnice apod.)
-                // Když není nic rozumného, přeskoč.
-                if (string.IsNullOrWhiteSpace(label)) continue;
 
-                yield return new PreviewFieldVm(label, norm, options);
+        private static bool Intersects(BlockVm a, BlockVm b) =>
+            !(a.X + a.PreviewWidth <= b.X ||
+              b.X + b.PreviewWidth <= a.X ||
+              a.Y + a.PreviewHeight <= b.Y ||
+              b.Y + b.PreviewHeight <= a.Y);
+
+        private void ResolveBlockOverlaps(BlockVm moved, StageVm st, double grid, double headerHeight)
+        {
+            for (int iter = 0; iter < 20; iter++)
+            {
+                var hit = st.Blocks.FirstOrDefault(b => !ReferenceEquals(b, moved) && Intersects(moved, b));
+                if (hit == null) break;
+
+                double dxRight = (hit.X + hit.PreviewWidth) - moved.X;
+                double dxLeft = (moved.X + moved.PreviewWidth) - hit.X;
+                double dyDown = (hit.Y + hit.PreviewHeight) - moved.Y;
+                double dyUp = (moved.Y + moved.PreviewHeight) - hit.Y;
+
+                var best = new (double dx, double dy)[] {
+            ( +dxRight + 1, 0 ),
+            ( -(dxLeft)  - 1, 0 ),
+            ( 0, +dyDown + 1 ),
+            ( 0, -(dyUp)  - 1 )
+        }.OrderBy(v => Math.Abs(v.dx) + Math.Abs(v.dy)).First();
+
+                moved.X += best.dx;
+                moved.Y += best.dy;
+
+                moved.X = SnapTo(moved.X, grid);
+                moved.Y = SnapTo(moved.Y, grid);
+
+                ClampBlockInside(moved, st, moved.PreviewWidth, moved.PreviewHeight, headerHeight);
             }
         }
 
-        private static IEnumerable<JsonElement> EnumerateObjectsDeep(JsonElement el)
+        private void AutoGrowStageIfNeeded(StageVm st, BlockVm b, double headerHeight)
         {
-            switch (el.ValueKind)
-            {
-                case JsonValueKind.Object:
-                    yield return el;
-                    foreach (var p in el.EnumerateObject())
-                        foreach (var sub in EnumerateObjectsDeep(p.Value)) yield return sub;
-                    break;
-
-                case JsonValueKind.Array:
-                    foreach (var it in el.EnumerateArray())
-                        foreach (var sub in EnumerateObjectsDeep(it)) yield return sub;
-                    break;
-            }
+            double requiredW = b.X + b.PreviewWidth + 16;
+            double requiredH = b.Y + b.PreviewHeight + 16 + headerHeight;
+            if (requiredW > st.W) st.W = requiredW;
+            if (requiredH > st.H) st.H = requiredH;
         }
 
-        private static string NormalizeType(string? t)
+        // === Přesun bloku NA cílovou pozici (přirozený drag) ===
+        public void MoveBlockTo(BlockVm b, StageVm st, double targetX, double targetY, double grid, double headerHeight)
         {
-            if (string.IsNullOrWhiteSpace(t)) return "Text";
-            var s = t.Trim().ToLowerInvariant();
+            if (b == null || st == null) return;
 
-            // obecné
-            if (s is "string" or "text" or "textbox" or "input" or "textarea") return "Text";
-            if (s is "int" or "integer" or "number" or "numeric" or "double" or "decimal") return "Number";
-            if (s is "date" or "datetime" or "datetime-local" or "datepicker") return "Date";
-            if (s is "select" or "dropdown" or "combo" or "combobox" or "options" or "list") return "Select";
-            if (s is "bool" or "boolean" or "checkbox" or "check") return "Checkbox";
+            // 1) nastav přesnou cílovou pozici (před snapem)
+            b.X = targetX;
+            b.Y = targetY;
 
-            // názvy WPF komponent
-            if (s.Contains("combobox")) return "Select";
-            if (s.Contains("checkbox")) return "Checkbox";
-            if (s.Contains("textbox")) return "Text";
-            if (s.Contains("numeric")) return "Number";
-            if (s.Contains("date")) return "Date";
+            // 2) clamp dovnitř stage
+            ClampBlockInside(b, st, b.PreviewWidth, b.PreviewHeight, headerHeight);
 
-            return "Text";
+            // 3) snap
+            b.X = SnapTo(b.X, grid);
+            b.Y = SnapTo(b.Y, grid);
+
+            // 4) no-overlap
+            ResolveBlockOverlaps(b, st, grid, headerHeight);
+
+            // 5) autogrow stage
+            AutoGrowStageIfNeeded(st, b, headerHeight);
         }
 
-        private static string? GetOptions(JsonElement el, string propName)
+        // === Vložení „pod poslední“ ===
+        public (double X, double Y) GetNextBelowLast(StageVm st, double left = 8, double margin = 12)
         {
-            if (!TryProp(el, propName, out var p)) return null;
+            if (st.Blocks.Count == 0) return (left, margin);
 
-            switch (p.ValueKind)
-            {
-                case JsonValueKind.Array:
-                    var arr = p.EnumerateArray()
-                               .Select(i => i.ValueKind == JsonValueKind.String ? i.GetString() : i.ToString())
-                               .Where(s => !string.IsNullOrWhiteSpace(s))
-                               .ToArray();
-                    return arr.Length == 0 ? null : string.Join(';', arr);
+            // najdi nejnižší blok
+            var last = st.Blocks.OrderByDescending(b => b.Y + b.PreviewHeight).First();
+            var y = last.Y + last.PreviewHeight + margin;
 
-                case JsonValueKind.String:
-                    return p.GetString();
-
-                case JsonValueKind.Object:
-                    // třeba dictionary { "A":"Text A","B":"Text B" } → vezmeme klíče
-                    var keys = new List<string>();
-                    foreach (var kv in p.EnumerateObject())
-                        keys.Add(kv.Name);
-                    return keys.Count == 0 ? null : string.Join(';', keys);
-
-                default:
-                    return null;
-            }
+            // šířku vezmi 0 – bude řešit Clamp/AutoGrow po vložení
+            return (left, y);
         }
 
+
+        // ---- JSON helpers ----
         private static bool TryProp(JsonElement el, string propName, out JsonElement val)
         {
             foreach (var p in el.EnumerateObject())
             {
-                if (p.NameEquals(propName) ||
-                    string.Equals(p.Name, propName, StringComparison.OrdinalIgnoreCase))
+                if (p.NameEquals(propName) || string.Equals(p.Name, propName, StringComparison.OrdinalIgnoreCase))
                 {
                     val = p.Value; return true;
                 }
             }
-            val = default;
-            return false;
+            val = default; return false;
         }
 
-        private static string? GetString(JsonElement el, string propName)
+        private static string? TryGetString(JsonElement el, string prop)
         {
-            if (!TryProp(el, propName, out var v)) return null;
-            if (v.ValueKind == JsonValueKind.String) return v.GetString();
-            return v.ToString();
+            return TryProp(el, prop, out var v)
+                ? (v.ValueKind == JsonValueKind.String ? v.GetString() : v.ToString())
+                : null;
+        }
+
+        private static double? TryGetDouble(JsonElement el, string prop)
+        {
+            if (!TryProp(el, prop, out var v)) return null;
+            return v.ValueKind switch
+            {
+                JsonValueKind.Number => v.TryGetDouble(out var d) ? d : (double?)null,
+                JsonValueKind.String => double.TryParse(v.GetString(), System.Globalization.NumberStyles.Any,
+                                                        System.Globalization.CultureInfo.InvariantCulture, out var d2) ? d2 : (double?)null,
+                _ => null
+            };
+        }
+
+        // ---- Brush helper (bez pádu na špatný formát) ----
+        private static Brush? ToBrushSafe(string? hex)
+        {
+            if (string.IsNullOrWhiteSpace(hex)) return null;
+            try
+            {
+                var obj = new BrushConverter().ConvertFromString(hex);
+                if (obj is Brush br) return br;
+            }
+            catch { /* ignore */ }
+            return null;
         }
 
         // --- Draft export (volitelné) ---
@@ -487,9 +569,9 @@ namespace Agt.Desktop.ViewModels
             var path = System.IO.Path.Combine(dir, "AGT");
             System.IO.Directory.CreateDirectory(path);
             System.IO.File.WriteAllText(System.IO.Path.Combine(path, "editor_pins.json"),
-                System.Text.Json.JsonSerializer.Serialize(pins, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                System.Text.Json.JsonSerializer.Serialize(pins, new JsonSerializerOptions { WriteIndented = true }));
             System.IO.File.WriteAllText(System.IO.Path.Combine(path, "editor_stage_routes.json"),
-                System.Text.Json.JsonSerializer.Serialize(routes, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                System.Text.Json.JsonSerializer.Serialize(routes, new JsonSerializerOptions { WriteIndented = true }));
         }
     }
 
@@ -516,12 +598,17 @@ namespace Agt.Desktop.ViewModels
         public ObservableCollection<string> AssignedGroups { get; } = new();
         public ObservableCollection<string> AssignedUsers { get; } = new();
 
-        private string _startMode = "Manual";
+        private string _startMode = "Manual"; // Manual | AutoOnPrevComplete | AutoOnCondition
         public string StartMode { get => _startMode; set { _startMode = value; Raise(); } }
 
-        private int _slaHours = 0; public int SLAHours { get => _slaHours; set { _slaHours = value; Raise(); } }
-        private bool _allowReopen = true; public bool AllowReopen { get => _allowReopen; set { _allowReopen = value; Raise(); } }
-        private bool _autoCompleteOnAllBlocks = false; public bool AutoCompleteOnAllBlocks { get => _autoCompleteOnAllBlocks; set { _autoCompleteOnAllBlocks = value; Raise(); } }
+        private int _slaHours = 0; // 0 = bez SLA
+        public int SLAHours { get => _slaHours; set { _slaHours = value; Raise(); } }
+
+        private bool _allowReopen = true;
+        public bool AllowReopen { get => _allowReopen; set { _allowReopen = value; Raise(); } }
+
+        private bool _autoCompleteOnAllBlocks = false;
+        public bool AutoCompleteOnAllBlocks { get => _autoCompleteOnAllBlocks; set { _autoCompleteOnAllBlocks = value; Raise(); } }
 
         public ObservableCollection<BlockVm> Blocks { get; } = new();
     }
@@ -538,8 +625,8 @@ namespace Agt.Desktop.ViewModels
 
         private bool _sel; public bool IsSelected { get => _sel; set { _sel = value; Raise(); } }
 
-        // NOVÉ: vykreslované prvky a rozměry plátna
-        public ObservableCollection<PreviewElementVm> PreviewElements { get; } = new();
+        // >>> NOVĚ: renderujeme přímo přes modelové komponenty
+        public ObservableCollection<FieldComponentBase> Components { get; } = new();
 
         private double _previewWidth = 320;
         public double PreviewWidth { get => _previewWidth; set { _previewWidth = value; Raise(); } }
@@ -547,6 +634,7 @@ namespace Agt.Desktop.ViewModels
         private double _previewHeight = 200;
         public double PreviewHeight { get => _previewHeight; set { _previewHeight = value; Raise(); } }
     }
+
 
     public sealed class PreviewElementVm : ViewModelBase
     {
@@ -566,20 +654,6 @@ namespace Agt.Desktop.ViewModels
             FieldType = fieldType;
             Options = options;
             X = x; Y = y; W = w; H = h;
-        }
-    }
-
-    public sealed class PreviewFieldVm : ViewModelBase
-    {
-        public string Label { get; }
-        public string FieldType { get; } // Text / Number / Date / Select / Checkbox
-        public string? Options { get; }   // pro Select (např. "A;B;C")
-
-        public PreviewFieldVm(string label, string fieldType, string? options = null)
-        {
-            Label = label;
-            FieldType = fieldType;
-            Options = options;
         }
     }
 

@@ -14,7 +14,26 @@ namespace Agt.Desktop.Models
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private double _totalWidth;
+        public double TotalWidth
+        {
+            get => _totalWidth;
+            set { if (_totalWidth != value) { _totalWidth = value; OnPropertyChanged(nameof(TotalWidth)); } }
+        }
 
+        private double _totalHeight;
+        public double TotalHeight
+        {
+            get => _totalHeight;
+            set { if (_totalHeight != value) { _totalHeight = value; OnPropertyChanged(nameof(TotalHeight)); } }
+        }
+
+        // doporučuji v ctoru nebo při tvorbě komponent nastavit default
+        protected FieldComponentBase()
+        {
+            TotalWidth = Width;   // pokud někdo nenastaví, padne to na skutečné Width/Height
+            TotalHeight = Height;
+        }
         // ---------- Identita ----------
         private Guid _id = Guid.NewGuid();
         public Guid Id

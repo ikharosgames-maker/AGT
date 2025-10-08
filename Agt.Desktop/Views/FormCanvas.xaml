@@ -1,0 +1,399 @@
+﻿<UserControl x:Class="Agt.Desktop.Controls.FormCanvas"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:m="clr-namespace:Agt.Desktop.Models"
+             xmlns:local="clr-namespace:Agt.Desktop.Controls"
+             x:Name="Root"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True">
+
+    <UserControl.Resources>
+
+        <!-- =======================
+             EDIT šablony
+             ======================= -->
+
+        <!-- LABEL -->
+        <DataTemplate x:Key="Edit_LabelField" DataType="{x:Type m:LabelField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,0">
+                <TextBlock Text="{Binding Label}"
+                           Foreground="{Binding Foreground}"
+                           FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                           VerticalAlignment="Center"/>
+            </Border>
+        </DataTemplate>
+
+        <!-- TEXTBOX -->
+        <DataTemplate x:Key="Edit_TextBoxField" DataType="{x:Type m:TextBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                               Foreground="{Binding Foreground}"
+                               FontFamily="{Binding FontFamily}"/>
+                    <TextBox Grid.Row="1"
+                             Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Foreground="{Binding Foreground}"
+                             FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                             BorderThickness="0" VerticalContentAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- TEXTAREA -->
+        <DataTemplate x:Key="Edit_TextAreaField" DataType="{x:Type m:TextAreaField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                               Foreground="{Binding Foreground}"
+                               FontFamily="{Binding FontFamily}"/>
+                    <TextBox Grid.Row="1"
+                             Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True" TextWrapping="Wrap"
+                             Foreground="{Binding Foreground}"
+                             FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                             BorderThickness="0" VerticalContentAlignment="Top"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- NUMBER -->
+        <DataTemplate x:Key="Edit_NumberField" DataType="{x:Type m:NumberField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                               Foreground="{Binding Foreground}"
+                               FontFamily="{Binding FontFamily}"/>
+                    <TextBox Grid.Row="1"
+                             Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Foreground="{Binding Foreground}"
+                             FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                             BorderThickness="0" VerticalContentAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- DATE -->
+        <DataTemplate x:Key="Edit_DateField" DataType="{x:Type m:DateField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                               Foreground="{Binding Foreground}"
+                               FontFamily="{Binding FontFamily}"/>
+                    <DatePicker Grid.Row="1"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- COMBO -->
+        <DataTemplate x:Key="Edit_ComboBoxField" DataType="{x:Type m:ComboBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"
+                               Foreground="{Binding Foreground}"
+                               FontFamily="{Binding FontFamily}"/>
+                    <ComboBox Grid.Row="1"
+                              IsEditable="{Binding IsEditable}"
+                              ItemsSource="{Binding Options}"
+                              Foreground="{Binding Foreground}"
+                              FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- CHECKBOX -->
+        <DataTemplate x:Key="Edit_CheckBoxField" DataType="{x:Type m:CheckBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="#666" BorderThickness="1" CornerRadius="2" Padding="6,4">
+                <CheckBox IsChecked="{Binding IsCheckedDefault}"
+                          Content="{Binding Label}" VerticalAlignment="Center"
+                          Foreground="{Binding Foreground}"
+                          FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
+            </Border>
+        </DataTemplate>
+
+        <!-- =======================
+             READONLY šablony
+             ======================= -->
+
+        <DataTemplate x:Key="RO_LabelField" DataType="{x:Type m:LabelField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,0">
+                <TextBlock Text="{Binding Label}"
+                           Foreground="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"
+                           FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"
+                           VerticalAlignment="Center"/>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RO_TextBoxField" DataType="{x:Type m:TextBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <TextBlock Grid.Row="1" Text="{Binding DefaultValue}" VerticalAlignment="Center"
+                               Foreground="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RO_TextAreaField" DataType="{x:Type m:TextAreaField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <TextBlock Grid.Row="1" Text="{Binding DefaultValue}" TextWrapping="Wrap" VerticalAlignment="Top"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RO_NumberField" DataType="{x:Type m:NumberField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <TextBlock Grid.Row="1" Text="{Binding DefaultValue}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RO_DateField" DataType="{x:Type m:DateField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <TextBlock Grid.Row="1" Text="{Binding DefaultValue}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RO_ComboBoxField" DataType="{x:Type m:ComboBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <TextBlock Grid.Row="1" Text="{Binding DefaultValue}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RO_CheckBoxField" DataType="{x:Type m:CheckBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Rectangle Width="16" Height="16"
+                               Stroke="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                               Fill="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" Margin="0,0,6,0"/>
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- =======================
+             RUN šablony (TwoWay binding na RuntimeData[BindingPath])
+             ======================= -->
+
+        <DataTemplate x:Key="Run_LabelField" DataType="{x:Type m:LabelField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,0">
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Run_TextBoxField" DataType="{x:Type m:TextBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <TextBox Grid.Row="1"
+                             Text="{Binding DataContext.RuntimeData[BindingPath], RelativeSource={RelativeSource AncestorType=local:FormCanvas}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalContentAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Run_TextAreaField" DataType="{x:Type m:TextAreaField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <TextBox Grid.Row="1"
+                             Text="{Binding DataContext.RuntimeData[BindingPath], RelativeSource={RelativeSource AncestorType=local:FormCanvas}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True" TextWrapping="Wrap" VerticalContentAlignment="Top"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Run_NumberField" DataType="{x:Type m:NumberField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <TextBox Grid.Row="1"
+                             Text="{Binding DataContext.RuntimeData[BindingPath], RelativeSource={RelativeSource AncestorType=local:FormCanvas}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Run_DateField" DataType="{x:Type m:DateField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <DatePicker Grid.Row="1"
+                                SelectedDate="{Binding DataContext.RuntimeData[BindingPath], RelativeSource={RelativeSource AncestorType=local:FormCanvas}, Mode=TwoWay}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Run_ComboBoxField" DataType="{x:Type m:ComboBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Label}" Margin="0,0,0,4"/>
+                    <ComboBox Grid.Row="1"
+                              ItemsSource="{Binding Options}"
+                              SelectedItem="{Binding DataContext.RuntimeData[BindingPath], RelativeSource={RelativeSource AncestorType=local:FormCanvas}, Mode=TwoWay}"
+                              IsEditable="{Binding IsEditable}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Run_CheckBoxField" DataType="{x:Type m:CheckBoxField}">
+            <Border Width="{Binding Width}" Height="{Binding Height}"
+                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="2" Padding="6,4">
+                <CheckBox IsChecked="{Binding DataContext.RuntimeData[BindingPath], RelativeSource={RelativeSource AncestorType=local:FormCanvas}, Mode=TwoWay}"
+                          Content="{Binding Label}" VerticalAlignment="Center"/>
+            </Border>
+        </DataTemplate>
+
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Canvas s absolutním layoutem -->
+        <Canvas x:Name="RootCanvas"
+                Width="{Binding CanvasWidth, ElementName=Root}"
+                Height="{Binding CanvasHeight, ElementName=Root}"
+                Background="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}">
+
+            <ItemsControl ItemsSource="{Binding Items, ElementName=Root}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Canvas/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemContainerStyle>
+                    <Style TargetType="ContentPresenter">
+                        <Setter Property="Canvas.Left"   Value="{Binding X}"/>
+                        <Setter Property="Canvas.Top"    Value="{Binding Y}"/>
+                        <Setter Property="Panel.ZIndex"  Value="{Binding ZIndex}"/>
+                    </Style>
+                </ItemsControl.ItemContainerStyle>
+                <ItemsControl.ItemTemplateSelector>
+                    <local:FieldTemplateSelector/>
+                </ItemsControl.ItemTemplateSelector>
+            </ItemsControl>
+
+        </Canvas>
+    </Grid>
+</UserControl>

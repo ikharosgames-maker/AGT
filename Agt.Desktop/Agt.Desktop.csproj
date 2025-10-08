@@ -38,6 +38,9 @@
 		<Page Include="Views\FlowDesignerView.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
+		<Page Include="Views\FormCanvas.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Include="Views\FormEditorView.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
@@ -65,10 +68,13 @@
 		<Compile Include="Adapters\RelayCommandAdapter.cs" />
 		<Compile Include="App.xaml.cs" />
 		<Compile Include="Controls\BlockPreviewControl.xaml.cs" />
+		<Compile Include="Converters\BrushOrSystemResourceConverter.cs" />
+		<Compile Include="Models\RenderMode.cs" />
 		<Compile Include="Services\BlockLibraryJson.cs" />
 		<Compile Include="Services\IBlockLibrary.cs" />
 		<Compile Include="ViewModels\SemicolonToListConverter.cs" />
 		<Compile Include="Views\ContrastForegroundConverter.cs" />
+		<Compile Include="Views\FormCanvas.xaml.cs" />
 		<Compile Include="Views\StageEdgePathConverter.cs" />
 		<Compile Include="ViewModels\FormProcessEditorViewModel.cs" />
 		<Compile Include="Views\FormProcessEditorWindow.xaml.cs" />
