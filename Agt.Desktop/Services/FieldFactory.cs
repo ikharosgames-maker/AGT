@@ -4,16 +4,13 @@ using Agt.Desktop.Models;
 
 namespace Agt.Desktop.Services
 {
+    /// <summary>
+    /// Továrna na nové field komponenty.
+    /// POZOR: Záměrně nenastavujeme výchozí Background/Foreground,
+    /// ponecháváme je NULL => barvy dodá theme + autokontrast v šablonách.
+    /// </summary>
     public class FieldFactory
     {
-        private static SolidColorBrush DefaultFieldBrush =>
-            (Agt.Desktop.App.Current?.Resources["FieldBackgroundBrush"] as SolidColorBrush)
-            ?? new SolidColorBrush(Color.FromRgb(0x2E, 0x2E, 0x2E));
-
-        private static SolidColorBrush DefaultTextBrush =>
-            (Agt.Desktop.App.Current?.Resources["ControlTextBrush"] as SolidColorBrush)
-            ?? Brushes.Black;
-
         public FieldComponentBase Create(string key, double x, double y, object? defaults)
         {
             FieldComponentBase f = key switch
@@ -29,15 +26,40 @@ namespace Agt.Desktop.Services
             };
 
             f.TypeKey = key;
-            f.X = x; f.Y = y;
-            f.Background = DefaultFieldBrush;
-            f.Foreground = DefaultTextBrush;
+            f.X = x;
+            f.Y = y;
 
-            // Pojmenování (typ_blok_label_index) – zatím bez indexu/bloku => doplníme v navazující iteraci z VM
+            // 🔑 Klíčové: žádné tvrdé barvy – necháme NULL,
+            // ať zafunguje globální theme + AutoContrastForegroundConverter v šablonách.
+            f.Background = null;
+            f.Foreground = null;
+
+            // Pokud bys někdy posílal explicitní výchozí vzhledy (např. z dialogu),
+            // můžeš je sem propsat – šablony je respektují.
+            if (defaults is IFieldVisualDefaults d)
+            {
+                if (d.Background != null) f.Background = d.Background;
+                if (d.Foreground != null) f.Foreground = d.Foreground;
+                if (!string.IsNullOrWhiteSpace(d.FontFamily)) f.FontFamily = d.FontFamily;
+                if (d.FontSize > 0) f.FontSize = d.FontSize;
+            }
+
+            // Pojmenování (můžeš později doplnit index/kontext bloku)
             f.Name = $"{key}_item";
             f.FieldKey = $"{key}_item";
 
             return f;
         }
+    }
+
+    /// <summary>
+    /// Volitelné rozhraní pro předání defaultů vzhledu (pokud jej nepoužíváš, klidně smaž).
+    /// </summary>
+    public interface IFieldVisualDefaults
+    {
+        Brush? Background { get; }
+        Brush? Foreground { get; }
+        string? FontFamily { get; }
+        double FontSize { get; }
     }
 }

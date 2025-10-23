@@ -1,0 +1,193 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mdl="clr-namespace:Agt.Desktop.Models"
+    xmlns:beh="clr-namespace:Agt.Desktop.Behaviors"
+    xmlns:v="clr-namespace:Agt.Desktop.Validation">
+    <!-- Společné styly (držíme theme, nic zbytečně "nepřifukujeme") -->
+    <Style x:Key="Field_Label" TargetType="TextBlock">
+        <Setter Property="Margin" Value="0,0,0,2"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        <Style.Triggers>
+            <Trigger Property="Text" Value="">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Field_InputBase" TargetType="Control">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="2"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="Field_TextBox" TargetType="TextBox" BasedOn="{StaticResource Field_InputBase}">
+        <!-- single-line textbox klidně vyplní buňku do šířky -->
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+
+    <Style x:Key="Field_TextArea" TargetType="TextBox" BasedOn="{StaticResource Field_InputBase}">
+        <!-- multi-line: text vlevo nahoře, plná plocha, wrap + scroll -->
+        <Setter Property="AcceptsReturn" Value="True"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Top"/>
+        <Setter Property="TextAlignment" Value="Left"/>
+    </Style>
+
+    <Style x:Key="Field_ComboBox" TargetType="ComboBox" BasedOn="{StaticResource Field_InputBase}">
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="IsTextSearchEnabled" Value="True"/>
+    </Style>
+
+    <Style x:Key="Field_DatePicker" TargetType="DatePicker" BasedOn="{StaticResource Field_InputBase}">
+        <!-- zásadní: roztáhnout ovládací prvek na celou šířku boxu -->
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <!-- volitelné: formát a textové zarovnání uvnitř -->
+        <Setter Property="SelectedDateFormat" Value="Short"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- Každá šablona = Grid přesně na Width/Height z modelu
+         Řádek0: Auto (label)  |  Řádek1: * (vstup) -->
+
+    <!-- LABEL  -->
+    <DataTemplate DataType="{x:Type mdl:LabelField}">
+        <Grid Width="{Binding Width}" Height="{Binding Height}">
+            <TextBlock Text="{Binding Label}"
+                       Foreground="{DynamicResource AppTextBrush}"
+                       VerticalAlignment="Center" HorizontalAlignment="Left"/>
+        </Grid>
+    </DataTemplate>
+
+    <!-- TEXTBOX  -->
+    <DataTemplate DataType="{x:Type mdl:TextBoxField}">
+        <Grid Width="{Binding Width}" Height="{Binding Height}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Style="{StaticResource Field_Label}" Text="{Binding Label}"/>
+
+            <TextBox Grid.Row="1"
+                     Style="{StaticResource Field_TextBox}"
+                     Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
+        </Grid>
+    </DataTemplate>
+
+    <!-- TEXTAREA  -->
+    <DataTemplate DataType="{x:Type mdl:TextAreaField}">
+        <Grid Width="{Binding Width}" Height="{Binding Height}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Style="{StaticResource Field_Label}" Text="{Binding Label}"/>
+
+            <TextBox Grid.Row="1"
+                     Style="{StaticResource Field_TextArea}"
+                     Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
+        </Grid>
+    </DataTemplate>
+
+    <!-- NUMBER (aktuálně jako textový vstup; validaci/masku přidáme centrálně) -->
+    <DataTemplate DataType="{x:Type mdl:NumberField}">
+        <Grid Width="{Binding Width}" Height="{Binding Height}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0"
+                   Style="{StaticResource Field_Label}"
+                   Text="{Binding Label}"/>
+
+            <TextBox Grid.Row="1"
+                 Style="{StaticResource Field_TextBox}"
+                 FontFamily="{Binding FontFamily}"
+                 FontSize="{Binding FontSize}"
+                 beh:NumericBox.IsEnabled="True"
+                 beh:NumericBox.AllowDecimal="True"
+                 beh:NumericBox.AllowNegative="True">
+                <TextBox.Text>
+                    <Binding Path="Value"
+                         Mode="TwoWay"
+                         UpdateSourceTrigger="PropertyChanged"
+                         ValidatesOnDataErrors="True"
+                         ValidatesOnExceptions="True"
+                         NotifyOnValidationError="True">
+                        <Binding.ValidationRules>
+                            <!-- volitelně: <v:NumberRangeRule Min="{Binding Min}" Max="{Binding Max}"/> -->
+                            <v:NumberRangeRule/>
+                        </Binding.ValidationRules>
+                    </Binding>
+                </TextBox.Text>
+            </TextBox>
+        </Grid>
+    </DataTemplate>
+
+
+    <!-- DATE - -->
+    <DataTemplate DataType="{x:Type mdl:DateField}">
+        <Grid Width="{Binding Width}" Height="{Binding Height}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Style="{StaticResource Field_Label}" Text="{Binding Label}"/>
+
+            <DatePicker Grid.Row="1"
+                        Style="{StaticResource Field_DatePicker}"
+                        SelectedDate="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
+        </Grid>
+    </DataTemplate>
+
+    <!-- COMBOBOX  -->
+    <DataTemplate DataType="{x:Type mdl:ComboBoxField}">
+        <Grid Width="{Binding Width}" Height="{Binding Height}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Style="{StaticResource Field_Label}" Text="{Binding Label}"/>
+
+            <ComboBox Grid.Row="1"
+                      Style="{StaticResource Field_ComboBox}"
+                      ItemsSource="{Binding Options}"
+                      SelectedValue="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      FontFamily="{Binding FontFamily}" FontSize="{Binding FontSize}"/>
+        </Grid>
+    </DataTemplate>
+
+    <!-- CHECKBOX  -->
+    <DataTemplate DataType="{x:Type mdl:CheckBoxField}">
+        <Grid Width="{Binding Width}" Height="{Binding Height}">
+            <CheckBox Content="{Binding Label}"
+                      IsChecked="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      VerticalAlignment="Center"
+                      Foreground="{DynamicResource AppTextBrush}"/>
+        </Grid>
+    </DataTemplate>
+
+</ResourceDictionary>

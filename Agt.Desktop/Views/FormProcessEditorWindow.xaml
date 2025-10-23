@@ -4,18 +4,46 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Agt.Desktop.ViewModels"
-        xmlns:controls="clr-namespace:Agt.Desktop.Controls"
+        xmlns:views="clr-namespace:Agt.Desktop.Views"
+        xmlns:models="clr-namespace:Agt.Desktop.Models"
         mc:Ignorable="d"
         Title="Editor formuláře / procesu"
-        Width="1200" Height="800">
+        Width="1200" Height="800"
+        Background="{DynamicResource EditorWindowBackgroundBrush}"
+        Foreground="{DynamicResource EditorTextBrush}">
+
+    <!-- ===== lokální zdroje ===== -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <!-- Selector musí být někde ve zdrojích – ponechávám zde, ať je jistota -->
+        <views:FieldTemplateSelector x:Key="FieldTemplateSelector"/>
+    </Window.Resources>
+
     <DockPanel>
         <!-- Menu -->
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_Soubor">
-                <MenuItem Header="Publikovat..." Click="OnPublish"/>
-                <Separator/>
-                <MenuItem Header="Zavřít" Click="OnClose"/>
-            </MenuItem>
+        <Menu DockPanel.Dock="Top"
+              Background="{DynamicResource EditorSurfaceAltBrush}"
+              Foreground="{DynamicResource EditorTextBrush}">
+            <Menu DockPanel.Dock="Top">
+                <Menu DockPanel.Dock="Top">
+                    <MenuItem Header="_Soubor">
+                        <MenuItem Header="Otevřít z repozitáře…"
+              Command="{Binding OpenFromRepositoryCommand}" />
+                        <Separator/>
+                        <MenuItem Header="Uložit pracovní verzi"
+              Command="{Binding SaveDraftCommand}"
+              InputGestureText="Ctrl+S" />
+                        <MenuItem Header="Otevřít pracovní verzi…"
+              Command="{Binding OpenDraftCommand}"
+              InputGestureText="Ctrl+O" />
+                        <Separator/>
+                        <MenuItem Header="Publikovat (Auto – PATCH/MINOR)"
+              Command="{Binding PublishCommand}"
+              InputGestureText="Ctrl+P" />
+                    </MenuItem>
+                </Menu>
+            </Menu>
+
             <MenuItem Header="_Vložit">
                 <MenuItem Header="Nová Stage (Group)" Click="OnAddStage"/>
             </MenuItem>
@@ -34,8 +62,8 @@
 
             <!-- Paleta bloků -->
             <Border Grid.Column="0"
-                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
-                    BorderBrush="#333" BorderThickness="0,0,1,0">
+                    Background="{DynamicResource EditorPanelBrush}"
+                    BorderBrush="{DynamicResource EditorBorderBrush}" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <TextBlock Text="Paleta bloků" FontWeight="Bold" Margin="10" DockPanel.Dock="Top"/>
                     <ListBox x:Name="PaletteList"
@@ -50,11 +78,11 @@
             <!-- Plátno + zoom/pan -->
             <Grid Grid.Column="1">
                 <Border x:Name="ZoomHost"
-                        Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                        Background="{DynamicResource EditorCanvasBrush}"
                         ClipToBounds="True" SnapsToDevicePixels="True">
                     <Canvas x:Name="RootCanvas"
                             Width="5000" Height="4000"
-                            Background="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}"
+                            Background="{DynamicResource EditorCanvasBrush}"
                             MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
                             MouseMove="Canvas_MouseMove"
                             MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
@@ -79,11 +107,11 @@
 
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:StageVm}">
-                                    <!-- OBAL STAGE (bez zbytečných extra margin/padding navíc) -->
+                                    <!-- OBAL STAGE (drag i přes hlavičku i tělo) -->
                                     <Border Width="{Binding W}"
                                             Height="{Binding H}"
-                                            BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
-                                            Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                                            BorderBrush="{DynamicResource EditorBorderBrush}"
+                                            Background="{DynamicResource EditorPanelBrush}"
                                             BorderThickness="1"
                                             MouseLeftButtonDown="Stage_MouseLeftButtonDown"
                                             MouseMove="Stage_MouseMove"
@@ -94,20 +122,28 @@
                                                 <RowDefinition Height="*"/>
                                             </Grid.RowDefinitions>
 
-                                            <!-- Hlavička stage (drag select) -->
+                                            <!-- Hlavička stage -->
                                             <DockPanel Grid.Row="0"
-                                                       Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
-                                                       MouseLeftButtonDown="StageHeader_MouseLeftButtonDown">
+                                                       Background="{DynamicResource EditorSurfaceAltBrush}"
+                                                       MouseLeftButtonDown="Stage_MouseLeftButtonDown"
+                                                       MouseMove="Stage_MouseMove"
+                                                       MouseLeftButtonUp="Stage_MouseLeftButtonUp">
                                                 <TextBlock Text="{Binding Title}" Margin="8,0" VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"
+                                                           Foreground="{DynamicResource EditorTextBrush}"
                                                            FontWeight="Bold"/>
                                             </DockPanel>
 
-                                            <!-- Body stage (drop cíl pro bloky) -->
+                                            <!-- Tělo stage (drop cíl pro bloky) -->
                                             <Grid Grid.Row="1"
+                                                  Background="{DynamicResource EditorPanelBrush}"
                                                   AllowDrop="True"
                                                   DragOver="Stage_Body_DragOver"
-                                                  Drop="Stage_Drop">
+                                                  Drop="Stage_Drop"
+                                                  ClipToBounds="True"
+                                                  MouseLeftButtonDown="Stage_MouseLeftButtonDown"
+                                                  MouseMove="Stage_MouseMove"
+                                                  MouseLeftButtonUp="Stage_MouseLeftButtonUp">
+
                                                 <!-- Vnitřní canvas pro BLOCKS -->
                                                 <ItemsControl ItemsSource="{Binding Blocks}">
                                                     <ItemsControl.ItemsPanel>
@@ -115,44 +151,97 @@
                                                             <Canvas/>
                                                         </ItemsPanelTemplate>
                                                     </ItemsControl.ItemsPanel>
+
                                                     <ItemsControl.ItemContainerStyle>
                                                         <Style TargetType="ContentPresenter">
-                                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                                                            <Setter Property="Canvas.Top"  Value="{Binding Y}"/>
+                                                            <Setter Property="Canvas.Left"  Value="{Binding X}"/>
+                                                            <Setter Property="Canvas.Top"   Value="{Binding Y}"/>
                                                             <Setter Property="Panel.ZIndex" Value="{Binding ZIndex, FallbackValue=0}"/>
                                                         </Style>
                                                     </ItemsControl.ItemContainerStyle>
+
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate DataType="{x:Type vm:BlockVm}">
-                                                            <controls:BlockPreviewControl
-                                                                Width="{Binding PreviewWidth}"
-                                                                Height="{Binding PreviewHeight}"
-                                                                MouseLeftButtonDown="OnBlockMouseDown"
-                                                                MouseMove="OnBlockMouseMove"
-                                                                MouseLeftButtonUp="OnBlockMouseUp"/>
+                                                            <!-- Vizuál bloku (drag celým blokem) -->
+                                                            <Border BorderBrush="{DynamicResource EditorBorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    Background="{DynamicResource EditorPanelBrush}"
+                                                                    SnapsToDevicePixels="True"
+                                                                    CornerRadius="4"
+                                                                    MouseLeftButtonDown="OnBlockMouseDown"
+                                                                    MouseMove="OnBlockMouseMove"
+                                                                    MouseLeftButtonUp="OnBlockMouseUp">
+                                                                <Grid>
+                                                                    <Grid.RowDefinitions>
+                                                                        <RowDefinition Height="24"/>
+                                                                        <RowDefinition Height="Auto"/>
+                                                                    </Grid.RowDefinitions>
+
+                                                                    <!-- Header bloku -->
+                                                                    <DockPanel Grid.Row="0" Background="{DynamicResource EditorSurfaceBrush}">
+                                                                        <TextBlock Text="{Binding Title}" Margin="6,0" FontWeight="SemiBold"/>
+                                                                    </DockPanel>
+
+                                                                    <!-- Tělo bloku = komponenty na AutoSizeCanvas -->
+                                                                    <ItemsControl Grid.Row="1"
+                                                                                  ItemsSource="{Binding Components}"
+                                                                                  ItemTemplateSelector="{StaticResource FieldTemplateSelector}">
+                                                                        <ItemsControl.ItemsPanel>
+                                                                            <ItemsPanelTemplate>
+                                                                                <!-- >>> AutoSizeCanvas aplikuje padding a spočítá se podle dětí -->
+                                                                                <views:AutoSizeCanvas Padding="8"/>
+                                                                            </ItemsPanelTemplate>
+                                                                        </ItemsControl.ItemsPanel>
+                                                                        <ItemsControl.ItemContainerStyle>
+                                                                            <Style TargetType="ContentPresenter">
+                                                                                <Setter Property="Canvas.Left"  Value="{Binding X}"/>
+                                                                                <Setter Property="Canvas.Top"   Value="{Binding Y}"/>
+                                                                                <Setter Property="Panel.ZIndex" Value="{Binding ZIndex, FallbackValue=0}"/>
+                                                                            </Style>
+                                                                        </ItemsControl.ItemContainerStyle>
+                                                                    </ItemsControl>
+
+                                                                    <!-- Obrys vybraného bloku -->
+                                                                    <Border BorderBrush="{DynamicResource EditorAccentBrush}"
+                                                                            BorderThickness="2"
+                                                                            CornerRadius="4"
+                                                                            IsHitTestVisible="False"
+                                                                            Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
+                                                                </Grid>
+                                                            </Border>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
+
+                                                <!-- Resize thumb -->
+                                                <Thumb Width="12" Height="12"
+                                                       HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                       Margin="0"
+                                                       Background="{DynamicResource EditorSurfaceAltBrush}" Cursor="SizeNWSE"
+                                                       DragDelta="Stage_Resize_DragDelta"
+                                                       Panel.ZIndex="100"/>
+
+                                                <!-- Porty (IN/OUT) -->
+                                                <Ellipse Width="10" Height="10" Fill="{DynamicResource EditorAccentBrush}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                         Margin="6,0,0,0"
+                                                         MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
+                                                         MouseLeftButtonDown="Stage_InPort_MouseLeftButtonDown"
+                                                         Panel.ZIndex="50"/>
+                                                <Ellipse Width="10" Height="10" Fill="{DynamicResource EditorAccentBrush}"
+                                                         HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                         Margin="0,0,6,0"
+                                                         MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
+                                                         MouseLeftButtonDown="Stage_OutPort_MouseLeftButtonDown"
+                                                         Panel.ZIndex="50"/>
+
+                                                <!-- Obrys vybrané stage -->
+                                                <Border BorderBrush="{DynamicResource EditorAccentBrush}"
+                                                        BorderThickness="2"
+                                                        CornerRadius="6"
+                                                        IsHitTestVisible="False"
+                                                        Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
                                             </Grid>
-
-                                            <!-- Resize thumb (pravý dolní roh) -->
-                                            <Thumb Width="12" Height="12"
-                                                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                   Margin="0"
-                                                   Background="#999" Cursor="SizeNWSE"
-                                                   DragDelta="Stage_Resize_DragDelta"/>
-
-                                            <!-- Porty (IN/OUT) – střed výšky -->
-                                            <Ellipse Width="10" Height="10" Fill="#5AAFff"
-                                                     HorizontalAlignment="Left" VerticalAlignment="Center"
-                                                     Margin="6,0,0,0"
-                                                     MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
-                                                     MouseLeftButtonDown="Stage_InPort_MouseLeftButtonDown"/>
-                                            <Ellipse Width="10" Height="10" Fill="#5AAFff"
-                                                     HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                     Margin="0,0,6,0"
-                                                     MouseEnter="Port_MouseEnter" MouseLeave="Port_MouseLeave"
-                                                     MouseLeftButtonDown="Stage_OutPort_MouseLeftButtonDown"/>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -161,15 +250,15 @@
 
                         <!-- HRANY -->
                         <Canvas x:Name="EdgeLayer" Width="5000" Height="4000" Panel.ZIndex="2000"/>
-                        <Path x:Name="RubberPath" Stroke="#AAA" StrokeDashArray="4,4" StrokeThickness="1" Visibility="Collapsed" Panel.ZIndex="3000"/>
+                        <Path x:Name="RubberPath" Stroke="{DynamicResource EditorTextBrush}" StrokeDashArray="4,4" StrokeThickness="1" Visibility="Collapsed" Panel.ZIndex="3000"/>
                     </Canvas>
                 </Border>
             </Grid>
 
             <!-- Pravý panel -->
             <Border Grid.Column="2"
-                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
-                    BorderBrush="#333" BorderThickness="1,0,0,0">
+                    Background="{DynamicResource EditorPanelBrush}"
+                    BorderBrush="{DynamicResource EditorBorderBrush}" BorderThickness="1,0,0,0">
                 <ScrollViewer>
                     <StackPanel Margin="12" x:Name="RightPanelRoot">
                         <TextBlock Text="Vlastnosti" FontWeight="Bold"/>

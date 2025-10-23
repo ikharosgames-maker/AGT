@@ -1,0 +1,133 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <SolidColorBrush x:Key="AppBackgroundBrush"
+                   Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="AppTextBrush"
+                   Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="AppPanelBrush"
+                   Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="AppPanelAltBrush"
+                   Color="{DynamicResource {x:Static SystemColors.ControlLightColorKey}}"/>
+    <SolidColorBrush x:Key="AppPanelDarkBrush"
+                   Color="{DynamicResource {x:Static SystemColors.ControlDarkColorKey}}"/>
+    <SolidColorBrush x:Key="AppCanvasBrush"
+                   Color="{DynamicResource {x:Static SystemColors.ControlDarkDarkColorKey}}"/>
+    <SolidColorBrush x:Key="AppBorderBrush"
+                   Color="{DynamicResource {x:Static SystemColors.ActiveBorderColorKey}}"/>
+    <SolidColorBrush x:Key="AppAccentBrush"
+                   Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="AppDisabledTextBrush"
+                   Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+
+    <DrawingBrush x:Key="AppGridBrush"
+                TileMode="Tile"
+                Viewport="0,0,16,16" ViewportUnits="Absolute"
+                Stretch="None">
+        <DrawingBrush.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="{DynamicResource AppCanvasBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,16,16"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Geometry="M 16 0 L 0 0 0 16">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="{DynamicResource AppPanelDarkBrush}" Thickness="0.5"/>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <SolidColorBrush x:Key="EditorWindowBackgroundBrush" Color="{Binding Color, Source={StaticResource AppBackgroundBrush}}"/>
+    <SolidColorBrush x:Key="EditorPanelBrush"            Color="{Binding Color, Source={StaticResource AppPanelBrush}}"/>
+    <SolidColorBrush x:Key="EditorSurfaceBrush"          Color="{Binding Color, Source={StaticResource AppPanelAltBrush}}"/>
+    <SolidColorBrush x:Key="EditorSurfaceAltBrush"       Color="{Binding Color, Source={StaticResource AppPanelDarkBrush}}"/>
+    <SolidColorBrush x:Key="EditorCanvasBrush"           Color="{Binding Color, Source={StaticResource AppCanvasBrush}}"/>
+    <SolidColorBrush x:Key="EditorBorderBrush"           Color="{Binding Color, Source={StaticResource AppBorderBrush}}"/>
+    <SolidColorBrush x:Key="EditorTextBrush"             Color="{Binding Color, Source={StaticResource AppTextBrush}}"/>
+    <SolidColorBrush x:Key="EditorAccentBrush"           Color="{Binding Color, Source={StaticResource AppAccentBrush}}"/>
+
+    <DrawingBrush x:Key="EditorGridBrush"  Drawing="{Binding Drawing, Source={StaticResource AppGridBrush}}"/>
+    <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="{Binding Color, Source={StaticResource AppCanvasBrush}}"/>
+
+
+    <Style TargetType="Window">
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+    </Style>
+
+    <Style TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+    </Style>
+
+    <Style TargetType="TextBox">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="6,2"/>
+        <Setter Property="MinHeight" Value="28"/>
+    </Style>
+
+    <Style TargetType="ComboBox">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MinHeight" Value="28"/>
+    </Style>
+
+    <Style TargetType="DatePicker">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MinHeight" Value="28"/>
+    </Style>
+
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+    </Style>
+
+    <Style TargetType="Border">
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
+    <Style TargetType="ContentPresenter">
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource AppTextBrush}"/>
+    </Style>
+
+    <Style TargetType="Menu">
+        <Setter Property="Background" Value="{DynamicResource AppPanelDarkBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+    </Style>
+    <Style TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+    </Style>
+    <Style TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource AppPanelBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="MinHeight" Value="28"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AppPanelAltBrush}"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+            </Trigger>
+            <Trigger Property="IsDefault" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource AppDisabledTextBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>

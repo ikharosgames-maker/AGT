@@ -1,10 +1,11 @@
-﻿using Agt.Desktop.Services;
-using Agt.Desktop.ViewModels;
-using Microsoft.Win32;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Win32;
+using Agt.Desktop.Services;
+using Agt.Desktop.ViewModels;
 
 namespace Agt.Desktop.Views
 {
@@ -35,21 +36,60 @@ namespace Agt.Desktop.Views
         {
             if (VM.CurrentBlock == null)
             {
-                MessageBox.Show("Nejprve založte nebo načtěte blok.");
+                MessageBox.Show("Nejprve založte nebo načtěte blok.", "Upozornění",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            var sfd = new SaveFileDialog { Filter = "AGT JSON (*.json)|*.json" };
-            if (sfd.ShowDialog(this) != true) return;
+            try
+            {
+                // Export DTO → z něj uděláme JSON a vyčteme BlockId/Version/Key/BlockName z kořene
+                var dto = VM.ExportToDto();
+                if (dto == null)
+                    throw new InvalidOperationException("Export vrací prázdná data.");
 
-            var payload = VM.ExportToDto();
-            // 1) Uložení do vybraného souboru
-            File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                var jsonIndented = JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = true });
+                using var doc = JsonDocument.Parse(jsonIndented);
+                var root = doc.RootElement;
 
-            // 2) Kopie do knihovny (sdílený katalog pro paletu formulářového editoru)
-            BlockLibraryJson.Default.SaveToLibrary(payload);
+                // BlockId (povinné)
+                if (!root.TryGetProperty("BlockId", out var blockIdEl) ||
+                    !Guid.TryParse(blockIdEl.GetString(), out var blockId) ||
+                    blockId == Guid.Empty)
+                    throw new InvalidOperationException("Kořen JSON neobsahuje platný 'BlockId' (GUID).");
 
-            VM.StatusText = $"Uloženo: {System.IO.Path.GetFileName(sfd.FileName)}";
+                // Version (povinné – ale když chybí, doplníme 1.0.0)
+                string version = root.TryGetProperty("Version", out var verEl) ? (verEl.GetString() ?? "") : "";
+                if (string.IsNullOrWhiteSpace(version)) version = "1.0.0";
+
+                // Volitelné
+                string? key = root.TryGetProperty("Key", out var keyEl) ? keyEl.GetString() : null;
+                string? blockName = root.TryGetProperty("BlockName", out var nameEl) ? nameEl.GetString() : null;
+
+                // 1) uložit do vybraného souboru
+                var sfd = new SaveFileDialog
+                {
+                    Filter = "AGT JSON (*.json)|*.json",
+                    FileName = $"{blockId:D}__{version}.json"
+                };
+                if (sfd.ShowDialog(this) != true) return;
+
+                File.WriteAllText(sfd.FileName, jsonIndented);
+
+                // 2) zapsat do knihovny bloků (KANON: BlockId + Version, soubor {BlockId}__{Version}.json)
+                var ok = BlockLibraryJson.Default.SaveToLibrary(blockId, version, root, key: key, blockName: blockName);
+                if (!ok)
+                    throw new InvalidOperationException("Zápis do knihovny bloků selhal.");
+
+                VM.StatusText = $"Uloženo: {System.IO.Path.GetFileName(sfd.FileName)}";
+                MessageBox.Show("Blok byl úspěšně uložen a zapsán do knihovny.",
+                    "Hotovo", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ukládání selhalo:\n{ex.Message}",
+                    "Chyba", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void LoadJson_OnClick(object sender, RoutedEventArgs e)
@@ -60,12 +100,17 @@ namespace Agt.Desktop.Views
             try
             {
                 var json = File.ReadAllText(ofd.FileName);
-                VM.ImportFromDto(JsonSerializer.Deserialize<DesignerViewModel.Dto>(json)!);
+                var dto = JsonSerializer.Deserialize<DesignerViewModel.Dto>(json);
+                if (dto == null)
+                    throw new InvalidOperationException("Soubor neobsahuje platný blok.");
+
+                VM.ImportFromDto(dto);
                 VM.StatusText = $"Načteno: {System.IO.Path.GetFileName(ofd.FileName)}";
             }
-            catch
+            catch (Exception ex)
             {
-                MessageBox.Show("Soubor nelze načíst.");
+                MessageBox.Show($"Soubor nelze načíst:\n{ex.Message}",
+                    "Chyba", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

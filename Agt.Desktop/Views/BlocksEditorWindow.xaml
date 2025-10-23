@@ -4,24 +4,26 @@
         xmlns:views="clr-namespace:Agt.Desktop.Views"
         Title="AGT – Návrhář formulářů"
         Width="1280" Height="860"
-        Background="#121212" Foreground="#EEEEEE"
+        Background="{DynamicResource EditorWindowBackgroundBrush}"
+        Foreground="{DynamicResource EditorTextBrush}"
         WindowStartupLocation="CenterScreen"
         SnapsToDevicePixels="True"
         UseLayoutRounding="True">
+
     <Grid>
         <Grid.RowDefinitions>
-            <!-- MENU -->
             <RowDefinition Height="Auto"/>
-            <!-- INFO BAR -->
             <RowDefinition Height="36"/>
-            <!-- OBSAH -->
             <RowDefinition Height="*"/>
-            <!-- STATUS -->
             <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
 
-        <!-- Hlavní Menu: vždy viditelné, kontrastní -->
-        <Menu Grid.Row="0" Background="#222222" Foreground="#FFFFFF" FontSize="13" IsHitTestVisible="True">
+        <!-- Menu -->
+        <Menu Grid.Row="0"
+          Background="{DynamicResource EditorSurfaceAltBrush}"
+          Foreground="{DynamicResource EditorTextBrush}"
+          FontSize="13"
+          IsHitTestVisible="True">
             <MenuItem Header="_Soubor">
                 <MenuItem Header="_Nový blok…" Click="NewBlock_OnClick"/>
                 <MenuItem Header="_Otevřít…" Click="LoadJson_OnClick"/>
@@ -29,7 +31,6 @@
                 <Separator/>
                 <MenuItem Header="_Konec" Click="Exit_OnClick"/>
             </MenuItem>
-
             <MenuItem Header="_Úpravy">
                 <MenuItem Header="_Smazat" Command="{Binding DeleteCommand}"/>
                 <MenuItem Header="_Duplikovat" Command="{Binding DuplicateCommand}"/>
@@ -39,7 +40,6 @@
                 <Separator/>
                 <MenuItem Header="Zarovnat v_levo" Command="{Binding AlignLeftCommand}"/>
             </MenuItem>
-
             <MenuItem Header="_Zobrazení">
                 <MenuItem Header="Mřížka −" Click="GridMinus_OnClick"/>
                 <MenuItem Header="Mřížka +" Click="GridPlus_OnClick"/>
@@ -55,59 +55,67 @@
                     </MenuItem.HeaderTemplate>
                 </MenuItem>
             </MenuItem>
-
             <MenuItem Header="_Layout">
                 <MenuItem Header="_Auto layout" Click="AutoLayout_OnClick"/>
             </MenuItem>
         </Menu>
 
-        <!-- Info bar (název/ID bloku) -->
-        <Border Grid.Row="1" Background="#1F1F1F" BorderBrush="#333" BorderThickness="0,0,0,1">
+        <!-- Info bar -->
+        <Border Grid.Row="1"
+            Background="{DynamicResource EditorSurfaceBrush}"
+            BorderBrush="{DynamicResource EditorBorderBrush}"
+            BorderThickness="0,0,0,1">
             <DockPanel>
                 <TextBlock Margin="10,0" VerticalAlignment="Center" FontSize="12"
-                           Text="{Binding CurrentBlockTitle, FallbackValue=— žádný blok —}"/>
+                   Text="{Binding CurrentBlockTitle, FallbackValue=— žádný blok —}"/>
             </DockPanel>
         </Border>
 
-        <!-- OBSAH: 5 sloupců – knihovna komponent, seznam, plátno, (volit.) panel, vlastnosti -->
+        <!-- Obsah -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="260"/>
                 <ColumnDefinition Width="260"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="0"/>
-                <!-- volitelný panel, ponecháno 0 -->
                 <ColumnDefinition Width="320"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Knihovna komponent -->
-            <Border Grid.Column="0" BorderBrush="#333" BorderThickness="0,0,1,0" Background="#1A1A1A">
+            <Border Grid.Column="0"
+              BorderBrush="{DynamicResource EditorBorderBrush}"
+              BorderThickness="0,0,1,0"
+              Background="{DynamicResource EditorPanelBrush}">
                 <views:ComponentLibraryView/>
             </Border>
 
-            <!-- Seznam komponent v aktuálním bloku -->
-            <Border Grid.Column="1" BorderBrush="#333" BorderThickness="0,0,1,0" Background="#1A1A1A">
+            <Border Grid.Column="1"
+              BorderBrush="{DynamicResource EditorBorderBrush}"
+              BorderThickness="0,0,1,0"
+              Background="{DynamicResource EditorPanelBrush}">
                 <views:ComponentsListView/>
             </Border>
 
-            <!-- Plátno návrháře -->
-            <Border Grid.Column="2" Background="#0F0F0F" BorderBrush="#333" BorderThickness="1">
+            <Border Grid.Column="2"
+              Background="{DynamicResource EditorCanvasBrush}"
+              BorderBrush="{DynamicResource EditorBorderBrush}"
+              BorderThickness="1">
+                <!-- Pokud chceš mřížku z Theme.xaml, přepni na EditorGridBrush -->
                 <views:DesignerCanvas/>
             </Border>
 
-            <!-- (Volitelný) Panel -->
-            <!--<Border Grid.Column="3" BorderBrush="#333" BorderThickness="1,0,0,0" Background="#1A1A1A">
-                <views:SomeOptionalPanel/>
-            </Border>-->
-
-            <!-- Vlastnosti vybraného prvku -->
-            <Border Grid.Column="4" BorderBrush="#333" BorderThickness="1,0,0,0" Background="#1A1A1A">
+            <Border Grid.Column="4"
+              BorderBrush="{DynamicResource EditorBorderBrush}"
+              BorderThickness="1,0,0,0"
+              Background="{DynamicResource EditorPanelBrush}">
                 <views:PropertiesPanel/>
             </Border>
         </Grid>
 
         <!-- Status bar -->
-        <Border Grid.Row="3" Background="#1F1F1F" BorderBrush="#333" BorderThickness="0,1,0,0">
+        <Border Grid.Row="3"
+            Background="{DynamicResource EditorSurfaceBrush}"
+            BorderBrush="{DynamicResource EditorBorderBrush}"
+            BorderThickness="0,1,0,0">
             <DockPanel>
                 <TextBlock Margin="8,0" VerticalAlignment="Center" FontSize="12"
                    Text="{Binding StatusText, FallbackValue=Připraveno}"/>

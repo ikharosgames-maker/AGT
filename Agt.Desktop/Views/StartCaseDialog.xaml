@@ -1,0 +1,46 @@
+﻿<Window x:Class="Agt.Desktop.Views.StartCaseDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Spustit případ"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="160"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="160"/>
+            <ColumnDefinition Width="320"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Text="Publikovaná verze" Grid.Row="0" Grid.Column="0" Margin="0,0,8,8"/>
+        <ComboBox x:Name="VersionBox"
+              Grid.Row="0" Grid.Column="1" Margin="0,0,0,8"
+              DisplayMemberPath="Display"
+              SelectionChanged="VersionBox_SelectionChanged"/>
+
+        <TextBlock Text="Počáteční bloky" Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Top"/>
+        <ListBox x:Name="BlocksList"
+             Grid.Row="1" Grid.Column="1"
+             BorderBrush="{DynamicResource AppBorderBrush}"
+             BorderThickness="1"
+             ScrollViewer.CanContentScroll="False"
+             VirtualizingStackPanel.IsVirtualizing="False">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <!-- ŽÁDNÉ FindName – čistý binding -->
+                    <CheckBox Content="{Binding Display}"
+                    IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Width="90" Margin="0,12,8,0" Content="Spustit" IsDefault="True" Click="Ok_Click"/>
+            <Button Width="90" Margin="0,12,0,0" Content="Zrušit" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

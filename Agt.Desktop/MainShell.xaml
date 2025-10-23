@@ -40,9 +40,10 @@
         </StackPanel>
 
         <!-- DataGrid Cases -->
-        <DataGrid ItemsSource="{Binding Cases}"
+        <DataGrid x:Name="CasesList" ItemsSource="{Binding Cases}"
               AutoGenerateColumns="False" IsReadOnly="True"
-              SelectionMode="Single" Margin="8">
+              SelectionMode="Single" Margin="8"
+                  MouseDoubleClick="CasesList_MouseDoubleClick">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="2*"/>
                 <DataGridTextColumn Header="FormVersion" Binding="{Binding FormVersion}" Width="*" />

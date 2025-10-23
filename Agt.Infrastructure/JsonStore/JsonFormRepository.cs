@@ -10,7 +10,23 @@ public sealed class JsonFormRepository : BaseJsonRepo, IFormRepository
 
     public Form? Get(Guid id) => Load<Form>(id).GetAwaiter().GetResult();
 
-    public FormVersion? GetVersion(Guid id) => Load<FormVersion>(id).GetAwaiter().GetResult();
+    public FormVersion? GetVersion(Guid id)
+    {
+        var dir = JsonPaths.Dir("form-versions");
+        var path = Path.Combine(dir, id.ToString("D") + ".json");
+
+        // 1) autoritativně: file podle GUID názvu
+        if (File.Exists(path))
+        {
+            var json = File.ReadAllText(path);
+            // můžeš deserializovat přímo do FormVersion
+            return JsonSerializer.Deserialize<FormVersion>(json);
+        }
+
+        // 2) (volitelné) tvrdé odmítnutí – ať hned zjistíš, že chybí soubor
+        // Pokud nechceš ani minimální scan, tuhle část vynech
+        throw new FileNotFoundException($"FormVersion file not found: {path}");
+    }
 
     public IEnumerable<FormVersion> ListVersions(Guid formId)
         => AllFiles()

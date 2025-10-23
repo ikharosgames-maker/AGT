@@ -1,33 +1,21 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text.Json;
 
 namespace Agt.Desktop.Services
 {
-    /// <summary>Knihovna bloků na disku (JSON soubory). Slouží jako katalog do palety procesního editoru.</summary>
-    public interface IBlockLibrary
+    public sealed record BlockLibEntry(Guid BlockId, string Key, string Name, string Version, string FilePath);
+
+    public interface IBlockLibrary : IDisposable
     {
-        /// <summary>Adresář knihovny (jen ke čtení – nastavuje implementace).</summary>
-        string LibraryRoot { get; }
+        IEnumerable<BlockLibEntry> Enumerate();
 
-        /// <summary>Uloží definici bloku do knihovny (přepíše existující se stejným Key+Version).</summary>
-        void SaveToLibrary(object blockDto);
+        // KANON: načítání výhradně přes BlockId + Version
+        bool TryLoadByIdVersion(Guid blockId, string version,
+                                out JsonDocument? doc, out BlockLibEntry? entry);
 
-        /// <summary>Vrátí přehled dostupných bloků: Key, Name/Title, Version a cesta k JSON.</summary>
-        IEnumerable<BlockCatalogItem> Enumerate();
-
-        /// <summary>Zkusí načíst raw JSON daného souboru (pro případ náhledu).</summary>
-        string LoadRawJson(string filePath);
-
-        /// <summary>Najde a načte JSON bloku podle Key + Version.</summary>
-        bool TryLoadByKeyVersion(string key, string version, out JsonDocument? document, out string? filePath);
-    }
-
-    public sealed class BlockCatalogItem
-    {
-        public string Key { get; init; } = "";
-        public string Name { get; init; } = "";
-        public string Version { get; init; } = "";
-        public string FilePath { get; init; } = "";
-        public override string ToString() => $"{Name} [{Key}] v{Version}";
+        // KANON: ukládání výhradně přes BlockId + Version
+        bool SaveToLibrary(Guid blockId, string version, JsonElement schemaRoot,
+                           string? key = null, string? blockName = null);
     }
 }

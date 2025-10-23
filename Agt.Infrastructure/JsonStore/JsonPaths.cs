@@ -2,7 +2,7 @@
 
 namespace Agt.Infrastructure.JsonStore;
 
-internal static class JsonPaths
+public static class JsonPaths
 {
     internal static string Root
     {
@@ -15,7 +15,7 @@ internal static class JsonPaths
         }
     }
 
-    internal static string Dir(string name)
+    public static string Dir(string name)
     {
         var d = Path.Combine(Root, name);
         Directory.CreateDirectory(d);

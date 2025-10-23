@@ -14,6 +14,19 @@ namespace Agt.Desktop.Models
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private object? _value;
+        public object? Value
+        {
+            get => _value;
+            set
+            {
+                if (!Equals(_value, value))
+                {
+                    _value = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
         private double _totalWidth;
         public double TotalWidth
         {
