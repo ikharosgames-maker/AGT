@@ -1,7 +1,5 @@
 name: .NET Build & Test
 on:
-  push: { branches: [ "main", "dev", "feature/**", "fix/**" ] }
-  pull_request: { branches: [ "main", "dev" ] }
 jobs:
   build:
     runs-on: windows-latest

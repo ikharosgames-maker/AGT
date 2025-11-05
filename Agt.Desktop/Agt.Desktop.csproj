@@ -102,6 +102,7 @@
 		<Compile Include="Converters\NullToUnsetValueConverter .cs" />
 		<Compile Include="Converters\RowsToMinHeightConverter.cs" />
 		<Compile Include="Models\OptionItem.cs" />
+		<Compile Include="Models\PaletteItem.cs" />
 		<Compile Include="Models\RenderMode.cs" />
 		<Compile Include="Services\BlockLibraryJson.cs" />
 		<Compile Include="Services\BlockMeasure.cs" />

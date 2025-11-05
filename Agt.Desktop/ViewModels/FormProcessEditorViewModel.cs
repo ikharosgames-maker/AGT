@@ -1,75 +1,224 @@
 using System;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Windows.Input;
+using System.Windows;
 
 namespace Agt.Desktop.ViewModels
 {
     /// <summary>
-    /// ViewModel editoru formulářů.
-    /// Přidává „Založit nový“ (NewFormCommand) a bezpečně uzavírá třídu/namespace.
+    /// Funkční kostra editoru procesu s grafem stagí a bloků,
+    /// která pokrývá volání z FormProcessEditorWindow.xaml.cs.
     /// </summary>
     public sealed class FormProcessEditorViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private void Raise([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        private string _formKey = string.Empty;
-        public string FormKey
-        {
-            get => _formKey;
-            set { _formKey = value; OnPropertyChanged(); }
-        }
+        public EditorGraph Graph { get; } = new();
 
-        private string _title = string.Empty;
-        public string Title
-        {
-            get => _title;
-            set { _title = value; OnPropertyChanged(); }
-        }
+        private StageVm? _selectedStage;
+        public StageVm? SelectedStage { get => _selectedStage; private set { _selectedStage = value; Raise(); } }
 
-        public ICommand NewFormCommand { get; }
+        private StageEdgeVm? _selectedStageEdge;
+        public StageEdgeVm? SelectedStageEdge { get => _selectedStageEdge; private set { _selectedStageEdge = value; Raise(); } }
+
+        public ObservableCollection<string> AvailableUsers { get; } = new();
+        public ObservableCollection<string> AvailableGroups { get; } = new();
 
         public FormProcessEditorViewModel()
         {
-            NewFormCommand = new RelayCommand(_ => CreateNewForm());
+            // seed: prázdný graf
         }
 
-        /// <summary>
-        /// Vytvoří nový prázdný formulář s jedinečným Id a názvem.
-        /// </summary>
-        private void CreateNewForm()
+        public void ClearSelection()
         {
-            var now = DateTime.Now;
-            FormKey = $"form-{now:yyyyMMdd-HHmmss}";
-            Title = $"Nový formulář {now:yyyy-MM-dd HH:mm}";
+            SelectedStage = null;
+            SelectedStageEdge = null;
+        }
 
-            // TODO: vyčistit plátno, přidat výchozí Stage 1 atd., dle vaší implementace editoru.
+        public void SelectStage(StageVm s)
+        {
+            SelectedStage = s;
+            SelectedStageEdge = null;
+        }
+
+        public void SelectEdge(StageEdgeVm e)
+        {
+            SelectedStageEdge = e;
+            SelectedStage = null;
+        }
+
+        public StageVm AddStageAuto(double x, double y, double w = 520, double h = 380)
+        {
+            var st = new StageVm { Id = Guid.NewGuid(), X = x, Y = y, W = w, H = h };
+            Graph.Stages.Add(st);
+            return st;
+        }
+
+        public StageEdgeVm AddStageEdge(Guid fromStageId, Guid toStageId)
+        {
+            var e = new StageEdgeVm { Id = Guid.NewGuid(), FromStageId = fromStageId, ToStageId = toStageId };
+            Graph.StageEdges.Add(e);
+            return e;
+        }
+
+        public StageVm? FindStage(Guid id) => Graph.Stages.FirstOrDefault(s => s.Id == id);
+
+        public StageVm? HitTestStage(Point pCanvas)
+            => Graph.Stages.LastOrDefault(s => pCanvas.X >= s.X && pCanvas.X <= s.X + s.W &&
+                                               pCanvas.Y >= s.Y && pCanvas.Y <= s.Y + s.H);
+
+        public (double X, double Y) GetNextBlockPosition(StageVm stage, double localX, double localY)
+        {
+            // jednoduché umístění do volného místa
+            var x = Snap(localX, 8, noSnap: false);
+            var y = Snap(localY, 8, noSnap: false);
+            return (Clamp(x, 0, Math.Max(0, stage.W - 260)),
+                    Clamp(y, 36, Math.Max(36, stage.H - 140)));
+        }
+
+        public BlockVm AddBlock(StageVm stage, Guid blockId, string title, string version, double x, double y)
+        {
+            var b = new BlockVm
+            {
+                Id = Guid.NewGuid(),
+                RefBlockId = blockId,
+                Title = title,
+                Version = version,
+                X = x, Y = y,
+                PreviewWidth = 260, PreviewHeight = 140
+            };
+            stage.Blocks.Add(b);
+            return b;
+        }
+
+        public void GeneratePreview(BlockVm b)
+        {
+            // zde by se tvořil náhled; pro skeleton ponecháme default rozmery
+            if (b.PreviewWidth <= 0) b.PreviewWidth = 260;
+            if (b.PreviewHeight <= 0) b.PreviewHeight = 140;
+        }
+
+        public (double X, double Y) FindNearestFreeSlot(StageVm stage, double localX, double localY, double blockW, double blockH, int grid, double header)
+        {
+            var x = Snap(localX, grid, noSnap: false);
+            var y = Snap(localY, grid, noSnap: false);
+            // velmi jednoduché vyhledání s kolizní kontrolou
+            int tries = 0;
+            while (IntersectsAny(stage, x, y, blockW, blockH) && tries < 200)
+            {
+                x += grid;
+                if (x + blockW > stage.W) { x = 0; y += grid; }
+                if (y + blockH > stage.H) { y = header; }
+                tries++;
+            }
+            x = Clamp(x, 0, Math.Max(0, stage.W - blockW));
+            y = Clamp(y, header, Math.Max(header, stage.H - blockH));
+            return (x, y);
+        }
+
+        private static bool IntersectsAny(StageVm stage, double x, double y, double w, double h)
+            => stage.Blocks.Any(o => RectIntersects(x, y, w, h, o));
+
+        public static bool RectIntersects(double x, double y, double w, double h, BlockVm other)
+            => !(x + w <= other.X || other.X + other.PreviewWidth <= x ||
+                 y + h <= other.Y || other.Y + other.PreviewHeight <= y);
+
+        public void MoveBlockTo(BlockVm b, StageVm stage, double x, double y, int grid, double headerHeight)
+        {
+            x = Snap(x, grid, noSnap: false);
+            y = Snap(y, grid, noSnap: false);
+            x = Clamp(x, 0, Math.Max(0, stage.W - b.PreviewWidth));
+            y = Clamp(y, headerHeight, Math.Max(headerHeight, stage.H - b.PreviewHeight));
+            b.X = x; b.Y = y;
+        }
+
+        public void ClampBlockInside(BlockVm b, StageVm stage, int grid, double headerHeight)
+        {
+            var x = Clamp(b.X, 0, Math.Max(0, stage.W - b.PreviewWidth));
+            var y = Clamp(b.Y, headerHeight, Math.Max(headerHeight, stage.H - b.PreviewHeight));
+            b.X = Snap(x, grid, noSnap: false);
+            b.Y = Snap(y, grid, noSnap: false);
+        }
+
+        public double Snap(double value, int grid, bool noSnap)
+            => noSnap || grid <= 1 ? value : Math.Round(value / grid) * grid;
+
+        public (double X, double Y) SnapAll(double x, double y, int grid, bool noSnap)
+            => (Snap(x, grid, noSnap), Snap(y, grid, noSnap));
+
+        private static double Clamp(double v, double min, double max) => v < min ? min : (v > max ? max : v);
+
+        public void SelectBlock(BlockVm b)
+        {
+            // výběr bloku neudržujeme, stačí vybrat stage obsahující blok
+            SelectedStage = Graph.Stages.FirstOrDefault(s => s.Blocks.Contains(b));
+        }
+
+        public void LoadPaletteFromLibrary()
+        {
+            // skeleton: jen doplníme několik ukázkových uživatelů/skupin
+            if (AvailableUsers.Count == 0)
+            {
+                AvailableUsers.Add(Environment.UserName);
+                AvailableUsers.Add("demo-user");
+            }
+            if (AvailableGroups.Count == 0)
+            {
+                AvailableGroups.Add("Administrators");
+                AvailableGroups.Add("Operators");
+            }
         }
     }
 
-    /// <summary>
-    /// Jednoduchý RelayCommand pro ICommand.
-    /// </summary>
-    public sealed class RelayCommand : ICommand
+    public sealed class EditorGraph
     {
-        private readonly Action<object?> _execute;
-        private readonly Func<object?, bool>? _canExecute;
+        public ObservableCollection<StageVm> Stages { get; } = new();
+        public ObservableCollection<StageEdgeVm> StageEdges { get; } = new();
+    }
 
-        public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
+    public sealed class StageVm : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void Raise([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
+        public Guid Id { get; set; }
+        private double _x; public double X { get => _x; set { _x = value; Raise(); } }
+        private double _y; public double Y { get => _y; set { _y = value; Raise(); } }
+        private double _w = 520; public double W { get => _w; set { _w = value; Raise(); } }
+        private double _h = 380; public double H { get => _h; set { _h = value; Raise(); } }
 
-        public void Execute(object? parameter) => _execute(parameter);
+        public ObservableCollection<BlockVm> Blocks { get; } = new();
 
-        public event EventHandler? CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
+        public ObservableCollection<string> AssignedUsers { get; } = new();
+        public ObservableCollection<string> AssignedGroups { get; } = new();
+    }
+
+    public sealed class BlockVm : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void Raise([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        public Guid Id { get; set; }
+        public Guid RefBlockId { get; set; }
+
+        public string Title { get; set; } = "";
+        public string Version { get; set; } = "1.0.0";
+
+        private double _x; public double X { get => _x; set { _x = value; Raise(); } }
+        private double _y; public double Y { get => _y; set { _y = value; Raise(); } }
+
+        private double _pw = 260; public double PreviewWidth { get => _pw; set { _pw = value; Raise(); } }
+        private double _ph = 140; public double PreviewHeight { get => _ph; set { _ph = value; Raise(); } }
+    }
+
+    public sealed class StageEdgeVm
+    {
+        public Guid Id { get; set; }
+        public Guid FromStageId { get; set; }
+        public Guid ToStageId { get; set; }
     }
 }
