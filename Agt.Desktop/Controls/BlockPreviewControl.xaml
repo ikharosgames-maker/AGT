@@ -9,8 +9,8 @@
              SnapsToDevicePixels="True"
              UseLayoutRounding="True"
              Background="Transparent"
-             Width="{Binding PreviewWidth, FallbackValue=320, TargetNullValue=320}"
-             Height="{Binding PreviewHeight, FallbackValue=200, TargetNullValue=200}">
+             Width="{Binding PreviewWidth,  TargetNullValue=320}"
+             Height="{Binding PreviewHeight,  TargetNullValue=200}">
 
     <UserControl.Resources>
         <!-- LABEL -->
@@ -150,7 +150,7 @@
 
             <!-- Tělo: absolutní layout; rozměr = přesně PreviewWidth×PreviewHeight -->
             <Canvas Grid.Row="1"
-                    Width="{Binding PreviewWidth, FallbackValue=320}"
+                    Width="{Binding PreviewWidth}"
                     Background="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
                     SnapsToDevicePixels="True" Margin="19,0,19,10">
                 <ItemsControl ItemsSource="{Binding Components}">

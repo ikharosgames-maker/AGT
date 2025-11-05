@@ -1,65 +1,179 @@
-﻿using System.Windows;
+﻿using System;
+using System.Globalization;
 using System.Windows.Media;
 using Agt.Desktop.Models;
 
 namespace Agt.Desktop.Services
 {
-    /// <summary>
-    /// Továrna na nové field komponenty.
-    /// POZOR: Záměrně nenastavujeme výchozí Background/Foreground,
-    /// ponecháváme je NULL => barvy dodá theme + autokontrast v šablonách.
-    /// </summary>
-    public class FieldFactory
+    public static class FieldFactory
     {
-        public FieldComponentBase Create(string key, double x, double y, object? defaults)
+        private static readonly Brush DefaultForeground = Brushes.Black;
+        private const string DefaultFontFamily = "Segoe UI";
+        private const double DefaultFontSize = 12;
+
+        private static T ApplyVisuals<T>(T c) where T : FieldComponentBase
         {
-            FieldComponentBase f = key switch
-            {
-                "label" => new LabelField { Width = 180, Height = 24, Label = "Label" },
-                "textbox" => new TextBoxField { Width = 300, Height = 52, Label = "Text", Placeholder = "zadejte text…" },
-                "textarea" => new TextAreaField { Width = 420, Height = 120, Label = "Víceřádkový text" },
-                "combobox" => new ComboBoxField { Width = 300, Height = 32, Label = "Výběr" },
-                "checkbox" => new CheckBoxField { Width = 200, Height = 28, Label = "Zaškrtnout", IsCheckedDefault = false },
-                "date" => new DateField { Width = 260, Height = 32, Label = "Datum" },
-                "number" => new NumberField { Width = 260, Height = 32, Label = "Číslo" },
-                _ => new LabelField { Width = 180, Height = 24, Label = "Label" }
-            };
-
-            f.TypeKey = key;
-            f.X = x;
-            f.Y = y;
-
-            // 🔑 Klíčové: žádné tvrdé barvy – necháme NULL,
-            // ať zafunguje globální theme + AutoContrastForegroundConverter v šablonách.
-            f.Background = null;
-            f.Foreground = null;
-
-            // Pokud bys někdy posílal explicitní výchozí vzhledy (např. z dialogu),
-            // můžeš je sem propsat – šablony je respektují.
-            if (defaults is IFieldVisualDefaults d)
-            {
-                if (d.Background != null) f.Background = d.Background;
-                if (d.Foreground != null) f.Foreground = d.Foreground;
-                if (!string.IsNullOrWhiteSpace(d.FontFamily)) f.FontFamily = d.FontFamily;
-                if (d.FontSize > 0) f.FontSize = d.FontSize;
-            }
-
-            // Pojmenování (můžeš později doplnit index/kontext bloku)
-            f.Name = $"{key}_item";
-            f.FieldKey = $"{key}_item";
-
-            return f;
+            // Background ponecháváme (default = Transparent)
+            c.Foreground = DefaultForeground.Clone();
+            c.FontFamily = DefaultFontFamily;
+            c.FontSize = DefaultFontSize;
+            return c;
         }
-    }
 
-    /// <summary>
-    /// Volitelné rozhraní pro předání defaultů vzhledu (pokud jej nepoužíváš, klidně smaž).
-    /// </summary>
-    public interface IFieldVisualDefaults
-    {
-        Brush? Background { get; }
-        Brush? Foreground { get; }
-        string? FontFamily { get; }
-        double FontSize { get; }
+        private static T ApplyPositionAndSize<T>(T c, double? x, double? y, double? width, double? height) where T : FieldComponentBase
+        {
+            if (x.HasValue) c.X = x.Value;
+            if (y.HasValue) c.Y = y.Value;
+            if (width.HasValue) c.Width = width.Value;
+            if (height.HasValue) c.Height = height.Value;
+            c.TotalWidth = c.Width;
+            c.TotalHeight = c.Height;
+            return c;
+        }
+
+        // ---- Pomocné převody z object? na double? (akceptuje null, čísla, stringy) ----
+        private static double? ToDoubleOrNull(object? v)
+        {
+            if (v is null) return null;
+
+            switch (v)
+            {
+                case double d: return d;
+                case float f: return (double)f;
+                case int i: return i;
+                case long l: return l;
+                case decimal m: return (double)m;
+                case string s:
+                    if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+                        return parsed;
+                    if (double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out parsed))
+                        return parsed;
+                    return null;
+                default:
+                    return null;
+            }
+        }
+
+        // ===== Jednotná Create(string) – volání bez souřadnic/rozměrů =====
+        public static FieldComponentBase Create(string typeKey)
+            => CreateInternal(typeKey, null, null, null, null);
+
+        // ===== Přetížení s 4 parametry (kompatibilita s DesignerViewModel) =====
+        // Signatura s object? umožní posílat null i „objektové“ šířky z bindingů/VM.
+        public static FieldComponentBase Create(string typeKey, double x, double y, object? width)
+            => CreateInternal(typeKey, x, y, ToDoubleOrNull(width), null);
+
+        // ===== Přetížení s 5 parametry – explicitní rozměry (object?) =====
+        public static FieldComponentBase Create(string typeKey, double x, double y, object? width, object? height)
+            => CreateInternal(typeKey, x, y, ToDoubleOrNull(width), ToDoubleOrNull(height));
+
+        // ===== Interní jednotná logika =====
+        private static FieldComponentBase CreateInternal(string typeKey, double? x, double? y, double? width, double? height)
+        {
+            if (string.IsNullOrWhiteSpace(typeKey))
+                throw new ArgumentOutOfRangeException(nameof(typeKey), "Neznámý typ komponenty");
+
+            var t = typeKey.Trim()
+                           .Replace(" ", "", StringComparison.OrdinalIgnoreCase)
+                           .ToLower(CultureInfo.InvariantCulture);
+
+            switch (t)
+            {
+                case "textbox":
+                case "text":
+                case "input":
+                    {
+                        var c = ApplyVisuals(new TextBoxField { Label = "Text" });
+                        height ??= 60;
+                        return ApplyPositionAndSize(c, x, y, width, height);
+                    }
+
+                case "textarea":
+                case "multiline":
+                    {
+                        var c = ApplyVisuals(new TextAreaField { Label = "Víceřádkový text" });
+                        height ??= 100;
+                        return ApplyPositionAndSize(c, x, y, width, height);
+                    }
+
+                case "number":
+                case "numeric":
+                case "int":
+                case "double":
+                    {
+                        var c = ApplyVisuals(new NumberField { Label = "Číslo" });
+                        height ??= 60;
+                        return ApplyPositionAndSize(c, x, y, width, height);
+                    }
+
+                case "date":
+                case "datepicker":
+                case "datum":
+                    {
+                        var c = ApplyVisuals(new DateField { Label = "Datum" });
+                        height ??= 60;
+                        return ApplyPositionAndSize(c, x, y, width, height);
+                    }
+
+                // ve switch (t) přidej tento case do skupiny comboboxu:
+                case "combo":
+                case "combobox":
+                case "select":
+                case "dropdown":
+                    {
+                        var c = ApplyVisuals(new ComboBoxField
+                        {
+                            Label = "Výběr",
+                            IsEditable = false,
+                            Background = Brushes.White   // ← přidáno: neprůhledný default uvnitř kontrolu
+                        });
+                        height ??= 60;
+                        return ApplyPositionAndSize(c, x, y, width, height);
+                    }
+
+                case "checkbox":
+                case "check":
+                case "bool":
+                    {
+                        var c = ApplyVisuals(new CheckBoxField { Label = "Zaškrtnout", IsCheckedDefault = false });
+                        height ??= 40;
+                        return ApplyPositionAndSize(c, x, y, width, height);
+                    }
+
+                case "label":
+                case "textlabel":
+                case "caption":
+                    {
+                        var c = ApplyVisuals(new LabelField { Label = "Popisek" });
+                        height ??= 40;
+                        return ApplyPositionAndSize(c, x, y, width, height);
+                    }
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(typeKey), "Neznámý typ komponenty");
+            }
+        }
+
+        // ===== Volitelné specializované továrny (ponecháno kvůli kompatibilitě) =====
+        public static TextBoxField CreateTextBox(string label = "", string placeholder = "")
+            => ApplyVisuals(new TextBoxField { Label = label, Placeholder = placeholder, Width = 240, Height = 60 });
+
+        public static TextAreaField CreateTextArea(string label = "", string placeholder = "")
+            => ApplyVisuals(new TextAreaField { Label = label, Placeholder = placeholder, Width = 240, Height = 100 });
+
+        public static NumberField CreateNumber(string label = "")
+            => ApplyVisuals(new NumberField { Label = label, Width = 160, Height = 60 });
+
+        public static DateField CreateDate(string label = "")
+            => ApplyVisuals(new DateField { Label = label, Width = 180, Height = 60 });
+
+        public static ComboBoxField CreateCombo(string label = "", bool isEditable = false)
+            => ApplyVisuals(new ComboBoxField { Label = label, IsEditable = isEditable, Width = 220, Height = 60 });
+
+        public static CheckBoxField CreateCheck(string label = "", bool isChecked = false)
+            => ApplyVisuals(new CheckBoxField { Label = label, IsCheckedDefault = isChecked, Width = 220, Height = 40 });
+
+        public static LabelField CreateLabel(string text = "")
+            => ApplyVisuals(new LabelField { Label = text, Width = 220, Height = 40 });
     }
 }

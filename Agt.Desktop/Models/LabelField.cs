@@ -4,19 +4,21 @@
     {
         public double FontSize { get; set; } = 14;
         public LabelField() { TypeKey = "label"; Height = 24; Width = 160; }
-        public override FieldComponentBase Clone() => new LabelField
+        public override FieldComponentBase Clone()
         {
-            FieldKey = FieldKey,
-            Label = Label,
-            Required = Required,
-            Placeholder = Placeholder,
-            DefaultValue = DefaultValue,
-            FontSize = FontSize,
-            X = X,
-            Y = Y,
-            Width = Width,
-            Height = Height,
-            ZIndex = ZIndex
-        };
+            var n = new LabelField
+            {
+                FieldKey = FieldKey,
+                Label = Label,
+                X = X,
+                Y = Y,
+                Width = Width,
+                Height = Height,
+                ZIndex = ZIndex
+            };
+            n.CopyVisualsFrom(this);
+            return n;
+        }
+
     }
 }

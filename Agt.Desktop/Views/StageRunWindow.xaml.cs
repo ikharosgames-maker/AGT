@@ -1,3 +1,4 @@
+using Agt.Desktop.Services;
 ﻿using Agt.Desktop.Models; // FieldComponentBase + konkrétní typy + RenderMode
 using Agt.Domain.Models;
 using Agt.Domain.Repositories;
@@ -501,6 +502,8 @@ namespace Agt.Desktop.Views
                 : Guid.Empty;
 
         // ----------------------- Schema → komponenty -----------------------
+        
+        // ----------------------- Schema → komponenty -----------------------
         private static void FillComponentsFromSchema(RunBlockVm b, string schemaJson)
         {
             b.Components.Clear();
@@ -514,45 +517,21 @@ namespace Agt.Desktop.Views
                 if (!root.TryGetProperty("Items", out var itemsEl) || itemsEl.ValueKind != JsonValueKind.Array)
                     return;
 
+                double maxRight = 0, maxBottom = 0;
                 foreach (var it in itemsEl.EnumerateArray())
                 {
-                    double x = TryGetDouble(it, "X", 0), y = TryGetDouble(it, "Y", 0);
-                    double w = TryGetDouble(it, "Width", 120), h = TryGetDouble(it, "Height", 28);
-                    int z = (int)TryGetDouble(it, "ZIndex", 0);
+                    // jednotné mapování
+                    var node = System.Text.Json.Nodes.JsonNode.Parse(it.GetRawText())!.AsObject();
+                    var comp = Agt.Desktop.Services.ComponentJsonMapper.FromJson(node);
 
-                    string typeKey = (TryGetString(it, "TypeKey") ?? "").Trim().ToLowerInvariant();
-                    string label = TryGetString(it, "Label") ?? "";
-                    string fieldKey = TryGetString(it, "FieldKey") ?? "";
-                    string name = TryGetString(it, "Name") ?? "";
-                    string? defVal = TryGetString(it, "DefaultValue");
+                    // doplň rozměry pro běh (border apod.)
+                    string typeKey = (it.TryGetProperty("TypeKey", out var _tk) ? _tk.GetString() : comp.TypeKey) ?? "";
 
-                    FieldComponentBase comp = typeKey switch
-                    {
-                        "label" => new LabelField(),
-                        "textbox" => new TextBoxField(),
-                        "textarea" => new TextAreaField(),
-                        "number" => new NumberField(),
-                        "date" => new DateField(),
-                        "combobox" => new ComboBoxField(),
-                        "checkbox" => new CheckBoxField(),
-                        _ => new LabelField()
-                    };
-
-                    TrySet(comp, "Label", label);
-                    TrySet(comp, "FieldKey", fieldKey);
-                    TrySet(comp, "Name", name);
-                    if (!string.IsNullOrWhiteSpace(defVal))
-                        TrySet(comp, "Value", defVal);
-
-                    comp.X = x;
-                    comp.Y = y;
-                    comp.ZIndex = z;
-
-                    TrySet(comp, "Width", w);
-                    TrySet(comp, "Height", h);
+                    double w = it.TryGetProperty("Width", out var _w) && _w.TryGetDouble(out var ddw) ? ddw : comp.Width;
+                    double h = it.TryGetProperty("Height", out var _h) && _h.TryGetDouble(out var ddh) ? ddh : comp.Height;
 
                     double totalW = w, totalH = h;
-                    switch (typeKey)
+                    switch (typeKey.ToLowerInvariant())
                     {
                         case "textbox":
                         case "textarea":
@@ -563,7 +542,7 @@ namespace Agt.Desktop.Views
                             totalH = h + 2;     // border T/B
                             break;
                         case "checkbox":
-                            double textW = MeasureTextWidth(label, "Segoe UI", 12);
+                            double textW = MeasureTextWidth(comp.Label ?? "", comp.FontFamily ?? "Segoe UI", comp.FontSize > 0 ? comp.FontSize : 12);
                             totalW = Math.Max(w, 20 + 4 + textW);
                             totalH = Math.Max(h, 20);
                             break;
@@ -572,17 +551,24 @@ namespace Agt.Desktop.Views
                             break;
                     }
 
-                    TrySet(comp, "TotalWidth", totalW);
-                    TrySet(comp, "TotalHeight", totalH);
+                    comp.TotalWidth = totalW;
+                    comp.TotalHeight = totalH;
 
                     b.Components.Add(comp);
+
+                    maxRight = Math.Max(maxRight, comp.X + comp.TotalWidth);
+                    maxBottom = Math.Max(maxBottom, comp.Y + comp.TotalHeight);
                 }
+
+                b.PreviewWidth = Math.Max(1, Math.Ceiling(maxRight) + 1);
+                b.PreviewHeight = Math.Max(1, Math.Ceiling(maxBottom) + 1);
             }
             catch
             {
-                // ignore
+                // ignore schema errors
             }
         }
+
 
         private static (double itemsW, double itemsH) MeasureSchemaForPreview(string schemaJson)
         {

@@ -12,7 +12,22 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.IO;
 using System.Text.Json;
+// --- USING DIREKTIVY (doplněné a sjednocené) ---
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
+// Dostupnost ViewModelů a modelů:
+using Agt.Desktop.ViewModels;   // obsahuje StageVm, BlockVm (případně jiné VM)
+using Agt.Desktop.Models;       // obsahuje PaletteItem, FieldComponentBase atd.
+
+// Alias krátkých názvů (zabrání CS0246 i když ve zbytku souboru používáš krátké typy):
+using StageVm = Agt.Desktop.ViewModels.StageVm;
+using BlockVm = Agt.Desktop.ViewModels.BlockVm;
+using PaletteItem = Agt.Desktop.Models.PaletteItem;
 
 namespace Agt.Desktop.Views
 {

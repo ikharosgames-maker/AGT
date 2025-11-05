@@ -46,13 +46,13 @@
                   MouseDoubleClick="CasesList_MouseDoubleClick">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="2*"/>
-                <DataGridTextColumn Header="FormVersion" Binding="{Binding FormVersion}" Width="*" />
-                <DataGridTextColumn Header="Started By" Binding="{Binding StartedBy}" Width="*" />
-                <DataGridTextColumn Header="Started At" Binding="{Binding StartedAt}" Width="*" />
-                <DataGridTextColumn Header="Open Blocks" Binding="{Binding OpenBlocks}" Width="*" />
+                <DataGridTextColumn Header="Formulář" Binding="{Binding FormName}" Width="*" />
+                <DataGridTextColumn Header="Založil" Binding="{Binding StartedBy}" Width="*" />
+                <DataGridTextColumn Header="Založeno" Binding="{Binding StartedAt}" Width="*" />
+                <DataGridTextColumn Header="Krok" Binding="{Binding StageProgress}" Width="*" />
                 <DataGridTextColumn Header="Assignees" Binding="{Binding Assignees}" Width="2*" />
                 <DataGridTextColumn Header="Due" Binding="{Binding DueAt}" Width="*" />
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" />
+                <DataGridTextColumn Header="Aktuální stage" Binding="{Binding CurrentStage}" Width="*" />
             </DataGrid.Columns>
             <DataGrid.ContextMenu>
                 <ContextMenu>

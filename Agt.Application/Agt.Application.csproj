@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Agt.Contracts\Agt.Contracts.csproj" />
     <ProjectReference Include="..\Domain\Agt.Domain.csproj" />
   </ItemGroup>

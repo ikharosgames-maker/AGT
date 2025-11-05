@@ -13,11 +13,7 @@
         Foreground="{DynamicResource EditorTextBrush}">
 
     <!-- ===== lokální zdroje ===== -->
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
-        <!-- Selector musí být někde ve zdrojích – ponechávám zde, ať je jistota -->
-        <views:FieldTemplateSelector x:Key="FieldTemplateSelector"/>
-    </Window.Resources>
+    
 
     <DockPanel>
         <!-- Menu -->
@@ -27,19 +23,21 @@
             <Menu DockPanel.Dock="Top">
                 <Menu DockPanel.Dock="Top">
                     <MenuItem Header="_Soubor">
+                        <MenuItem Header="Založit nový"
+                                  Command="{Binding NewFormCommand}" />
                         <MenuItem Header="Otevřít z repozitáře…"
-              Command="{Binding OpenFromRepositoryCommand}" />
+                                  Command="{Binding OpenFromRepositoryCommand}" />
                         <Separator/>
                         <MenuItem Header="Uložit pracovní verzi"
-              Command="{Binding SaveDraftCommand}"
-              InputGestureText="Ctrl+S" />
+                                  Command="{Binding SaveDraftCommand}"
+                                  InputGestureText="Ctrl+S" />
                         <MenuItem Header="Otevřít pracovní verzi…"
-              Command="{Binding OpenDraftCommand}"
-              InputGestureText="Ctrl+O" />
+                                  Command="{Binding OpenDraftCommand}"
+                                  InputGestureText="Ctrl+O" />
                         <Separator/>
                         <MenuItem Header="Publikovat (Auto – PATCH/MINOR)"
-              Command="{Binding PublishCommand}"
-              InputGestureText="Ctrl+P" />
+                                  Command="{Binding PublishCommand}"
+                                  InputGestureText="Ctrl+P" />
                     </MenuItem>
                 </Menu>
             </Menu>
@@ -156,7 +154,7 @@
                                                         <Style TargetType="ContentPresenter">
                                                             <Setter Property="Canvas.Left"  Value="{Binding X}"/>
                                                             <Setter Property="Canvas.Top"   Value="{Binding Y}"/>
-                                                            <Setter Property="Panel.ZIndex" Value="{Binding ZIndex, FallbackValue=0}"/>
+                                                            <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
                                                         </Style>
                                                     </ItemsControl.ItemContainerStyle>
 
@@ -185,10 +183,10 @@
                                                                     <!-- Tělo bloku = komponenty na AutoSizeCanvas -->
                                                                     <ItemsControl Grid.Row="1"
                                                                                   ItemsSource="{Binding Components}"
-                                                                                  ItemTemplateSelector="{StaticResource FieldTemplateSelector}">
+                                                                                  views:RenderModeHelper.Mode="{x:Static models:RenderMode.ReadOnly}">
                                                                         <ItemsControl.ItemsPanel>
                                                                             <ItemsPanelTemplate>
-                                                                                <!-- >>> AutoSizeCanvas aplikuje padding a spočítá se podle dětí -->
+                                                                                <!-- AutoSizeCanvas aplikuje padding a spočítá se podle dětí -->
                                                                                 <views:AutoSizeCanvas Padding="8"/>
                                                                             </ItemsPanelTemplate>
                                                                         </ItemsControl.ItemsPanel>
@@ -196,9 +194,10 @@
                                                                             <Style TargetType="ContentPresenter">
                                                                                 <Setter Property="Canvas.Left"  Value="{Binding X}"/>
                                                                                 <Setter Property="Canvas.Top"   Value="{Binding Y}"/>
-                                                                                <Setter Property="Panel.ZIndex" Value="{Binding ZIndex, FallbackValue=0}"/>
+                                                                                <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
                                                                             </Style>
                                                                         </ItemsControl.ItemContainerStyle>
+                                                                        <!-- POZOR: žádný ItemTemplate/Selector -> použijí se implicitní DataTemplates z ComponentTemplates.xaml -->
                                                                     </ItemsControl>
 
                                                                     <!-- Obrys vybraného bloku -->
