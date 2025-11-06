@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -9,63 +8,75 @@ using System.Windows;
 namespace Agt.Desktop.ViewModels
 {
     /// <summary>
-    /// ViewModel pro editor procesu – doplněny overloady a metody tak,
-    /// aby odpovídaly voláním z View (FormProcessEditorWindow.xaml.cs, StageEdgePathConverter).
+    /// ViewModel pro editor procesu – sjednocené API pro volání z View.
+    /// Obsahuje podporu pro: vytváření stagi, hrany, bloky, snap/klamp, porty pro kreslení hran,
+    /// založení nového procesu (ID, název) a kontrolu duplicit názvů.
+    /// Doplněno: AvailableUsers / AvailableGroups pro UI výběru přiřazení.
     /// </summary>
     public sealed class FormProcessEditorViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
-        private void Raise([System.Runtime.CompilerServices.CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private void Raise([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         public EditorGraph Graph { get; private set; } = new();
 
-        // ✳️ Nově: identita a jméno procesu + známé názvy pro kontrolu duplicit
+        // ===== Identita a název procesu + duplicity =====
         private Guid _processId = Guid.NewGuid();
         public Guid ProcessId { get => _processId; private set { _processId = value; Raise(); } }
 
         private string _processName = "Nový proces";
         public string ProcessName { get => _processName; private set { _processName = value; Raise(); } }
 
-        public System.Collections.ObjectModel.ObservableCollection<string> ExistingProcessNames { get; }
-            = new System.Collections.ObjectModel.ObservableCollection<string>();
+        public ObservableCollection<string> ExistingProcessNames { get; } = new();
 
-        public FormProcessEditorViewModel() { }
+        // ===== Dostupní uživatelé a skupiny pro přiřazení na stage (požadováno FormProcessEditorWindow) =====
+        // V produkci je můžeš plnit z AD/DB/konfigurace; tady nechávám bezpečné defaulty,
+        // ať UI funguje a lze je snadno přepsat.
+        public ObservableCollection<string> AvailableUsers { get; } = new();
+        public ObservableCollection<string> AvailableGroups { get; } = new();
+
+        public FormProcessEditorViewModel()
+        {
+            EnsureAvailablePrincipalsSeed();
+        }
+
         public FormProcessEditorViewModel(object? save, object? clone, object? registry) : this() { }
 
+        private void EnsureAvailablePrincipalsSeed()
+        {
+            if (AvailableUsers.Count == 0)
+            {
+                // minimální seed, ať je v kombu aspoň něco; přidej dle potřeby
+                var me = Environment.UserName;
+                if (!string.IsNullOrWhiteSpace(me)) AvailableUsers.Add(me);
+                AvailableUsers.Add("user.alpha");
+                AvailableUsers.Add("user.beta");
+                AvailableUsers.Add("user.gamma");
+            }
+            if (AvailableGroups.Count == 0)
+            {
+                AvailableGroups.Add("group.admins");
+                AvailableGroups.Add("group.operators");
+                AvailableGroups.Add("group.reviewers");
+            }
+        }
+
+        // ===== Paleta / knihovna bloků (placeholdery) =====
+        public void LoadPaletteFromLibrary() { }
+        public void LoadPaletteFromLibrary(object? lib) => LoadPaletteFromLibrary();
+
+        // ===== Výběry =====
         private StageVm? _selectedStage;
         public StageVm? SelectedStage { get => _selectedStage; private set { _selectedStage = value; Raise(); } }
 
         private StageEdgeVm? _selectedStageEdge;
         public StageEdgeVm? SelectedStageEdge { get => _selectedStageEdge; private set { _selectedStageEdge = value; Raise(); } }
 
-        public ObservableCollection<string> AvailableUsers { get; } = new();
-        public ObservableCollection<string> AvailableGroups { get; } = new();
-
-
-        // ====== Paleta / knihovna bloků ======
-        public void LoadPaletteFromLibrary()
-        {
-            if (AvailableUsers.Count == 0)
-            {
-                AvailableUsers.Add(Environment.UserName);
-                AvailableUsers.Add("demo-user");
-            }
-            if (AvailableGroups.Count == 0)
-            {
-                AvailableGroups.Add("Administrators");
-                AvailableGroups.Add("Operators");
-            }
-        }
-        public void LoadPaletteFromLibrary(object? lib) => LoadPaletteFromLibrary();
-        // (Pokud v projektu existuje IBlockLibrary, klidně přidej public void LoadPaletteFromLibrary(IBlockLibrary lib) => LoadPaletteFromLibrary();
-
-        // ====== Výběry ======
         public void ClearSelection() { SelectedStage = null; SelectedStageEdge = null; }
         public void SelectStage(StageVm s) { SelectedStage = s; SelectedStageEdge = null; }
         public void SelectEdge(StageEdgeVm e) { SelectedStage = null; SelectedStageEdge = e; }
 
-        // ====== Stage API ======
+        // ===== Stage API =====
         public StageVm AddStageAuto(double x, double y, double w = 520, double h = 380)
         {
             var st = new StageVm { Id = Guid.NewGuid(), X = x, Y = y, W = w, H = h };
@@ -73,7 +84,6 @@ namespace Agt.Desktop.ViewModels
             return st;
         }
 
-        // View volá i bez parametrů
         public StageVm AddStageAuto()
         {
             var (x, y) = Graph.Stages.Count == 0
@@ -89,23 +99,19 @@ namespace Agt.Desktop.ViewModels
             return e;
         }
 
-        // View občas posílá přímo StageVm → přidáme overload
-        public StageEdgeVm AddStageEdge(StageVm from, StageVm to)
-            => AddStageEdge(from.Id, to.Id);
+        public StageEdgeVm AddStageEdge(StageVm from, StageVm to) => AddStageEdge(from.Id, to.Id);
 
         public StageVm? FindStage(Guid id) => Graph.Stages.FirstOrDefault(s => s.Id == id);
 
-        // Hit-test bez radiusu
+        // Hit-test bez radiusu / s radius overloadem pro kompatibilitu
         public StageVm? HitTestStage(Point pCanvas)
             => Graph.Stages.LastOrDefault(s =>
-                    pCanvas.X >= s.X && pCanvas.X <= s.X + s.W &&
-                    pCanvas.Y >= s.Y && pCanvas.Y <= s.Y + s.H);
+                   pCanvas.X >= s.X && pCanvas.X <= s.X + s.W &&
+                   pCanvas.Y >= s.Y && pCanvas.Y <= s.Y + s.H);
 
-        // View volá: HitTestStage(pCanvas, 4)
         public StageVm? HitTestStage(Point pCanvas, double radius) => HitTestStage(pCanvas);
 
-        // ====== Porty pro hrany (StageEdgePathConverter) ======
-        // Out port = pravý střed stage (odchozí šipka)
+        // ===== Porty pro hrany (vpravo/levý střed) =====
         public Point GetStageOutPortAbs(StageVm stage)
             => new Point(stage.X + stage.W, stage.Y + stage.H / 2.0);
 
@@ -115,7 +121,6 @@ namespace Agt.Desktop.ViewModels
             return st is null ? new Point() : GetStageOutPortAbs(st);
         }
 
-        // In port = levý střed stage (příchozí šipka)
         public Point GetStageInPortAbs(StageVm stage)
             => new Point(stage.X, stage.Y + stage.H / 2.0);
 
@@ -125,7 +130,7 @@ namespace Agt.Desktop.ViewModels
             return st is null ? new Point() : GetStageInPortAbs(st);
         }
 
-        // ====== Block API ======
+        // ===== Block API =====
         public (double X, double Y) GetNextBlockPosition(StageVm stage, double localX, double localY)
         {
             var x = Snap(localX, 8, noSnap: false);
@@ -157,18 +162,34 @@ namespace Agt.Desktop.ViewModels
             if (b.PreviewHeight <= 0) b.PreviewHeight = 140;
         }
 
+        /// <summary>
+        /// Najde nejbližší volné místo ve stage pro blok (grid = velikost mřížky, header = výška záhlaví).
+        /// </summary>
         public (double X, double Y) FindNearestFreeSlot(StageVm stage, double localX, double localY, double blockW, double blockH, int grid, double header)
         {
             var x = Snap(localX, grid, noSnap: false);
             var y = Snap(localY, grid, noSnap: false);
+
             int tries = 0;
-            while (IntersectsAny(stage, x, y, blockW, blockH) && tries < 200)
+            const int maxTries = 200;
+
+            while (IntersectsAny(stage, x, y, blockW, blockH) && tries < maxTries)
             {
                 x += grid;
-                if (x + blockW > stage.W) { x = 0; y += grid; }
-                if (y + blockH > stage.H) { y = header; }
+
+                if (x + blockW > stage.W)
+                {
+                    x = 0;
+                    y += grid;
+                }
+                if (y + blockH > stage.H)
+                {
+                    y = header;
+                }
+
                 tries++;
             }
+
             x = Clamp(x, 0, Math.Max(0, stage.W - blockW));
             y = Clamp(y, header, Math.Max(header, stage.H - blockH));
             return (x, y);
@@ -181,7 +202,7 @@ namespace Agt.Desktop.ViewModels
             => !(x + w <= other.X || other.X + other.PreviewWidth <= x ||
                  y + h <= other.Y || other.Y + other.PreviewHeight <= y);
 
-        // Původní signatura (grid int)
+        // ===== Přesun + klamp =====
         public void MoveBlockTo(BlockVm b, StageVm stage, double x, double y, int grid, double headerHeight)
         {
             x = Snap(x, grid, noSnap: false);
@@ -191,11 +212,9 @@ namespace Agt.Desktop.ViewModels
             b.X = x; b.Y = y;
         }
 
-        // Overload pro grid double
         public void MoveBlockTo(BlockVm b, StageVm stage, double x, double y, double grid, double headerHeight)
             => MoveBlockTo(b, stage, x, y, (int)Math.Round(grid), headerHeight);
 
-        // Původní signatura
         public void ClampBlockInside(BlockVm b, StageVm stage, int grid, double headerHeight)
         {
             var x = Clamp(b.X, 0, Math.Max(0, stage.W - b.PreviewWidth));
@@ -204,11 +223,9 @@ namespace Agt.Desktop.ViewModels
             b.Y = Snap(y, grid, noSnap: false);
         }
 
-        // Overload grid double
         public void ClampBlockInside(BlockVm b, StageVm stage, double grid, double headerHeight)
             => ClampBlockInside(b, stage, (int)Math.Round(grid), headerHeight);
 
-        // Overload s blockW/H – volá View při přetahování
         public void ClampBlockInside(BlockVm b, StageVm stage, double blockW, double blockH, double headerHeight)
         {
             var x = Clamp(b.X, 0, Math.Max(0, stage.W - blockW));
@@ -217,18 +234,19 @@ namespace Agt.Desktop.ViewModels
             b.Y = Snap(y, 8, noSnap: false);
         }
 
-        // ====== Snap/Helpers ======
+        // ===== Snap/Helpers =====
         public double Snap(double value, int grid, bool noSnap)
             => noSnap || grid <= 1 ? value : Math.Round(value / grid) * grid;
+
         public double Snap(double value, double grid, bool noSnap)
             => Snap(value, (int)Math.Round(grid), noSnap);
 
         public (double X, double Y) SnapAll(double x, double y, int grid, bool noSnap)
             => (Snap(x, grid, noSnap), Snap(y, grid, noSnap));
+
         public (double X, double Y) SnapAll(double x, double y, double grid, bool noSnap)
             => SnapAll(x, y, (int)Math.Round(grid), noSnap);
 
-        // View volá: vm.SnapAll(GridSize);
         public void SnapAll(double grid)
         {
             foreach (var st in Graph.Stages)
@@ -249,11 +267,13 @@ namespace Agt.Desktop.ViewModels
             SelectedStage = Graph.Stages.FirstOrDefault(s => s.Blocks.Contains(b));
         }
 
-        // ====== Publish ======
+        // ===== Publish (zatím skeleton) =====
         public void Publish()
         {
             // TODO: vlastní logika publikace návrhu procesu.
         }
+
+        // ===== Nový proces: duplicity + default Stage =====
         public bool IsProcessNameTaken(string name)
         {
             if (string.IsNullOrWhiteSpace(name)) return false;
@@ -264,7 +284,6 @@ namespace Agt.Desktop.ViewModels
             return false;
         }
 
-        // ✳️ Vytvoření nového prázdného procesu s kontrolou názvu
         public bool TryCreateNewProcess(string name, out string? error)
         {
             error = null;
@@ -289,19 +308,17 @@ namespace Agt.Desktop.ViewModels
 
         private void CreateEmptyProcessWithDefaultStage(string name)
         {
-            // reset identity + graf
             ProcessId = Guid.NewGuid();
             ProcessName = name;
             Graph = new EditorGraph();
             Raise(nameof(Graph));
 
-            // defaultní Stage 1
             var st = new StageVm { Id = Guid.NewGuid(), X = 40, Y = 40, W = 560, H = 400 };
             Graph.Stages.Add(st);
         }
     }
 
-    // ====== Model grafu/stagí/hran ======
+    // ===== Model grafu/stagí/hran =====
     public sealed class EditorGraph
     {
         public ObservableCollection<StageVm> Stages { get; } = new();
@@ -320,6 +337,8 @@ namespace Agt.Desktop.ViewModels
         private double _h = 380; public double H { get => _h; set { _h = value; Raise(); } }
 
         public ObservableCollection<BlockVm> Blocks { get; } = new();
+
+        // K těmto kolekcím typicky přidávají/odebírají položky handlery ve View (přes Available*)
         public ObservableCollection<string> AssignedUsers { get; } = new();
         public ObservableCollection<string> AssignedGroups { get; } = new();
     }
