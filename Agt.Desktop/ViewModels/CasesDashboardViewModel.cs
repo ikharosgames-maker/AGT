@@ -9,8 +9,9 @@ namespace Agt.Desktop.ViewModels
 {
     /// <summary>
     /// ViewModel pro přehled case na hlavním okně (dashboard).
-    /// Sloupce: FormName, CreatedAt, CreatedBy, StageProgress (i/N), Assignees, DueAt, CurrentStage.
-    /// Exponuje také příkazy NewCaseCommand a ExitCommand očekávané v MainShell.xaml.
+    /// Sloupce: FormName, CreatedAt, CreatedBy, StageProgress, Assignees, DueAt, CurrentStage.
+    /// Exponuje také příkazy NewCaseCommand, ExitCommand, OpenEditorCommand, OpenCaseCommand.
+    /// Otevírání oken neřeší přímo – vyhlašuje události, které obslouží view (MainShell.xaml.cs).
     /// </summary>
     public sealed class CasesDashboardViewModel : INotifyPropertyChanged
     {
@@ -18,9 +19,14 @@ namespace Agt.Desktop.ViewModels
         private void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        // Hlavní zdroj pro DataGrid; ponechávám i alias "Cases" pro jistotu
+        // ===== Události, které zachytí MainShell.xaml.cs =====
+        public event EventHandler? StartNewCaseRequested;
+        public event EventHandler? OpenEditorRequested;
+        public event EventHandler<CaseRow?>? OpenCaseRequested;
+
+        // Hlavní zdroj pro DataGrid
         public ObservableCollection<CaseRow> Items { get; } = new();
-        public ObservableCollection<CaseRow> Cases => Items;
+        public ObservableCollection<CaseRow> Cases => Items; // alias pro jistotu
 
         private CaseRow? _selected;
         public CaseRow? Selected
@@ -29,28 +35,28 @@ namespace Agt.Desktop.ViewModels
             set { _selected = value; OnPropertyChanged(); OnPropertyChanged(nameof(SelectedCase)); }
         }
 
-        // Pro případ, že XAML používá SelectedCase
         public CaseRow? SelectedCase
         {
             get => _selected;
             set { _selected = value; OnPropertyChanged(); OnPropertyChanged(nameof(Selected)); }
         }
 
-        // ===== Befehly očekávané v MainShell.xaml =====
+        // Příkazy – navázané na menu a tlačítka v MainShell.xaml
         public ICommand NewCaseCommand { get; }
         public ICommand ExitCommand { get; }
+        public ICommand OpenEditorCommand { get; }
         public ICommand OpenCaseCommand { get; }
         public ICommand RefreshCommand { get; }
 
         public CasesDashboardViewModel()
         {
-            // Commands (zatím „bezpečné“ skeletony – logiku napojíme následně)
-            NewCaseCommand = new UiCommand(_ => NewCase());
+            NewCaseCommand = new UiCommand(_ => StartNewCaseRequested?.Invoke(this, EventArgs.Empty));
             ExitCommand = new UiCommand(_ => Agt.Desktop.App.Current?.Shutdown());
-            OpenCaseCommand = new UiCommand(_ => OpenSelectedCase(), _ => SelectedCase != null);
+            OpenEditorCommand = new UiCommand(_ => OpenEditorRequested?.Invoke(this, EventArgs.Empty));
+            OpenCaseCommand = new UiCommand(_ => OpenCaseRequested?.Invoke(this, SelectedCase), _ => SelectedCase != null);
             RefreshCommand = new UiCommand(_ => Refresh());
 
-            // Dummy data, ať je UI hned živé (nahradíme reálným repozitářem)
+            // Dummy data pro vizuální kontrolu (nahradíme načtením z repozitáře)
             if (Items.Count == 0)
             {
                 Items.Add(new CaseRow
@@ -66,25 +72,12 @@ namespace Agt.Desktop.ViewModels
             }
         }
 
-        private void NewCase()
-        {
-            // TODO: otevřít StartCaseDialog a založit nový case (napojíme v další iteraci)
-            MessageBox.Show("Založit nový Case – funkci dopojíme na StartCaseDialog.", "Nový Case");
-        }
-
-        private void OpenSelectedCase()
-        {
-            if (SelectedCase == null) return;
-            // TODO: otevřít detail rozpracovaného case (navážeme na služby/Run okno)
-            MessageBox.Show($"Otevřít case: {SelectedCase.FormName}", "Otevřít Case");
-        }
-
         private void Refresh()
         {
-            // TODO: načíst skutečná data z úložiště
+            // TODO: načíst skutečná data z úložiště a přepočítat StageProgress / CurrentStage
         }
 
-        // Jednoduchá ICommand implementace (bez závislosti na externích knihovnách)
+        // Jednoduchá ICommand implementace
         private sealed class UiCommand : ICommand
         {
             private readonly Action<object?> _execute;
@@ -98,14 +91,14 @@ namespace Agt.Desktop.ViewModels
 
             public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
             public void Execute(object? parameter) => _execute(parameter);
+
             public event EventHandler? CanExecuteChanged;
             public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
     /// <summary>
-    /// Řádek v přehledu – jména property odpovídají bindingům v MainShell.xaml:
-    /// FormName, CreatedAt, CreatedBy, StageProgress, Assignees, DueAt, CurrentStage.
+    /// Řádek v přehledu – jména property odpovídají bindingům v MainShell.xaml.
     /// </summary>
     public sealed class CaseRow : INotifyPropertyChanged
     {
