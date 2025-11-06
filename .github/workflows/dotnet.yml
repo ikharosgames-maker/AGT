@@ -33,7 +33,7 @@ jobs:
         shell: pwsh
         run: |
           $sln = (git ls-files *.sln | Select-Object -First 1)
-          if (-not $sln) { throw "No .sln found in repo root or subfolders." }
+          if (-not $sln) { throw "No .sln found in repo." }
           "SLN=$sln" | Out-File -FilePath $env:GITHUB_ENV -Append
           Write-Host "Using solution: $sln"
 
