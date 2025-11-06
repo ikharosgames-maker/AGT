@@ -62,6 +62,9 @@
 		<Page Include="Views\FormRepositoryBrowserWindow.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
+		<Page Include="Views\NewProcessDialog.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Include="Views\NotificationView.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
@@ -130,6 +133,7 @@
 		<Compile Include="Views\ContrastForegroundConverter.cs" />
 		<Compile Include="Views\FormCanvas.xaml.cs" />
 		<Compile Include="Views\FormRepositoryBrowserWindow.xaml.cs" />
+		<Compile Include="Views\NewProcessDialog.xaml.cs" />
 		<Compile Include="Views\PublishFormDialog.xaml.cs" />
 		<Compile Include="Views\RenderModeHelper.cs" />
 		<Compile Include="Views\StageEdgePathConverter.cs" />

@@ -1,67 +1,53 @@
 ﻿<Window x:Class="Agt.Desktop.Views.MainShell"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="AGT – Řídicí panel" Height="800" Width="1200">
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-    </Window.Resources>
-
+        Title="AGT" Height="700" Width="1000"
+        WindowStartupLocation="CenterScreen">
     <DockPanel>
-        <!-- Menu -->
+
+        <!-- Hlavní menu -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_Soubor">
-                <MenuItem Header="Nový Case..." Command="{Binding NewCaseCommand}" />
-                <Separator/>
-                <MenuItem Header="Konec" Command="{Binding ExitCommand}" />
-            </MenuItem>
-            <MenuItem Header="_Nástroje">
-                <MenuItem Header="Editor bloků" Command="{Binding OpenBlockEditorCommand}" />
-                <MenuItem Header="Editor formulářů" Command="{Binding OpenFormEditorCommand}" />
-                <MenuItem Header="Směrování (formulář)" Command="{Binding OpenRoutingEditorCommand}" />
-            </MenuItem>
-            <MenuItem Header="_Zobrazit">
-                <MenuItem Header="Moje úkoly" Command="{Binding OpenMyTasksCommand}" />
-                <MenuItem Header="Notifikace" Command="{Binding OpenNotificationsCommand}" />
-            </MenuItem>
-            <MenuItem Header="_Administrace"
-                Visibility="{Binding CanAdmin, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <MenuItem Header="Uživatelé a role" Command="{Binding OpenUsersRolesCommand}" />
-                <MenuItem Header="Publikace verzí" Command="{Binding OpenPublishCenterCommand}" />
+                <MenuItem Header="_Nový case" Command="{Binding NewCaseCommand}" />
+                <MenuItem Header="_Editor"    Command="{Binding OpenEditorCommand}" />
+                <Separator />
+                <MenuItem Header="_Konec"     Command="{Binding ExitCommand}" />
             </MenuItem>
         </Menu>
 
-        <!-- Filtr -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,4">
-            <TextBlock Text="Hledat:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-            <TextBox Width="220" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Text="  Stav:" VerticalAlignment="Center" Margin="12,0,6,0"/>
-            <ComboBox Width="150" ItemsSource="{Binding StateOptions}" SelectedItem="{Binding SelectedState}" />
-            <Button Content="Obnovit" Margin="12,0,0,0" Command="{Binding RefreshCommand}"/>
-        </StackPanel>
+        <!-- Tělo okna -->
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- DataGrid Cases -->
-        <DataGrid x:Name="CasesList" ItemsSource="{Binding Cases}"
-              AutoGenerateColumns="False" IsReadOnly="True"
-              SelectionMode="Single" Margin="8"
-                  MouseDoubleClick="CasesList_MouseDoubleClick">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="2*"/>
-                <DataGridTextColumn Header="Formulář" Binding="{Binding FormName}" Width="*" />
-                <DataGridTextColumn Header="Založil" Binding="{Binding StartedBy}" Width="*" />
-                <DataGridTextColumn Header="Založeno" Binding="{Binding StartedAt}" Width="*" />
-                <DataGridTextColumn Header="Krok" Binding="{Binding StageProgress}" Width="*" />
-                <DataGridTextColumn Header="Assignees" Binding="{Binding Assignees}" Width="2*" />
-                <DataGridTextColumn Header="Due" Binding="{Binding DueAt}" Width="*" />
-                <DataGridTextColumn Header="Aktuální stage" Binding="{Binding CurrentStage}" Width="*" />
-            </DataGrid.Columns>
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Otevřít detail" Command="{Binding DataContext.OpenCaseCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
-                    <MenuItem Header="Dokončit vybraný blok..." Command="{Binding DataContext.CompleteSelectedBlockCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
-                    <Separator/>
-                    <MenuItem Header="Reopen blok..." Command="{Binding DataContext.ReopenSelectedBlockCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
-                </ContextMenu>
-            </DataGrid.ContextMenu>
-        </DataGrid>
+            <!-- Toolbar / akce nad seznamem  -->
+            <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+                <Button Content="Nový case"    Margin="0,0,8,0" Command="{Binding NewCaseCommand}"/>
+                <Button Content="Spustit case" Margin="0,0,8,0" Command="{Binding OpenCaseCommand}"/>
+                <Button Content="Obnovit"                   Command="{Binding RefreshCommand}"/>
+                <!-- ZÁMĚRNĚ už bez tlačítka 'Editor' – ten je pouze v menu -->
+            </StackPanel>
+
+            <!-- Seznam případů -->
+            <DataGrid x:Name="CasesList"
+                      Grid.Row="1"
+                      AutoGenerateColumns="False"
+                      ItemsSource="{Binding Cases}"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      MouseDoubleClick="CasesList_MouseDoubleClick">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Formulář"         Binding="{Binding FormName}" Width="2*"/>
+                    <DataGridTextColumn Header="Založeno"         Binding="{Binding CreatedAt, StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="*"/>
+                    <DataGridTextColumn Header="Založil"          Binding="{Binding CreatedBy}" Width="*"/>
+                    <DataGridTextColumn Header="Krok"             Binding="{Binding StageProgress}" Width="*"/>
+                    <DataGridTextColumn Header="Přiřazeno"        Binding="{Binding Assignees}" Width="*"/>
+                    <DataGridTextColumn Header="Termín"           Binding="{Binding DueAt, StringFormat={}{0:dd.MM.yyyy}}" Width="*"/>
+                    <DataGridTextColumn Header="Aktuální stage"   Binding="{Binding CurrentStage}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
     </DockPanel>
 </Window>

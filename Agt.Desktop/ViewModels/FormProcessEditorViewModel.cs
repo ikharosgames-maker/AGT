@@ -15,9 +15,23 @@ namespace Agt.Desktop.ViewModels
     public sealed class FormProcessEditorViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
-        private void Raise([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private void Raise([System.Runtime.CompilerServices.CallerMemberName] string? name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        public EditorGraph Graph { get; } = new();
+        public EditorGraph Graph { get; private set; } = new();
+
+        // ✳️ Nově: identita a jméno procesu + známé názvy pro kontrolu duplicit
+        private Guid _processId = Guid.NewGuid();
+        public Guid ProcessId { get => _processId; private set { _processId = value; Raise(); } }
+
+        private string _processName = "Nový proces";
+        public string ProcessName { get => _processName; private set { _processName = value; Raise(); } }
+
+        public System.Collections.ObjectModel.ObservableCollection<string> ExistingProcessNames { get; }
+            = new System.Collections.ObjectModel.ObservableCollection<string>();
+
+        public FormProcessEditorViewModel() { }
+        public FormProcessEditorViewModel(object? save, object? clone, object? registry) : this() { }
 
         private StageVm? _selectedStage;
         public StageVm? SelectedStage { get => _selectedStage; private set { _selectedStage = value; Raise(); } }
@@ -28,11 +42,6 @@ namespace Agt.Desktop.ViewModels
         public ObservableCollection<string> AvailableUsers { get; } = new();
         public ObservableCollection<string> AvailableGroups { get; } = new();
 
-        // ====== Konstruktory ======
-        public FormProcessEditorViewModel() { }
-
-        // View volá: new FormProcessEditorViewModel(save, clone, registry)
-        public FormProcessEditorViewModel(object? save, object? clone, object? registry) : this() { }
 
         // ====== Paleta / knihovna bloků ======
         public void LoadPaletteFromLibrary()
@@ -244,6 +253,51 @@ namespace Agt.Desktop.ViewModels
         public void Publish()
         {
             // TODO: vlastní logika publikace návrhu procesu.
+        }
+        public bool IsProcessNameTaken(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            var key = name.Trim();
+            foreach (var n in ExistingProcessNames)
+                if (string.Equals(n?.Trim(), key, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            return false;
+        }
+
+        // ✳️ Vytvoření nového prázdného procesu s kontrolou názvu
+        public bool TryCreateNewProcess(string name, out string? error)
+        {
+            error = null;
+            var trimmed = (name ?? "").Trim();
+            if (string.IsNullOrEmpty(trimmed))
+            {
+                error = "Zadejte název procesu.";
+                return false;
+            }
+            if (IsProcessNameTaken(trimmed))
+            {
+                error = $"Název „{trimmed}“ už existuje. Zadejte prosím jiný.";
+                return false;
+            }
+
+            CreateEmptyProcessWithDefaultStage(trimmed);
+            if (!ExistingProcessNames.Contains(trimmed))
+                ExistingProcessNames.Add(trimmed);
+
+            return true;
+        }
+
+        private void CreateEmptyProcessWithDefaultStage(string name)
+        {
+            // reset identity + graf
+            ProcessId = Guid.NewGuid();
+            ProcessName = name;
+            Graph = new EditorGraph();
+            Raise(nameof(Graph));
+
+            // defaultní Stage 1
+            var st = new StageVm { Id = Guid.NewGuid(), X = 40, Y = 40, W = 560, H = 400 };
+            Graph.Stages.Add(st);
         }
     }
 

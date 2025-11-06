@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Agt.Desktop.Views
 {
@@ -11,20 +12,19 @@ namespace Agt.Desktop.Views
 
             var vm = new ViewModels.CasesDashboardViewModel();
 
-            // otevřít editor
+            // Editor pouze přes menu/command → jedna instance dialogu na vyvolání
             vm.OpenEditorRequested += (_, __) =>
             {
                 var wnd = new FormProcessEditorWindow { Owner = this };
                 wnd.ShowDialog();
             };
 
-            // založit nový case → otevřít StartCaseDialog a po OK přidat do přehledu
+            // Nový case – rychlý start přes dialog + vložení řádku do přehledu (dočasně)
             vm.StartNewCaseRequested += (_, __) =>
             {
                 var dlg = new StartCaseDialog { Owner = this };
                 if (dlg.ShowDialog() == true)
                 {
-                    // v tuto chvíli jen vytvoříme „živý“ záznam do dashboardu
                     var row = new ViewModels.CaseRow
                     {
                         FormName = $"Formulář {DateTime.Now:yyyy-MM-dd HH:mm}",
@@ -37,25 +37,25 @@ namespace Agt.Desktop.Views
                     };
                     vm.Items.Insert(0, row);
                     vm.Selected = row;
-
-                    // TODO: napojit na ICaseDataRepository (uložit snapshot) + rovnou otevřít Case Run okno
                 }
             };
 
-            // otevřít existující case (zatím jen info)
+            // Otevřít/spustit vybraný case (zatím placeholder – na další krok napojíme Run okno)
             vm.OpenCaseRequested += (_, row) =>
             {
                 if (row == null) return;
-                MessageBox.Show($"Otevřít case: {row.FormName}", "Otevřít case",
+                MessageBox.Show($"Otevírám case: {row.FormName}", "Spustit case",
                                 MessageBoxButton.OK, MessageBoxImage.Information);
-                // TODO: tady otevřeme Case Run okno s rozložením bloků podle stagi
             };
 
             DataContext = vm;
         }
-        private void CasesList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+
+        // Dvojklik na řádek → spustí OpenCaseCommand
+        private void CasesList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (DataContext is ViewModels.CasesDashboardViewModel vm && vm.OpenCaseCommand.CanExecute(null))
+            if (DataContext is ViewModels.CasesDashboardViewModel vm
+                && vm.OpenCaseCommand.CanExecute(null))
             {
                 vm.OpenCaseCommand.Execute(null);
             }
