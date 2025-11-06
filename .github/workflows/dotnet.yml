@@ -14,27 +14,50 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET SDKs
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             8.0.x
             9.0.x
 
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\NuGet\Cache
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Discover solution
+        shell: pwsh
+        run: |
+          $sln = (git ls-files *.sln | Select-Object -First 1)
+          if (-not $sln) { throw "No .sln found in repo root or subfolders." }
+          "SLN=$sln" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Using solution: $sln"
+
       - name: Restore
-        run: dotnet restore AGT.sln
+        run: dotnet restore "${{ env.SLN }}"
 
       - name: Build (Release)
-        run: dotnet build AGT.sln --configuration Release --no-restore
+        run: dotnet build "${{ env.SLN }}" --configuration Release --no-restore
 
       - name: Test (Release)
-        run: dotnet test AGT.sln --configuration Release --no-build --logger "trx;LogFileName=test_results.trx"
+        run: dotnet test "${{ env.SLN }}" --configuration Release --no-build --logger "trx;LogFileName=test_results.trx"
 
-      - name: Publish Desktop (win-x64, framework-dependent)
-        run: dotnet publish Agt.Desktop/Agt.Desktop.csproj -c Release -r win-x64 --self-contained false -o artifacts/desktop
+      - name: Publish Desktop (win-x64, skip if not found)
+        shell: pwsh
+        run: |
+          if (Test-Path "Agt.Desktop/Agt.Desktop.csproj") {
+            dotnet publish Agt.Desktop/Agt.Desktop.csproj -c Release -r win-x64 --self-contained false -o artifacts/desktop
+          } else {
+            Write-Host "Agt.Desktop/Agt.Desktop.csproj not found, skipping publish."
+          }
 
-      - name: Upload artifacts
+      - name: Upload artifacts (if any)
         uses: actions/upload-artifact@v4
         with:
           name: agt-build
           path: artifacts/**
+          if-no-files-found: ignore
