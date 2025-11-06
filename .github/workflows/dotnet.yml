@@ -1,18 +1,40 @@
 name: .NET Build & Test
+
 on:
+  push:
+    branches: [ "master", "main", "dev", "feature/**", "fix/**" ]
+  pull_request:
+    branches: [ "master", "main", "dev" ]
+
 jobs:
   build:
     runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            9.0.x
             8.0.x
-      - run: dotnet restore **/*.sln
-      - run: dotnet build **/*.sln -c Release --no-restore
-      - run: dotnet test **/*.sln -c Release --no-build --logger "trx;LogFileName=test_results.trx"
-      - run: dotnet publish Agt.Desktop/Agt.Desktop.csproj -c Release -r win-x64 --self-contained false -o artifacts/desktop
-      - uses: actions/upload-artifact@v4
-        with: { name: agt-build, path: artifacts/** }
+            9.0.x
+
+      - name: Restore
+        run: dotnet restore AGT.sln
+
+      - name: Build (Release)
+        run: dotnet build AGT.sln --configuration Release --no-restore
+
+      - name: Test (Release)
+        run: dotnet test AGT.sln --configuration Release --no-build --logger "trx;LogFileName=test_results.trx"
+
+      - name: Publish Desktop (win-x64, framework-dependent)
+        run: dotnet publish Agt.Desktop/Agt.Desktop.csproj -c Release -r win-x64 --self-contained false -o artifacts/desktop
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: agt-build
+          path: artifacts/**
