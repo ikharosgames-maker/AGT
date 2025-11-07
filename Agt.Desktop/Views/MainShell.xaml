@@ -1,4 +1,4 @@
-<Window x:Class="Agt.Desktop.MainShell"
+<Window x:Class="Agt.Desktop.Views.MainShell"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="AGT Shell" Height="480" Width="720" WindowStartupLocation="CenterScreen">

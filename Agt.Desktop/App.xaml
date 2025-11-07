@@ -1,42 +1,12 @@
-﻿<Application x:Class="Agt.Desktop.App"
+<Application x:Class="Agt.Desktop.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:services="clr-namespace:Agt.Desktop.Services"
-             xmlns:conv="clr-namespace:Agt.Desktop.Converters" 
-             xmlns:views="clr-namespace:Agt.Desktop.Controls">
-    <Application.Resources>
-  <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/Agt.Desktop;component/Themes/Theme.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Agt.Desktop;component/Views/Components/ComponentTemplates.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-
-
-            <!-- Služby -->
-        <services:SelectionService x:Key="SelectionService"/>
-        <services:FieldCatalogService x:Key="FieldCatalog"/>
-        <services:FieldFactory x:Key="FieldFactory"/>
-        <views:FieldTemplateSelector x:Key="FieldTemplateSelector"/>
-            <!-- Konvertory -->
-            <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
-
-            <!-- Menu – systémové barvy -->
-        <Style TargetType="Menu">
-            <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.MenuBrushKey}}"/>
-            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.MenuTextBrushKey}}"/>
-        </Style>
-            <Style TargetType="MenuItem">
-                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.MenuTextBrushKey}}"/>
-                <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.MenuBrushKey}}"/>
-                <Setter Property="BorderBrush" Value="{x:Null}"/>
-                <Style.Triggers>
-                    <Trigger Property="IsHighlighted" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
-                        <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
-                    </Trigger>
-                </Style.Triggers>
-            </Style>
-
-        </ResourceDictionary>
-</Application.Resources>
+             StartupUri="MainShell.xaml">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Agt.Desktop;component/Views/Components/ComponentTemplates.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
 </Application>

@@ -77,7 +77,7 @@ namespace Agt.Desktop.Views
                 File.WriteAllText(sfd.FileName, jsonIndented);
 
                 // 2) zapsat do knihovny bloků (KANON: BlockId + Version, soubor {BlockId}__{Version}.json)
-                var ok = BlockLibraryJson.Default.SaveToLibrary(blockId, version, root, key: key, blockName: blockName);
+                var ok = BlockLibraryJson.Default.SaveToLibrary(blockId, version, root, key, blockName: blockName);
                 if (!ok)
                     throw new InvalidOperationException("Zápis do knihovny bloků selhal.");
 

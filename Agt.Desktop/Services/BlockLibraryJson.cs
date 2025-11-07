@@ -1,159 +1,130 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Agt.Infrastructure.JsonStore;
 
 namespace Agt.Desktop.Services
 {
-    /// <summary>
-    /// JSON knihovna bloků. Canon identita = (BlockId, Version).
-    /// Soubory: %AppData%/AGT/blocks/{BlockId}__{Version}.json
-    /// </summary>
+    public sealed class BlockLibEntry
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Version { get; set; } = "1.0";
+        public string Title { get; set; } = string.Empty;
+        public string FilePath { get; set; } = string.Empty;
+
+        public override string ToString() => string.IsNullOrWhiteSpace(Title) ? $"{Key} ({Version})" : Title;
+
+        // dovolí výraz 'if (!entry)' jako test na null
+        public static bool operator !(BlockLibEntry? e) => e is null;
+    }
+
     public sealed class BlockLibraryJson : IBlockLibrary
     {
-        public static IBlockLibrary Default { get; } = new BlockLibraryJson();
+        public static BlockLibraryJson Default { get; } = new BlockLibraryJson();
 
-        private readonly List<BlockLibEntry> _index = new();
-        private readonly List<JsonDocument> _openDocs = new();
+        public string LibraryRoot { get; }
 
-        private BlockLibraryJson()
+        public BlockLibraryJson(string? customRoot = null)
         {
-            Reindex();
+            LibraryRoot = string.IsNullOrWhiteSpace(customRoot) ? JsonPaths.Dir("blocks") : customRoot!;
+            Directory.CreateDirectory(LibraryRoot);
         }
 
-        private static string GetDir(string name)
+        public IEnumerable<BlockLibEntry> Enumerate()
+        {
+            foreach (var path in Directory.EnumerateFiles(LibraryRoot, "*.json"))
+            {
+                var name = Path.GetFileNameWithoutExtension(path);
+                var key = name;
+                var version = "1.0";
+
+                var parts = name.Split(new[] { "__" }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2) { key = parts[0]; version = parts[1]; }
+
+                var title = TryReadTitle(path) ?? key;
+
+                yield return new BlockLibEntry
+                {
+                    Key = key,
+                    Version = version,
+                    Title = title,
+                    FilePath = path
+                };
+            }
+        }
+
+        public BlockLibEntry? TryFind(string key, string version)
+        {
+            return Enumerate().FirstOrDefault(e =>
+                string.Equals(e.Key, key, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(e.Version, version, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public string GetPath(BlockLibEntry entry) => entry.FilePath;
+
+        public void Save(BlockLibEntry entry, string json)
+        {
+            var path = string.IsNullOrWhiteSpace(entry.FilePath)
+                ? Path.Combine(LibraryRoot, $"{entry.Key}__{entry.Version}.json")
+                : entry.FilePath;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, json);
+            entry.FilePath = path;
+        }
+
+        // ---- Finální API (string) ----
+        public BlockLibEntry SaveToLibrary(string blockName, string blockVersion, string json, string? title = null)
+        {
+            if (string.IsNullOrWhiteSpace(blockName)) throw new ArgumentException("blockName missing");
+            if (string.IsNullOrWhiteSpace(blockVersion)) blockVersion = "1.0";
+            var entry = TryFind(blockName, blockVersion) ?? new BlockLibEntry { Key = blockName, Version = blockVersion, Title = title ?? blockName };
+            Save(entry, json);
+            return entry;
+        }
+
+        public BlockLibEntry SaveToLibrary(string blockName, string blockVersion, object value, string? title = null, JsonSerializerOptions? options = null)
+        {
+            var json = JsonSerializer.Serialize(value, options ?? new JsonSerializerOptions(JsonSerializerDefaults.Web){ WriteIndented = true });
+            return SaveToLibrary(blockName, blockVersion, json, title);
+        }
+
+        // ---- Overload pro volání s Guid + pojmenovanými argumenty 'key' a 'blockName' ----
+        public bool SaveToLibrary(Guid blockId, string blockVersion, JsonElement root, string? key = null, string? blockName = null)
         {
             try
             {
-                var t = Type.GetType("Agt.Infrastructure.JsonStore.JsonPaths, Agt.Infrastructure");
-                var mi = t?.GetMethod("Dir", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                var r = mi?.Invoke(null, new object?[] { name }) as string;
-                if (!string.IsNullOrWhiteSpace(r)) return r!;
+                var json = root.GetRawText();
+                var k = blockId.ToString("D");
+                var title = !string.IsNullOrWhiteSpace(blockName) ? blockName : (key ?? k);
+                var entry = TryFind(k, blockVersion) ?? new BlockLibEntry { Key = k, Version = blockVersion, Title = title };
+                Save(entry, json);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string? TryReadTitle(string path)
+        {
+            try
+            {
+                using var s = File.OpenRead(path);
+                using var doc = JsonDocument.Parse(s);
+                if (doc.RootElement.TryGetProperty("Title", out var t)) return t.GetString();
+                if (doc.RootElement.TryGetProperty("Block", out var b) &&
+                    b.TryGetProperty("Title", out var bt)) return bt.GetString();
+                if (doc.RootElement.TryGetProperty("Definition", out var d) &&
+                    d.TryGetProperty("Title", out var dt)) return dt.GetString();
+                if (doc.RootElement.TryGetProperty("Metadata", out var m) &&
+                    m.TryGetProperty("Title", out var mt)) return mt.GetString();
             }
             catch { }
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AGT", name);
-        }
-
-        private static string BlocksDir() => GetDir("blocks");
-
-        private void Reindex()
-        {
-            _index.Clear();
-            Directory.CreateDirectory(BlocksDir());
-
-            foreach (var path in Directory.EnumerateFiles(BlocksDir(), "*.json"))
-            {
-                try
-                {
-                    using var jd = JsonDocument.Parse(File.ReadAllText(path));
-                    var root = jd.RootElement;
-
-                    if (!root.TryGetProperty("BlockId", out var idEl)) continue;
-                    if (!Guid.TryParse(idEl.GetString(), out var bid)) continue;
-
-                    if (!root.TryGetProperty("Version", out var vEl)) continue;
-                    var version = vEl.GetString();
-                    if (string.IsNullOrWhiteSpace(version)) continue;
-
-                    var key = root.TryGetProperty("Key", out var kEl) ? (kEl.GetString() ?? "") : "";
-                    var name = root.TryGetProperty("BlockName", out var nEl) ? (nEl.GetString() ?? key) : key;
-
-                    _index.Add(new BlockLibEntry(bid, key, name, version!, path));
-                }
-                catch
-                {
-                    // poškozený soubor ignoruj
-                }
-            }
-        }
-
-        public IEnumerable<BlockLibEntry> Enumerate() => _index;
-
-        public bool TryLoadByIdVersion(Guid blockId, string version,
-                                       out JsonDocument? doc, out BlockLibEntry? entry)
-        {
-            entry = _index.FirstOrDefault(e =>
-                e.BlockId == blockId &&
-                string.Equals(e.Version, version, StringComparison.OrdinalIgnoreCase));
-
-            if (entry is null) { doc = null; return false; }
-
-            try
-            {
-                var jd = JsonDocument.Parse(File.ReadAllText(entry.FilePath));
-                _openDocs.Add(jd);
-                doc = jd;
-                return true;
-            }
-            catch
-            {
-                doc = null;
-                return false;
-            }
-        }
-
-        public bool SaveToLibrary(Guid blockId, string version, JsonElement schemaRoot,
-                                  string? key = null, string? blockName = null)
-        {
-            try
-            {
-                Directory.CreateDirectory(BlocksDir());
-
-                using var buffer = new MemoryStream();
-                using (var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = true }))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WriteString("BlockId", blockId.ToString());
-                    writer.WriteString("Version", version);
-
-                    if (!string.IsNullOrWhiteSpace(key)) writer.WriteString("Key", key);
-                    if (!string.IsNullOrWhiteSpace(blockName)) writer.WriteString("BlockName", blockName);
-
-                    if (schemaRoot.ValueKind == JsonValueKind.Object)
-                    {
-                        foreach (var prop in schemaRoot.EnumerateObject())
-                        {
-                            var n = prop.Name;
-                            if (n.Equals("BlockId", StringComparison.OrdinalIgnoreCase) ||
-                                n.Equals("Version", StringComparison.OrdinalIgnoreCase) ||
-                                n.Equals("Key", StringComparison.OrdinalIgnoreCase) ||
-                                n.Equals("BlockName", StringComparison.OrdinalIgnoreCase))
-                                continue;
-
-                            writer.WritePropertyName(n);
-                            prop.Value.WriteTo(writer);
-                        }
-                    }
-
-                    writer.WriteEndObject();
-                }
-
-                var filePath = Path.Combine(BlocksDir(), $"{blockId:D}__{version}.json");
-                File.WriteAllBytes(filePath, buffer.ToArray());
-
-                // refresh indexu
-                _index.RemoveAll(e => e.BlockId == blockId &&
-                                      string.Equals(e.Version, version, StringComparison.OrdinalIgnoreCase));
-                using var confirmDoc = JsonDocument.Parse(File.ReadAllText(filePath));
-                var root = confirmDoc.RootElement;
-                var k = root.TryGetProperty("Key", out var kEl) ? (kEl.GetString() ?? "") : "";
-                var nm = root.TryGetProperty("BlockName", out var nEl) ? (nEl.GetString() ?? k) : k;
-                _index.Add(new BlockLibEntry(blockId, k, nm, version, filePath));
-
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public void Dispose()
-        {
-            foreach (var d in _openDocs) d.Dispose();
-            _openDocs.Clear();
+            return null;
         }
     }
 }

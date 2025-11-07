@@ -1,8 +1,7 @@
 using System;
 using System.Windows;
-using Agt.Desktop.Views;
 
-namespace Agt.Desktop
+namespace Agt.Desktop.Views
 {
     public partial class MainShell : Window
     {
