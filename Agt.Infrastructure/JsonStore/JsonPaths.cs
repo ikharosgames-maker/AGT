@@ -1,28 +1,24 @@
-using System;
-using System.IO;
+﻿using System.Runtime.InteropServices;
 
-namespace Agt.Infrastructure.JsonStore
+namespace Agt.Infrastructure.JsonStore;
+
+public static class JsonPaths
 {
-    public static class JsonPaths
+    internal static string Root
     {
-        private static readonly string BaseDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AGT");
-
-        public static string BaseDirectory => BaseDir;
-
-        public static string EnsureDir(string relative)
+        get
         {
-            var full = Path.Combine(BaseDir, relative);
-            Directory.CreateDirectory(full);
-            return full;
+            var baseDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var root = Path.Combine(baseDir, "AGT");
+            Directory.CreateDirectory(root);
+            return root;
         }
+    }
 
-        public static string Dir(string relative) => EnsureDir(relative);
-
-        public static string CaseDataDir => EnsureDir("case-data");
-
-        public static string CaseDataPath(Guid caseId)
-            => Path.Combine(CaseDataDir, $"{caseId:N}.json");
+    public static string Dir(string name)
+    {
+        var d = Path.Combine(Root, name);
+        Directory.CreateDirectory(d);
+        return d;
     }
 }

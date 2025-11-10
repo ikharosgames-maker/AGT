@@ -1,173 +1,320 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using Microsoft.Extensions.DependencyInjection;
 using Agt.Domain.Models;
 using Agt.Domain.Repositories;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Agt.Desktop.Views
 {
+    /// <summary>
+    /// Zobrazí publikovaný layout (stage + bloky) a umožní průchod dle rout.
+    /// Layout se čte ze souboru layouts/{FormVersionId}.json (viz patch publikace).
+    /// Routy se načtou z repozitáře (pokud máte metodu) nebo z JSON fallbacku.
+    /// </summary>
     public partial class CaseRunWindow : Window
     {
-        private readonly ICaseDataRepository _repo;
-        public Guid CaseId { get; }
-        public List<FieldVm> Fields { get; } = new();
+        private readonly Guid _formVersionId;
+        private readonly HashSet<string> _active = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _selected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public CaseRunWindow(Guid caseId, IServiceProvider services)
+        private readonly List<Route> _routes = new List<Route>();
+        private readonly LayoutSnapshot _layout = new LayoutSnapshot();
+
+        // mapování: blockKey -> UI prvek
+        private readonly Dictionary<string, Border> _blockVisuals = new Dictionary<string, Border>(StringComparer.OrdinalIgnoreCase);
+
+        public CaseRunWindow(Guid formVersionId, IEnumerable<string> startBlockKeys)
         {
             InitializeComponent();
-            DataContext = this;
 
-            _repo = services.GetRequiredService<ICaseDataRepository>();
-            CaseId = caseId;
+            if (formVersionId == Guid.Empty) throw new ArgumentException("formVersionId nesmí být Guid.Empty", nameof(formVersionId));
+            _formVersionId = formVersionId;
 
-            BuildDemoFields();
-            _ = LoadExistingAsync();
-        }
-
-        private void BuildDemoFields()
-        {
-            Fields.Add(FieldVm.Text("firstname", "Jméno"));
-            Fields.Add(FieldVm.Text("lastname", "Příjmení"));
-            Fields.Add(FieldVm.Combo("role", "Role", new[] { "User", "Power User", "Admin" }));
-            Fields.Add(FieldVm.Check("active", "Aktivní"));
-            Fields.Add(FieldVm.Date("birth", "Datum narození"));
-        }
-
-        private async Task LoadExistingAsync()
-        {
-            var s = await _repo.LoadAsync(CaseId);
-            if (s == null) return;
-
-            foreach (var f in Fields)
+            // Header: jméno formuláře + verze
+            var sp = Agt.Desktop.App.Services;
+            var forms = sp.GetRequiredService<IFormRepository>();
+            var fv = forms.GetVersion(formVersionId);
+            string header = "Běh případu";
+            if (fv != null)
             {
-                if (s.Values.TryGetValue(f.Key, out var val))
+                var f = forms.Get(fv.FormId);
+                header = f != null ? (f.Name + "  v" + fv.Version) : ("Form v" + fv.Version);
+            }
+            HeaderTitle.Text = header;
+
+            // Načti routes
+            _routes = GetRoutesForVersion(sp, formVersionId);
+
+            // Načti layout snapshot
+            _layout = LoadLayout(formVersionId);
+
+            // Nastav počáteční aktivní
+            if (startBlockKeys != null)
+            {
+                foreach (var k in startBlockKeys) if (!string.IsNullOrWhiteSpace(k)) _active.Add(k);
+            }
+
+            // Vykresli
+            RenderLayout();
+            UpdateAllBlockStyles();
+        }
+
+        // =================== vykreslení layoutu ===================
+
+        private void RenderLayout()
+        {
+            StageCanvas.Children.Clear();
+            _blockVisuals.Clear();
+
+            // Stage (jako rámečky)
+            foreach (var st in _layout.Stages)
+            {
+                var gb = new GroupBox
                 {
-                    f.SetValueFromStorage(val);
+                    Header = st.Title ?? ("Stage " + st.Id.ToString().Substring(0, 8)),
+                    BorderBrush = (Brush)FindResource("AppBorderBrush"),
+                    BorderThickness = new Thickness(1),
+                    Background = (Brush)FindResource("AppPanelAltBrush"),
+                    Padding = new Thickness(8),
+                    Width = st.Width > 0 ? st.Width : 600,
+                    Height = st.Height > 0 ? st.Height : 400
+                };
+                Canvas.SetLeft(gb, st.X);
+                Canvas.SetTop(gb, st.Y);
+                StageCanvas.Children.Add(gb);
+            }
+
+            // Bloky (uvnitř canvasu, vizuálně nad stagemi)
+            foreach (var b in _layout.Blocks)
+            {
+                var border = new Border
+                {
+                    Width = b.Width > 0 ? b.Width : 140,
+                    Height = b.Height > 0 ? b.Height : 64,
+                    CornerRadius = new CornerRadius(4),
+                    BorderThickness = new Thickness(1),
+                    Background = (Brush)FindResource("AppPanelAltBrush"),
+                    BorderBrush = (Brush)FindResource("AppBorderBrush"),
+                    ToolTip = (b.Title ?? b.Key)
+                };
+
+                var tb = new TextBlock
+                {
+                    Text = (b.Title ?? b.Key),
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(8),
+                    Foreground = (Brush)FindResource("AppTextBrush")
+                };
+                border.Child = tb;
+
+                border.MouseLeftButtonUp += (_, __) => ToggleSelect(b.Key);
+
+                Canvas.SetLeft(border, b.X);
+                Canvas.SetTop(border, b.Y);
+                Panel.SetZIndex(border, 10);
+                StageCanvas.Children.Add(border);
+
+                _blockVisuals[b.Key] = border;
+            }
+        }
+
+        // =================== ovládání ===================
+
+        private void ToggleSelect(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return;
+
+            if (_selected.Contains(key)) _selected.Remove(key);
+            else _selected.Add(key);
+
+            UpdateBlockStyle(key);
+        }
+
+        private void ClearSelection_Click(object sender, RoutedEventArgs e)
+        {
+            _selected.Clear();
+            UpdateAllBlockStyles();
+        }
+
+        private void CompleteSelected_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selected.Count == 0)
+            {
+                MessageBox.Show("Vyber alespoň jeden blok k dokončení (klikem na blok).", "Běh případu",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // dokonči vybrané
+            foreach (var k in _selected.ToArray())
+            {
+                _active.Remove(k);
+                _done.Add(k);
+            }
+
+            // rozvinout následníky dle rout (MVP: bez joinů/podmínek)
+            foreach (var k in _selected.ToArray())
+            {
+                var outs = _routes
+                    .Where(r => string.Equals(r.FromBlockKey, k, StringComparison.OrdinalIgnoreCase))
+                    .Select(r => r.ToBlockKey);
+
+                foreach (var to in outs)
+                {
+                    if (string.IsNullOrWhiteSpace(to)) continue;
+                    if (_done.Contains(to)) continue;
+                    _active.Add(to);
                 }
             }
+
+            _selected.Clear();
+            UpdateAllBlockStyles();
         }
 
-        private async void OnSaveClick(object sender, RoutedEventArgs e)
+        // =================== styling bloků ===================
+
+        private void UpdateAllBlockStyles()
         {
-            var snapshot = new CaseDataSnapshot { CaseId = CaseId };
-            foreach (var f in Fields)
+            foreach (var key in _blockVisuals.Keys.ToList())
+                UpdateBlockStyle(key);
+        }
+
+        private void UpdateBlockStyle(string key)
+        {
+            Border border;
+            if (!_blockVisuals.TryGetValue(key, out border)) return;
+
+            // základ
+            border.Background = (Brush)FindResource("AppPanelAltBrush");
+            border.BorderBrush = (Brush)FindResource("AppBorderBrush");
+            border.BorderThickness = new Thickness(1);
+            border.Opacity = 1.0;
+
+            // stav
+            if (_done.Contains(key))
             {
-                var val = f.GetValueForStorage()?.ToString(); // uložit jako string
-                snapshot.Values[f.Key] = val;
+                border.Background = (Brush)FindResource("AppPanelDarkBrush");
+                border.Opacity = 0.7;
+            }
+            else if (_active.Contains(key))
+            {
+                border.Background = (Brush)FindResource("AppPanelBrush");
+                border.BorderBrush = (Brush)FindResource("AppAccentBrush");
+                border.BorderThickness = new Thickness(2);
             }
 
-            await _repo.SaveAsync(snapshot);
-            MessageBox.Show(this, "Uloženo.", "Case", MessageBoxButton.OK, MessageBoxImage.Information);
+            // výběr
+            if (_selected.Contains(key))
+            {
+                border.BorderBrush = (Brush)FindResource("AppAccentBrush");
+                border.BorderThickness = new Thickness(3);
+            }
         }
 
-        private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
-    }
+        // =================== načtení rout a layoutu ===================
 
-    public abstract class FieldVm : ContentControl
-    {
-        public string Key { get; }
-        public string Label { get; }
-
-        protected FieldVm(string key, string label)
+        private static List<Route> GetRoutesForVersion(IServiceProvider sp, Guid formVersionId)
         {
-            Key = key;
-            Label = label;
+            // pokus o repo (připravené pro MSSQL/EF)
+            try
+            {
+                var repo = sp.GetService<IRouteRepository>();
+                if (repo != null)
+                {
+                    var mi = repo.GetType().GetMethod("ListByFormVersion", new[] { typeof(Guid) });
+                    if (mi != null)
+                    {
+                        var res = mi.Invoke(repo, new object[] { formVersionId }) as IEnumerable<Route>;
+                        if (res != null) return res.ToList();
+                    }
+
+                    // fallback přes případné ListAll():
+                    var miAll = repo.GetType().GetMethod("ListAll", Type.EmptyTypes);
+                    if (miAll != null)
+                    {
+                        var all = miAll.Invoke(repo, new object[0]) as IEnumerable<Route>;
+                        if (all != null) return all.Where(r => r.FormVersionId == formVersionId).ToList();
+                    }
+                }
+            }
+            catch { /* ignoruj, spadneme na JSON */ }
+
+            // JSON fallback
+            var dir = Agt.Infrastructure.JsonStore.JsonPaths.Dir("routes");
+            Directory.CreateDirectory(dir);
+            var list = new List<Route>();
+            foreach (var f in Directory.EnumerateFiles(dir, "*.json"))
+            {
+                try
+                {
+                    var json = File.ReadAllText(f);
+                    var r = JsonSerializer.Deserialize<Route>(json);
+                    if (r != null && r.FormVersionId == formVersionId) list.Add(r);
+                }
+                catch { }
+            }
+            return list;
         }
 
-        public abstract object? GetValueForStorage();
-        public abstract void SetValueFromStorage(object? value);
-
-        public static FieldVm Text(string key, string label)
+        private static LayoutSnapshot LoadLayout(Guid formVersionId)
         {
-            var tb = new TextBox { Style = (Style)System.Windows.Application.Current.FindResource("TextBoxInput") };
-            return new TextFieldVm(key, label, tb);
-        }
+            var dir = Agt.Infrastructure.JsonStore.JsonPaths.Dir("layouts");
+            Directory.CreateDirectory(dir);
+            var path = System.IO.Path.Combine(dir, formVersionId + ".json");
+            if (!File.Exists(path)) return new LayoutSnapshot();
 
-        public static FieldVm Combo(string key, string label, IEnumerable<string> items)
-        {
-            var cb = new ComboBox { Style = (Style)System.Windows.Application.Current.FindResource("ComboInput") };
-            foreach (var it in items) cb.Items.Add(it);
-            return new ComboFieldVm(key, label, cb);
-        }
-
-        public static FieldVm Check(string key, string label)
-        {
-            var ch = new CheckBox { Style = (Style)System.Windows.Application.Current.FindResource("CheckInput") };
-            return new CheckFieldVm(key, label, ch);
+            try
+            {
+                var json = File.ReadAllText(path);
+                var snap = JsonSerializer.Deserialize<LayoutSnapshot>(json);
+                return snap ?? new LayoutSnapshot();
+            }
+            catch
+            {
+                return new LayoutSnapshot();
+            }
         }
 
-        public static FieldVm Date(string key, string label)
-        {
-            var dp = new DatePicker { Style = (Style)System.Windows.Application.Current.FindResource("DateInput") };
-            return new DateFieldVm(key, label, dp);
-        }
-    }
+        // =================== DTO pro layout snapshot ===================
 
-    public sealed class TextFieldVm : FieldVm
-    {
-        private readonly TextBox _tb;
-        public TextFieldVm(string key, string label, TextBox tb) : base(key, label)
+        private sealed class LayoutSnapshot
         {
-            _tb = tb;
-            Content = _tb;
+            public List<StageLayout> Stages { get; set; }
+            public List<BlockLayout> Blocks { get; set; }
+            public LayoutSnapshot()
+            {
+                Stages = new List<StageLayout>();
+                Blocks = new List<BlockLayout>();
+            }
         }
-        public override object? GetValueForStorage() => _tb.Text;
-        public override void SetValueFromStorage(object? value) => _tb.Text = value?.ToString() ?? string.Empty;
-    }
 
-    public sealed class ComboFieldVm : FieldVm
-    {
-        private readonly ComboBox _cb;
-        public ComboFieldVm(string key, string label, ComboBox cb) : base(key, label)
+        private sealed class StageLayout
         {
-            _cb = cb;
-            Content = _cb;
+            public Guid Id { get; set; }
+            public string Title { get; set; }
+            public double X { get; set; }
+            public double Y { get; set; }
+            public double Width { get; set; }
+            public double Height { get; set; }
         }
-        public override object? GetValueForStorage() => _cb.SelectedItem?.ToString();
-        public override void SetValueFromStorage(object? value)
-        {
-            var s = value?.ToString();
-            if (s == null) { _cb.SelectedIndex = -1; return; }
-            var match = _cb.Items.Cast<object>().FirstOrDefault(i => string.Equals(i?.ToString(), s, StringComparison.Ordinal));
-            _cb.SelectedItem = match;
-        }
-    }
 
-    public sealed class CheckFieldVm : FieldVm
-    {
-        private readonly CheckBox _ch;
-        public CheckFieldVm(string key, string label, CheckBox ch) : base(key, label)
+        private sealed class BlockLayout
         {
-            _ch = ch;
-            Content = _ch;
-        }
-        public override object? GetValueForStorage() => _ch.IsChecked == true;
-        public override void SetValueFromStorage(object? value)
-        {
-            if (value is bool b) _ch.IsChecked = b;
-            else if (bool.TryParse(value?.ToString(), out var parsed)) _ch.IsChecked = parsed;
-            else _ch.IsChecked = false;
-        }
-    }
-
-    public sealed class DateFieldVm : FieldVm
-    {
-        private readonly DatePicker _dp;
-        public DateFieldVm(string key, string label, DatePicker dp) : base(key, label)
-        {
-            _dp = dp;
-            Content = _dp;
-        }
-        public override object? GetValueForStorage() => _dp.SelectedDate;
-        public override void SetValueFromStorage(object? value)
-        {
-            if (value is DateTime dt) _dp.SelectedDate = dt;
-            else if (DateTime.TryParse(value?.ToString(), out var parsed)) _dp.SelectedDate = parsed;
-            else _dp.SelectedDate = null;
+            public string Key { get; set; }
+            public string Title { get; set; }
+            public Guid StageId { get; set; }
+            public double X { get; set; }
+            public double Y { get; set; }
+            public double Width { get; set; }
+            public double Height { get; set; }
         }
     }
 }
