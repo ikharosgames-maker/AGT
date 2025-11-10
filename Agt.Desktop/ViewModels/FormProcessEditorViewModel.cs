@@ -1,320 +1,75 @@
 using System;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Windows;
+using System.Windows.Input;
 
 namespace Agt.Desktop.ViewModels
 {
+    /// <summary>
+    /// ViewModel editoru formulářů.
+    /// Přidává „Založit nový“ (NewFormCommand) a bezpečně uzavírá třídu/namespace.
+    /// </summary>
     public sealed class FormProcessEditorViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
-        private void Raise([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        public EditorGraph Graph { get; private set; } = new();
+        private string _formKey = string.Empty;
+        public string FormKey
+        {
+            get => _formKey;
+            set { _formKey = value; OnPropertyChanged(); }
+        }
 
-        private Guid _processId = Guid.NewGuid();
-        public Guid ProcessId { get => _processId; private set { _processId = value; Raise(); } }
+        private string _title = string.Empty;
+        public string Title
+        {
+            get => _title;
+            set { _title = value; OnPropertyChanged(); }
+        }
 
-        private string _processName = "Nový proces";
-        public string ProcessName { get => _processName; private set { _processName = value; Raise(); } }
-
-        public ObservableCollection<string> ExistingProcessNames { get; } = new();
-
-        public ObservableCollection<string> AvailableUsers { get; } = new();
-        public ObservableCollection<string> AvailableGroups { get; } = new();
-
-        public ObservableCollection<BlockPaletteItem> Palette { get; } = new();
+        public ICommand NewFormCommand { get; }
 
         public FormProcessEditorViewModel()
         {
-            EnsureAvailablePrincipalsSeed();
-            LoadPaletteFromLibrary();
-        }
-        public FormProcessEditorViewModel(object? save, object? clone, object? registry) : this() { }
-
-        private void EnsureAvailablePrincipalsSeed()
-        {
-            if (AvailableUsers.Count == 0)
-            {
-                var me = Environment.UserName;
-                if (!string.IsNullOrWhiteSpace(me)) AvailableUsers.Add(me);
-                AvailableUsers.Add("user.alpha");
-                AvailableUsers.Add("user.beta");
-                AvailableUsers.Add("user.gamma");
-            }
-            if (AvailableGroups.Count == 0)
-            {
-                AvailableGroups.Add("group.admins");
-                AvailableGroups.Add("group.operators");
-                AvailableGroups.Add("group.reviewers");
-            }
+            NewFormCommand = new RelayCommand(_ => CreateNewForm());
         }
 
-        public void LoadPaletteFromLibrary()
+        /// <summary>
+        /// Vytvoří nový prázdný formulář s jedinečným Id a názvem.
+        /// </summary>
+        private void CreateNewForm()
         {
-            if (Palette.Count == 0)
-            {
-                Palette.Add(new BlockPaletteItem { Id = Guid.NewGuid(), Title = "TextBox", Version = "1.0.0" });
-                Palette.Add(new BlockPaletteItem { Id = Guid.NewGuid(), Title = "ComboBox", Version = "1.0.0" });
-                Palette.Add(new BlockPaletteItem { Id = Guid.NewGuid(), Title = "Checkbox", Version = "1.0.0" });
-            }
-        }
+            var now = DateTime.Now;
+            FormKey = $"form-{now:yyyyMMdd-HHmmss}";
+            Title = $"Nový formulář {now:yyyy-MM-dd HH:mm}";
 
-        private StageVm? _selectedStage;
-        public StageVm? SelectedStage { get => _selectedStage; private set { _selectedStage = value; Raise(); } }
-
-        private StageEdgeVm? _selectedStageEdge;
-        public StageEdgeVm? SelectedStageEdge { get => _selectedStageEdge; private set { _selectedStageEdge = value; Raise(); } }
-
-        public void ClearSelection() { SelectedStage = null; SelectedStageEdge = null; }
-        public void SelectStage(StageVm s) { SelectedStage = s; SelectedStageEdge = null; }
-        public void SelectEdge(StageEdgeVm e) { SelectedStage = null; SelectedStageEdge = e; }
-
-        public StageVm AddStageAuto(double x, double y, double w = 520, double h = 380)
-        {
-            var st = new StageVm { Id = Guid.NewGuid(), X = x, Y = y, W = w, H = h };
-            Graph.Stages.Add(st);
-            return st;
-        }
-        public StageVm AddStageAuto()
-        {
-            var (x, y) = Graph.Stages.Count == 0
-                ? (0.0, 0.0)
-                : (Graph.Stages.Max(s => s.X + s.W) + 40.0, Graph.Stages.Max(s => s.Y));
-            return AddStageAuto(x, y, 520, 380);
-        }
-
-        public StageEdgeVm AddStageEdge(Guid fromStageId, Guid toStageId)
-        {
-            var e = new StageEdgeVm { Id = Guid.NewGuid(), FromStageId = fromStageId, ToStageId = toStageId };
-            Graph.StageEdges.Add(e);
-            return e;
-        }
-        public StageEdgeVm AddStageEdge(StageVm from, StageVm to) => AddStageEdge(from.Id, to.Id);
-
-        public StageVm? FindStage(Guid id) => Graph.Stages.FirstOrDefault(s => s.Id == id);
-
-        public StageVm? HitTestStage(Point pCanvas)
-            => Graph.Stages.LastOrDefault(s =>
-                   pCanvas.X >= s.X && pCanvas.X <= s.X + s.W &&
-                   pCanvas.Y >= s.Y && pCanvas.Y <= s.Y + s.H);
-        public StageVm? HitTestStage(Point pCanvas, double radius) => HitTestStage(pCanvas);
-
-        public Point GetStageOutPortAbs(StageVm stage) => new Point(stage.X + stage.W, stage.Y + stage.H / 2.0);
-        public Point GetStageOutPortAbs(Guid stageId) { var st = FindStage(stageId); return st is null ? new Point() : GetStageOutPortAbs(st); }
-        public Point GetStageInPortAbs(StageVm stage) => new Point(stage.X, stage.Y + stage.H / 2.0);
-        public Point GetStageInPortAbs(Guid stageId) { var st = FindStage(stageId); return st is null ? new Point() : GetStageInPortAbs(st); }
-
-        public (double X, double Y) GetNextBlockPosition(StageVm stage, double localX, double localY)
-        {
-            var x = Snap(localX, 8, noSnap: false);
-            var y = Snap(localY, 8, noSnap: false);
-            return (Clamp(x, 0, Math.Max(0, stage.W - 260)),
-                    Clamp(y, 36, Math.Max(36, stage.H - 140)));
-        }
-
-        public BlockVm AddBlock(StageVm stage, Guid blockId, string title, string version, double x, double y)
-        {
-            var b = new BlockVm
-            {
-                Id = Guid.NewGuid(),
-                RefBlockId = blockId,
-                Title = title,
-                Version = version,
-                X = x, Y = y,
-                PreviewWidth = 260, PreviewHeight = 140
-            };
-            stage.Blocks.Add(b);
-            return b;
-        }
-
-        public void GeneratePreview(BlockVm b)
-        {
-            if (b.PreviewWidth <= 0) b.PreviewWidth = 260;
-            if (b.PreviewHeight <= 0) b.PreviewHeight = 140;
-        }
-
-        public (double X, double Y) FindNearestFreeSlot(StageVm stage, double localX, double localY, double blockW, double blockH, int grid, double header)
-        {
-            var x = Snap(localX, grid, noSnap: false);
-            var y = Snap(localY, grid, noSnap: false);
-
-            int tries = 0;
-            const int maxTries = 200;
-
-            while (IntersectsAny(stage, x, y, blockW, blockH) && tries < maxTries)
-            {
-                x += grid;
-
-                if (x + blockW > stage.W)
-                {
-                    x = 0;
-                    y += grid;
-                }
-                if (y + blockH > stage.H)
-                {
-                    y = header;
-                }
-
-                tries++;
-            }
-
-            x = Clamp(x, 0, Math.Max(0, stage.W - blockW));
-            y = Clamp(y, header, Math.Max(header, stage.H - blockH));
-            return (x, y);
-        }
-
-        private static bool IntersectsAny(StageVm stage, double x, double y, double w, double h)
-            => stage.Blocks.Any(o => RectIntersects(x, y, w, h, o));
-
-        public static bool RectIntersects(double x, double y, double w, double h, BlockVm other)
-            => !(x + w <= other.X || other.X + other.PreviewWidth <= x ||
-                 y + h <= other.Y || other.Y + other.PreviewHeight <= y);
-
-        public void MoveBlockTo(BlockVm b, StageVm stage, double x, double y, int grid, double headerHeight)
-        {
-            x = Snap(x, grid, noSnap: false);
-            y = Snap(y, grid, noSnap: false);
-            x = Clamp(x, 0, Math.Max(0, stage.W - b.PreviewWidth));
-            y = Clamp(y, headerHeight, Math.Max(headerHeight, stage.H - b.PreviewHeight));
-            b.X = x; b.Y = y;
-        }
-        public void MoveBlockTo(BlockVm b, StageVm stage, double x, double y, double grid, double headerHeight)
-            => MoveBlockTo(b, stage, x, y, (int)Math.Round(grid), headerHeight);
-
-        public void ClampBlockInside(BlockVm b, StageVm stage, int grid, double headerHeight)
-        {
-            var x = Clamp(b.X, 0, Math.Max(0, stage.W - b.PreviewWidth));
-            var y = Clamp(b.Y, headerHeight, Math.Max(headerHeight, stage.H - b.PreviewHeight));
-            b.X = Snap(x, grid, noSnap: false);
-            b.Y = Snap(y, grid, noSnap: false);
-        }
-        public void ClampBlockInside(BlockVm b, StageVm stage, double grid, double headerHeight)
-            => ClampBlockInside(b, stage, (int)Math.Round(grid), headerHeight);
-
-        public void ClampBlockInside(BlockVm b, StageVm stage, double blockW, double blockH, double headerHeight)
-        {
-            var x = Clamp(b.X, 0, Math.Max(0, stage.W - blockW));
-            var y = Clamp(b.Y, headerHeight, Math.Max(headerHeight, stage.H - blockH));
-            b.X = Snap(x, 8, noSnap: false);
-            b.Y = Snap(y, 8, noSnap: false);
-        }
-
-        public double Snap(double value, int grid, bool noSnap) => noSnap || grid <= 1 ? value : Math.Round(value / grid) * grid;
-        public double Snap(double value, double grid, bool noSnap) => Snap(value, (int)Math.Round(grid), noSnap);
-        public (double X, double Y) SnapAll(double x, double y, int grid, bool noSnap) => (Snap(x, grid, noSnap), Snap(y, grid, noSnap));
-        public (double X, double Y) SnapAll(double x, double y, double grid, bool noSnap) => SnapAll(x, y, (int)Math.Round(grid), noSnap);
-
-        public void SnapAll(double grid)
-        {
-            foreach (var st in Graph.Stages)
-            foreach (var b in st.Blocks)
-            {
-                b.X = Snap(b.X, grid, noSnap: false);
-                b.Y = Snap(b.Y, grid, noSnap: false);
-                b.X = Clamp(b.X, 0, Math.Max(0, st.W - b.PreviewWidth));
-                b.Y = Clamp(b.Y, 36, Math.Max(36, st.H - b.PreviewHeight));
-            }
-        }
-
-        private static double Clamp(double v, double min, double max) => v < min ? min : (v > max ? max : v);
-
-        public void SelectBlock(BlockVm b) => SelectedStage = Graph.Stages.FirstOrDefault(s => s.Blocks.Contains(b));
-
-        public void Publish() { }
-
-        public bool IsProcessNameTaken(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name)) return false;
-            var key = name.Trim();
-            foreach (var n in ExistingProcessNames)
-                if (string.Equals(n?.Trim(), key, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            return false;
-        }
-
-        public bool TryCreateNewProcess(string name, out string? error)
-        {
-            error = null;
-            var trimmed = (name ?? "").Trim();
-            if (string.IsNullOrEmpty(trimmed))
-            {
-                error = "Zadejte název procesu.";
-                return false;
-            }
-            if (IsProcessNameTaken(trimmed))
-            {
-                error = $"Název „{trimmed}“ už existuje. Zadejte prosím jiný.";
-                return false;
-            }
-            CreateEmptyProcessWithDefaultStage(trimmed);
-            if (!ExistingProcessNames.Contains(trimmed))
-                ExistingProcessNames.Add(trimmed);
-            return true;
-        }
-
-        private void CreateEmptyProcessWithDefaultStage(string name)
-        {
-            ProcessId = Guid.NewGuid();
-            ProcessName = name;
-            Graph = new EditorGraph();
-            Raise(nameof(Graph));
-
-            var st = new StageVm { Id = Guid.NewGuid(), X = 40, Y = 40, W = 560, H = 400 };
-            Graph.Stages.Add(st);
+            // TODO: vyčistit plátno, přidat výchozí Stage 1 atd., dle vaší implementace editoru.
         }
     }
 
-    public sealed class EditorGraph
+    /// <summary>
+    /// Jednoduchý RelayCommand pro ICommand.
+    /// </summary>
+    public sealed class RelayCommand : ICommand
     {
-        public ObservableCollection<StageVm> Stages { get; } = new();
-        public ObservableCollection<StageEdgeVm> StageEdges { get; } = new();
-    }
+        private readonly Action<object?> _execute;
+        private readonly Func<object?, bool>? _canExecute;
 
-    public sealed class StageVm : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void Raise([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
 
-        public Guid Id { get; set; }
-        private double _x; public double X { get => _x; set { _x = value; Raise(); } }
-        private double _y; public double Y { get => _y; set { _y = value; Raise(); } }
-        private double _w = 520; public double W { get => _w; set { _w = value; Raise(); } }
-        private double _h = 380; public double H { get => _h; set { _h = value; Raise(); } }
+        public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
 
-        public ObservableCollection<BlockVm> Blocks { get; } = new();
-        public ObservableCollection<string> AssignedUsers { get; } = new();
-        public ObservableCollection<string> AssignedGroups { get; } = new();
-    }
+        public void Execute(object? parameter) => _execute(parameter);
 
-    public sealed class BlockVm : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void Raise([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
-        public Guid Id { get; set; }
-        public Guid RefBlockId { get; set; }
-        public string Title { get; set; } = "";
-        public string Version { get; set; } = "1.0.0";
-        private double _x; public double X { get => _x; set { _x = value; Raise(); } }
-        private double _y; public double Y { get => _y; set { _y = value; Raise(); } }
-        private double _pw = 260; public double PreviewWidth { get => _pw; set { _pw = value; Raise(); } }
-        private double _ph = 140; public double PreviewHeight { get => _ph; set { _ph = value; Raise(); } }
-    }
-
-    public sealed class StageEdgeVm
-    {
-        public Guid Id { get; set; }
-        public Guid FromStageId { get; set; }
-        public Guid ToStageId { get; set; }
-    }
-
-    public sealed class BlockPaletteItem
-    {
-        public Guid Id { get; set; }
-        public string Title { get; set; } = "";
-        public string Version { get; set; } = "1.0.0";
+        public event EventHandler? CanExecuteChanged
+        {
+            add { CommandManager.RequerySuggested += value; }
+            remove { CommandManager.RequerySuggested -= value; }
+        }
     }
 }

@@ -1,24 +1,28 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace Agt.Desktop.Views
 {
+    /// <summary>
+    /// Dialog pro start case. Using direktivy jsou nahoÅ™e a kÃ³d je uvnitÅ™ tÅ™Ã­dy/namespace.
+    /// </summary>
     public partial class StartCaseDialog : Window
     {
-        public StartCaseDialog() { InitializeComponent(); }
+        public StartCaseDialog()
+        {
+            InitializeComponent();
+        }
 
         public IReadOnlyList<string> SelectedStartBlockKeys { get; private set; } = Array.Empty<string>();
 
-        // Handler volaný z XAML (SelectionChanged u verze)
-        private void VersionBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private static IReadOnlyList<string> PickInitialBlocksFromFirstStage(/* LayoutModel layout */)
         {
-            // TODO: pøípadná logika pro zmìnu verze; skeleton nechává prázdné.
+            return Array.Empty<string>();
         }
 
-        // Handler volaný z XAML (Click na OK)
-        private void Ok_Click(object sender, RoutedEventArgs e)
+        private void OnOk(object? sender, RoutedEventArgs e)
         {
             DialogResult = true;
             Close();

@@ -1,54 +1,143 @@
-<Window x:Class="Agt.Desktop.Views.BlocksEditorWindow"
+﻿<Window x:Class="Agt.Desktop.Views.BlocksEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Blocks Editor" Height="720" Width="1100" WindowStartupLocation="CenterScreen">
-  <Grid>
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="280"/>
-      <ColumnDefinition Width="*"/>
-    </Grid.ColumnDefinitions>
-    <Grid.RowDefinitions>
-      <RowDefinition Height="48"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="28"/>
-    </Grid.RowDefinitions>
+        xmlns:views="clr-namespace:Agt.Desktop.Views"
+        xmlns:mdl="clr-namespace:Agt.Desktop.Models"
+        Title="AGT – Návrhář formulářů"
+        Width="1280" Height="860"
+        Background="{DynamicResource EditorWindowBackgroundBrush}"
+        Foreground="{DynamicResource EditorTextBrush}"
+        WindowStartupLocation="CenterScreen"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True">
 
-    <!-- Toolbar -->
-    <StackPanel Orientation="Horizontal" Grid.ColumnSpan="2" VerticalAlignment="Center" Margin="8,4">
-      <Button Content="Nový blok" Margin="0,0,8,0" Click="NewBlock_OnClick"/>
-      <Button Content="Uložit JSON" Margin="0,0,8,0" Click="SaveJson_OnClick"/>
-      <Button Content="Načíst JSON" Margin="0,0,8,0" Click="LoadJson_OnClick"/>
-      <Separator Width="12"/>
-      <Button Content="Auto layout" Margin="0,0,8,0" Click="AutoLayout_OnClick"/>
-      <Button Content="Zoom +" Margin="0,0,8,0" Click="GridPlus_OnClick"/>
-      <Button Content="Zoom −" Margin="0,0,8,0" Click="GridMinus_OnClick"/>
-      <Button Content="Zavřít" Margin="0,0,8,0" Click="Exit_OnClick"/>
-      <TextBlock Text="{Binding StatusText}" Margin="12,0,0,0" VerticalAlignment="Center"/>
-    </StackPanel>
+    <!-- Jedno místo pravdy pro šablony + vynucení DESIGN módu pro všechny ItemsControl v editoru -->
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Pokud je ComponentTemplates.xaml ve stejném assembly a cestě, funguje tato URI.
+                     V případě jiné cesty uprav:
+                     pack://application:,,,/Agt.Desktop;component/Views/Components/ComponentTemplates.xaml -->
+                <ResourceDictionary Source="/Agt.Desktop;component/Views/Components/ComponentTemplates.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
 
-    <!-- Palette -->
-    <Grid Grid.Row="1" Grid.Column="0">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="*"/>
-      </Grid.RowDefinitions>
-      <TextBox x:Name="PaletteFilter" Margin="8" VerticalContentAlignment="Center" TextChanged="PaletteFilter_TextChanged"/>
-      <ListBox x:Name="PaletteList" Grid.Row="1" Margin="8" DisplayMemberPath="Title"
-               MouseDoubleClick="PaletteList_MouseDoubleClick"/>
+            <!-- Všude v tomto okně renderujeme v DESIGN módu (šablony na to mají triggery) -->
+            <Style TargetType="{x:Type ItemsControl}">
+                <Setter Property="views:RenderModeHelper.Mode" Value="{x:Static mdl:RenderMode.Edit}"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="28"/>
+        </Grid.RowDefinitions>
+
+        <!-- Menu -->
+        <Menu Grid.Row="0"
+              Background="{DynamicResource EditorSurfaceAltBrush}"
+              Foreground="{DynamicResource EditorTextBrush}"
+              FontSize="13"
+              IsHitTestVisible="True">
+            <MenuItem Header="_Soubor">
+                <MenuItem Header="_Nový blok…" Click="NewBlock_OnClick"/>
+                <MenuItem Header="_Otevřít…" Click="LoadJson_OnClick"/>
+                <MenuItem Header="_Uložit…" Click="SaveJson_OnClick"/>
+                <Separator/>
+                <MenuItem Header="_Konec" Click="Exit_OnClick"/>
+            </MenuItem>
+            <MenuItem Header="_Úpravy">
+                <MenuItem Header="_Smazat" Command="{Binding DeleteCommand}"/>
+                <MenuItem Header="_Duplikovat" Command="{Binding DuplicateCommand}"/>
+                <Separator/>
+                <MenuItem Header="Do_předu" Command="{Binding BringToFrontCommand}"/>
+                <MenuItem Header="Do_zadu" Command="{Binding SendToBackCommand}"/>
+                <Separator/>
+                <MenuItem Header="Zarovnat v_levo" Command="{Binding AlignLeftCommand}"/>
+            </MenuItem>
+            <MenuItem Header="_Zobrazení">
+                <MenuItem Header="Mřížka −" Click="GridMinus_OnClick"/>
+                <MenuItem Header="Mřížka +" Click="GridPlus_OnClick"/>
+                <Separator/>
+                <MenuItem Header="Velikost mřížky:">
+                    <MenuItem.HeaderTemplate>
+                        <DataTemplate>
+                            <DockPanel>
+                                <TextBlock Text="Velikost mřížky:" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding GridSize}" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </DataTemplate>
+                    </MenuItem.HeaderTemplate>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_Layout">
+                <MenuItem Header="_Auto layout" Click="AutoLayout_OnClick"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Info bar -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource EditorSurfaceBrush}"
+                BorderBrush="{DynamicResource EditorBorderBrush}"
+                BorderThickness="0,0,0,1">
+            <DockPanel>
+                <TextBlock Margin="10,0" VerticalAlignment="Center" FontSize="12"
+                           Text="{Binding CurrentBlockTitle}"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Obsah -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="0"/>
+                <ColumnDefinition Width="320"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    BorderBrush="{DynamicResource EditorBorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    Background="{DynamicResource EditorPanelBrush}">
+                <views:ComponentLibraryView/>
+            </Border>
+
+            <Border Grid.Column="1"
+                    BorderBrush="{DynamicResource EditorBorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    Background="{DynamicResource EditorPanelBrush}">
+                <views:ComponentsListView/>
+            </Border>
+
+            <Border Grid.Column="2"
+                    Background="{DynamicResource EditorCanvasBrush}"
+                    BorderBrush="{DynamicResource EditorBorderBrush}"
+                    BorderThickness="1">
+                <!-- Pokud chceš mřížku z Theme.xaml, přepni na EditorGridBrush -->
+                <views:DesignerCanvas/>
+            </Border>
+
+            <Border Grid.Column="4"
+                    BorderBrush="{DynamicResource EditorBorderBrush}"
+                    BorderThickness="1,0,0,0"
+                    Background="{DynamicResource EditorPanelBrush}">
+                <views:PropertiesPanel/>
+            </Border>
+        </Grid>
+
+        <!-- Status bar -->
+        <Border Grid.Row="3"
+                Background="{DynamicResource EditorSurfaceBrush}"
+                BorderBrush="{DynamicResource EditorBorderBrush}"
+                BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock Margin="8,0" VerticalAlignment="Center" FontSize="12"
+                           Text="{Binding StatusText}"/>
+            </DockPanel>
+        </Border>
     </Grid>
-
-    <!-- Design surface -->
-    <ScrollViewer Grid.Row="1" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                  Background="#FFF7F7F7" PreviewMouseLeftButtonDown="Canvas_MouseLeftButtonDown"
-                  PreviewMouseLeftButtonUp="Canvas_MouseLeftButtonUp" PreviewMouseMove="Canvas_MouseMove">
-      <Canvas x:Name="DesignCanvas" Width="2000" Height="1500" Background="White"/>
-    </ScrollViewer>
-
-    <!-- Status bar -->
-    <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#11000000">
-      <DockPanel>
-        <TextBlock Margin="8,4" Text="{Binding StatusText}"/>
-      </DockPanel>
-    </Border>
-  </Grid>
 </Window>
