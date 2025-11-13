@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using Microsoft.Win32;
 using Agt.Desktop.Services;
 using Agt.Desktop.ViewModels;
+using Agt.Domain.Models;
 
 namespace Agt.Desktop.Views
 {
@@ -47,48 +48,35 @@ namespace Agt.Desktop.Views
 
             try
             {
-                // Export DTO → z něj uděláme JSON a vyčteme BlockId/Version/Key/BlockName z kořene
-                var dto = VM.ExportToDto();
-                if (dto == null)
-                    throw new InvalidOperationException("Export vrací prázdná data.");
+                // 1) export do doménového DTO
+                var def = VM.ExportBlockDefinition();
 
-                var jsonIndented = JsonSerializer.Serialize(
-                    dto,
-                    new JsonSerializerOptions { WriteIndented = true });
+                if (def.BlockId == Guid.Empty)
+                    throw new InvalidOperationException("BlockId nesmí být prázdný GUID.");
+
+                var version = string.IsNullOrWhiteSpace(def.Version)
+                    ? "1.0.0"
+                    : def.Version!.Trim();
+                def.Version = version;
+
+                if (string.IsNullOrWhiteSpace(def.SchemaVersion))
+                    def.SchemaVersion = "1.0";
+
+                // 2) serializace DTO do JSON
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+                var jsonIndented = JsonSerializer.Serialize(def, jsonOptions);
 
                 using var doc = JsonDocument.Parse(jsonIndented);
                 var root = doc.RootElement;
 
-                // BlockId (povinné)
-                if (!root.TryGetProperty("BlockId", out var blockIdEl) ||
-                    !Guid.TryParse(blockIdEl.GetString(), out var blockId) ||
-                    blockId == Guid.Empty)
-                {
-                    throw new InvalidOperationException(
-                        "Kořen JSON neobsahuje platný 'BlockId' (GUID).");
-                }
-
-                // Version (povinné – ale když chybí, doplníme 1.0.0)
-                string version = root.TryGetProperty("Version", out var verEl)
-                    ? (verEl.GetString() ?? "")
-                    : "";
-                if (string.IsNullOrWhiteSpace(version))
-                    version = "1.0.0";
-
-                // Volitelné
-                string? key = root.TryGetProperty("Key", out var keyEl)
-                    ? keyEl.GetString()
-                    : null;
-
-                string? blockName = root.TryGetProperty("BlockName", out var nameEl)
-                    ? nameEl.GetString()
-                    : null;
-
-                // 1) uložit do vybraného souboru
+                // 3) uložit na disk (uživatelský export)
                 var sfd = new SaveFileDialog
                 {
                     Filter = "AGT JSON (*.json)|*.json",
-                    FileName = $"{blockId:D}__{version}.json"
+                    FileName = $"{def.BlockId:D}__{version}.json"
                 };
 
                 if (sfd.ShowDialog(this) != true)
@@ -96,13 +84,13 @@ namespace Agt.Desktop.Views
 
                 File.WriteAllText(sfd.FileName, jsonIndented);
 
-                // 2) zapsat do knihovny bloků (KANON: BlockId + Version, soubor {BlockId}__{Version}.json)
+                // 4) zapsat do knihovny bloků – kanonický store
                 var ok = BlockLibraryJson.Default.SaveToLibrary(
-                    blockId,
+                    def.BlockId,
                     version,
                     root,
-                    key: key,
-                    blockName: blockName);
+                    key: def.Key,
+                    blockName: def.BlockName);
 
                 if (!ok)
                     throw new InvalidOperationException("Zápis do knihovny bloků selhal.");
@@ -138,13 +126,13 @@ namespace Agt.Desktop.Views
             {
                 var json = File.ReadAllText(ofd.FileName);
 
-                // TADY byla chyba – chyběl typ pro deserializaci
-                var dto = JsonSerializer.Deserialize<DesignerViewModel.Dto>(json);
+                // 1) načíst doménové DTO (tolerantní k neznámým polím)
+                var def = JsonSerializer.Deserialize<BlockDefinitionDto>(json);
+                if (def == null)
+                    throw new InvalidOperationException("Soubor neobsahuje platnou definici bloku.");
 
-                if (dto == null)
-                    throw new InvalidOperationException("Soubor neobsahuje platný blok.");
-
-                VM.ImportFromDto(dto);
+                // 2) naplnit designer
+                VM.ImportBlockDefinition(def);
                 VM.StatusText = $"Načteno: {Path.GetFileName(ofd.FileName)}";
             }
             catch (Exception ex)
@@ -159,18 +147,22 @@ namespace Agt.Desktop.Views
 
         private void GridPlus_OnClick(object sender, RoutedEventArgs e)
         {
-            var vm = (DesignerViewModel)DataContext;
-            vm.GridSize = vm.GridSize + 2;
+            VM.GridSize = VM.GridSize + 2;
         }
 
         private void GridMinus_OnClick(object sender, RoutedEventArgs e)
         {
-            var vm = (DesignerViewModel)DataContext;
-            vm.GridSize = vm.GridSize > 2 ? vm.GridSize - 2 : 2;
+            VM.GridSize = VM.GridSize > 2 ? VM.GridSize - 2 : 2;
         }
 
-        private void Exit_OnClick(object sender, RoutedEventArgs e) => Close();
+        private void AutoLayout_OnClick(object sender, RoutedEventArgs e)
+        {
+            VM.AutoLayout();
+        }
 
-        private void AutoLayout_OnClick(object sender, RoutedEventArgs e) => VM.AutoLayout();
+        private void Exit_OnClick(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
     }
 }

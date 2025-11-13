@@ -1,91 +1,64 @@
-﻿using System;
+﻿// Domain/Models/BlockDefinitionDto.cs
+using System;
 using System.Collections.Generic;
 
 namespace Agt.Domain.Models
 {
     /// <summary>
-    /// Sdílený tvar definice bloku – má odpovídat JSONu, který generuje editor bloků.
+    /// Sdílené DTO definice bloku – používá ho editor, knihovna bloků i runtime.
     /// </summary>
     public sealed class BlockDefinitionDto
     {
-        /// <summary>Unikátní identifikátor bloku (GUID).</summary>
+        /// <summary>Globální identifikátor bloku.</summary>
         public Guid BlockId { get; set; }
 
-        /// <summary>Logický klíč bloku (např. "CustomerAddress"), může být prázdný.</summary>
+        /// <summary>Logický klíč bloku (např. CustomerAddress). Volitelný.</summary>
         public string? Key { get; set; }
 
         /// <summary>Zobrazovaný název bloku.</summary>
-        public string? BlockName { get; set; }
+        public string BlockName { get; set; } = string.Empty;
 
         /// <summary>Verze bloku (semver-like, např. "1.0.0").</summary>
         public string? Version { get; set; }
 
-        /// <summary>
-        /// Verze schématu JSONu – kvůli budoucím migracím.
-        /// Pokud chybí, bere se jako "1.0".
-        /// </summary>
+        /// <summary>Verze schématu JSON (kvůli budoucím migracím).</summary>
         public string? SchemaVersion { get; set; }
 
-        /// <summary>Volitelná další metadata (např. popis, tagy) v libovolném formátu.</summary>
-        public string? MetadataJson { get; set; }
+        /// <summary>Velikost mřížky v designeru.</summary>
+        public double GridSize { get; set; } = 8;
 
-        /// <summary>Seznam položek (komponent) uvnitř bloku.</summary>
+        /// <summary>Zda se mřížka zobrazuje.</summary>
+        public bool ShowGrid { get; set; } = true;
+
+        /// <summary>Zda se komponenty přichytávají k mřížce.</summary>
+        public bool SnapToGrid { get; set; } = true;
+
+        /// <summary>Seznam položek (komponent) v bloku.</summary>
         public List<FieldDefinitionDto> Items { get; set; } = new();
     }
 
-    /// <summary>
-    /// Definice jedné položky (komponenty) v bloku – odpovídá JSONu v poli Items.
-    /// </summary>
+    /// <summary>Definice jedné komponenty uvnitř bloku.</summary>
     public sealed class FieldDefinitionDto
     {
-        // --- Identita / typ ---
+        public string TypeKey { get; set; } = string.Empty;
+        public Guid Id { get; set; }
 
-        /// <summary>Typ komponenty (textbox, textarea, checkbox, number, date, combobox...)</summary>
-        public string? TypeKey { get; set; }
-
-        /// <summary>Jedinečný klíč pole v rámci bloku.</summary>
-        public string? FieldKey { get; set; }
-
-        /// <summary>Zobrazovaný popisek.</summary>
-        public string? Label { get; set; }
-
-        /// <summary>Hint/placeholder pro textová pole.</summary>
-        public string? Placeholder { get; set; }
-
-        /// <summary>Výchozí hodnota (string, číslo, atd. serializovaná jako text).</summary>
-        public string? DefaultValue { get; set; }
-
-        /// <summary>Povinné pole?</summary>
-        public bool Required { get; set; }
-
-        // --- Layout / pozice ---
+        public string Name { get; set; } = string.Empty;
+        public string FieldKey { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
 
         public double X { get; set; }
         public double Y { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
-
-        /// <summary>Z-index komponenty (pořadí vykreslení).</summary>
         public int ZIndex { get; set; }
 
-        /// <summary>Ukotvení (Left/Right/Top/Bottom) – pokud používáš.</summary>
-        public string? Anchor { get; set; }
+        public string? DefaultValue { get; set; }
 
-        /// <summary>Dock (None, Left, Right, Top, Bottom, Fill) – pokud používáš.</summary>
-        public string? Dock { get; set; }
+        public string Background { get; set; } = "#00000000";
+        public string Foreground { get; set; } = "#FF000000";
 
-        // --- Stylování ---
-
-        public string? Background { get; set; }
-        public string? Foreground { get; set; }
-        public string? FontFamily { get; set; }
-        public double? FontSize { get; set; }
-        public string? FontWeight { get; set; }
-        public string? FontStyle { get; set; }
-
-        // --- Další volitelná nastavení ---
-
-        /// <summary>Obecná rozšiřitelná metadata komponenty.</summary>
-        public string? MetadataJson { get; set; }
+        public string FontFamily { get; set; } = "Segoe UI";
+        public double FontSize { get; set; } = 12;
     }
 }

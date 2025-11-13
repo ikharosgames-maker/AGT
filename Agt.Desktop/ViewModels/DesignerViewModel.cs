@@ -1,14 +1,15 @@
-﻿using System;
+﻿using Agt.Desktop.Adapters;
+using Agt.Desktop.Models;
+using Agt.Desktop.Services;
+using Agt.Domain.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using System.Windows;
 using System.Windows.Media;
-using Agt.Desktop.Models;
-using Agt.Desktop.Services;
-using Agt.Desktop.Adapters;
 
 namespace Agt.Desktop.ViewModels
 {
@@ -164,6 +165,113 @@ namespace Agt.Desktop.ViewModels
             }
             StatusText = "Duplikováno.";
         }
+        /// <summary>
+        /// Export aktuálního bloku do doménového DTO (BlockDefinitionDto).
+        /// </summary>
+        public BlockDefinitionDto ExportBlockDefinition(string? key = null, string? version = null)
+        {
+            var dto = ExportToDto();
+            if (dto == null)
+                throw new InvalidOperationException("ExportToDto() vrátil null.");
+
+            var def = new BlockDefinitionDto
+            {
+                BlockId = dto.BlockId,
+                BlockName = dto.BlockName ?? string.Empty,
+                Key = key,
+                Version = string.IsNullOrWhiteSpace(version) ? "1.0.0" : version.Trim(),
+                SchemaVersion = "1.0",
+                GridSize = dto.GridSize,
+                ShowGrid = dto.ShowGrid,
+                SnapToGrid = dto.SnapToGrid
+            };
+
+            foreach (var it in dto.Items)
+            {
+                def.Items.Add(new FieldDefinitionDto
+                {
+                    TypeKey = it.TypeKey,
+                    Id = it.Id,
+                    Name = it.Name,
+                    FieldKey = it.FieldKey,
+                    Label = it.Label,
+                    X = it.X,
+                    Y = it.Y,
+                    Width = it.Width,
+                    Height = it.Height,
+                    ZIndex = it.ZIndex,
+                    DefaultValue = it.DefaultValue,
+                    Background = it.Background,
+                    Foreground = it.Foreground,
+                    FontFamily = it.FontFamily,
+                    FontSize = it.FontSize
+                });
+            }
+
+            return def;
+        }
+
+        /// <summary>
+        /// Načte blok z doménového DTO (BlockDefinitionDto) do designeru.
+        /// </summary>
+        public void ImportBlockDefinition(BlockDefinitionDto definition)
+        {
+            if (definition == null) throw new ArgumentNullException(nameof(definition));
+
+            var items = definition.Items
+                .Select(i => new ItemDto(
+                    i.TypeKey,
+                    i.Id,
+                    i.Name,
+                    i.FieldKey,
+                    i.Label,
+                    i.X,
+                    i.Y,
+                    i.Width,
+                    i.Height,
+                    i.ZIndex,
+                    i.DefaultValue,
+                    i.Background,
+                    i.Foreground,
+                    i.FontFamily,
+                    i.FontSize
+                ))
+                .ToArray();
+
+            var dto = new Dto(
+                definition.BlockId,
+                definition.BlockName ?? string.Empty,
+                definition.GridSize,
+                definition.ShowGrid,
+                definition.SnapToGrid,
+                items);
+
+            ImportFromDto(dto);
+        }
+        public sealed record ItemDto(
+    string TypeKey,
+    Guid Id,
+    string Name,
+    string FieldKey,
+    string Label,
+    double X,
+    double Y,
+    double Width,
+    double Height,
+    int ZIndex,
+    string? DefaultValue,
+    string Background,
+    string Foreground,
+    string FontFamily,
+    double FontSize);
+
+        public sealed record Dto(
+            Guid BlockId,
+            string BlockName,
+            double GridSize,
+            bool ShowGrid,
+            bool SnapToGrid,
+            ItemDto[] Items);
 
         private Task OnDeleteAsync()
         {
@@ -194,12 +302,6 @@ namespace Agt.Desktop.ViewModels
 
             StatusText = "Hromadná změna aplikována.";
         }
-
-        // --- Export / Import (doplněno o Name) ---
-        public record Dto(Guid BlockId, string BlockName, double GridSize, bool ShowGrid, bool SnapToGrid, ItemDto[] Items);
-        public record ItemDto(string TypeKey, Guid Id, string Name, string FieldKey, string Label,
-                              double X, double Y, double Width, double Height, int ZIndex,
-                              string? DefaultValue, string Background, string Foreground, string FontFamily, double FontSize);
 
         private static string BrushToString(Brush b)
         {
