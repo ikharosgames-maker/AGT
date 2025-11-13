@@ -32,4 +32,10 @@ public sealed class StageDefinition
     /// Free-form metadata serialized as JSON (routing hints, UI options, etc.).
     /// </summary>
     public string MetadataJson { get; set; } = "{}";
+
+    /// <summary>
+    /// Přiřazovací pravidlo pro úkoly v této stage – pokud je nastavené,
+    /// může se použít jako defaultní přiřazení (user/group).
+    /// </summary>
+    public AssignmentRule? AssignmentRule { get; set; }
 }

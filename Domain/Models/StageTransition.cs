@@ -21,4 +21,10 @@ public sealed class StageTransition
     /// Condition under which the transition is taken.
     /// </summary>
     public Condition? Condition { get; set; }
+
+    /// <summary>
+    /// Volitelné přiřazovací pravidlo pro úkol v cílové stage.
+    /// Pokud je nastavené, může přebít AssignmentRule na StageDefinition.
+    /// </summary>
+    public AssignmentRule? AssignmentRule { get; set; }
 }

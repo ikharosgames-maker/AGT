@@ -15,11 +15,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoutingService, RoutingService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<INotificationService, NotificationService>();
-        services.AddScoped<IProcessDefinitionService, ProcessDefinitionService>();
-        services.AddSingleton<IAuthZ, AuthZ>();
 
         if (useJsonStore)
         {
+            // JSON store implementace
             services.AddSingleton<IFormRepository, JsonStore.JsonFormRepository>();
             services.AddSingleton<IBlockRepository, JsonStore.JsonBlockRepository>();
             services.AddSingleton<ICaseRepository, JsonStore.JsonCaseRepository>();
