@@ -34,6 +34,52 @@ namespace Agt.Desktop.Views
             }
         }
 
+        /// <summary>
+        /// Pomocná funkce pro automatické zvýšení verze.
+        /// Vstupní verze může být null / prázdná – v tom případě vrací "1.0.0".
+        /// Jinak očekává tvar "major.minor.patch" a zvýší patch o 1.
+        /// </summary>
+        /// <summary>
+        /// Vypočítá novou verzi podle typu změny.
+        /// - první uložení → 1.0.0
+        /// - změna struktury (přidání/odebrání komponent) → major++
+        /// - změna layoutu/vlastností → minor++
+        /// </summary>
+        private static string BumpVersion(string? version, DesignerViewModel.BlockChangeKind changeKind)
+        {
+            // první uložení
+            if (string.IsNullOrWhiteSpace(version))
+                return "1.0.0";
+
+            var parts = version.Trim().TrimStart('v', 'V').Split('.');
+            int major = 0, minor = 0, patch = 0;
+
+            if (parts.Length > 0) int.TryParse(parts[0], out major);
+            if (parts.Length > 1) int.TryParse(parts[1], out minor);
+            if (parts.Length > 2) int.TryParse(parts[2], out patch);
+
+            switch (changeKind)
+            {
+                case DesignerViewModel.BlockChangeKind.Structure:
+                    major++;
+                    minor = 0;
+                    patch = 0;
+                    break;
+
+                case DesignerViewModel.BlockChangeKind.LayoutOrProperties:
+                    minor++;
+                    patch = 0;
+                    break;
+
+                case DesignerViewModel.BlockChangeKind.None:
+                default:
+                    // nedetekovaná změna → necháme původní verzi beze změny
+                    return $"{major}.{minor}.{patch}";
+            }
+
+            return $"{major}.{minor}.{patch}";
+        }
+
         private void SaveJson_OnClick(object sender, RoutedEventArgs e)
         {
             if (VM.CurrentBlock == null)
@@ -48,46 +94,43 @@ namespace Agt.Desktop.Views
 
             try
             {
-                // 1) export do doménového DTO
+                // 1) export do doménového DTO (aktuální stav)
                 var def = VM.ExportBlockDefinition();
 
                 if (def.BlockId == Guid.Empty)
                     throw new InvalidOperationException("BlockId nesmí být prázdný GUID.");
 
-                var version = string.IsNullOrWhiteSpace(def.Version)
-                    ? "1.0.0"
-                    : def.Version!.Trim();
-                def.Version = version;
+                // Rozhodnout typ změny vůči poslednímu uloženému/načtenému stavu
+                var changeKind = VM.GetChangeKind(def);
+
+                // Chytré verzování: major/minor podle typu změny
+                var newVersion = BumpVersion(def.Version, changeKind);
+                def.Version = newVersion;
 
                 if (string.IsNullOrWhiteSpace(def.SchemaVersion))
                     def.SchemaVersion = "1.0";
 
+                if (string.IsNullOrWhiteSpace(def.BlockName))
+                    def.BlockName = "(bez názvu)";
+
+                // Autor + čas založení:
+                if (string.IsNullOrWhiteSpace(def.CreatedBy))
+                    def.CreatedBy = Environment.UserName;
+
+                if (def.CreatedAt == default)
+                    def.CreatedAt = DateTime.UtcNow;
+
                 // 2) serializace DTO do JSON
-                var jsonOptions = new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                };
+                var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
                 var jsonIndented = JsonSerializer.Serialize(def, jsonOptions);
 
                 using var doc = JsonDocument.Parse(jsonIndented);
                 var root = doc.RootElement;
 
-                // 3) uložit na disk (uživatelský export)
-                var sfd = new SaveFileDialog
-                {
-                    Filter = "AGT JSON (*.json)|*.json",
-                    FileName = $"{def.BlockId:D}__{version}.json"
-                };
-
-                if (sfd.ShowDialog(this) != true)
-                    return;
-
-                File.WriteAllText(sfd.FileName, jsonIndented);
-
-                // 4) zapsat do knihovny bloků – kanonický store
+                // 3) uložení pouze do knihovny bloků
                 var ok = BlockLibraryJson.Default.SaveToLibrary(
                     def.BlockId,
-                    version,
+                    newVersion,
                     root,
                     key: def.Key,
                     blockName: def.BlockName);
@@ -95,11 +138,21 @@ namespace Agt.Desktop.Views
                 if (!ok)
                     throw new InvalidOperationException("Zápis do knihovny bloků selhal.");
 
-                VM.StatusText = $"Uloženo: {Path.GetFileName(sfd.FileName)}";
+                // aktualizovat stav ve viewmodelu (pro další uložení)
+                VM.CurrentVersion = newVersion;
+                VM.CurrentCreatedBy = def.CreatedBy;
+                VM.CurrentCreatedAt = def.CreatedAt;
+                VM.MarkSaved(def);
+
+                VM.StatusText = $"Uloženo do knihovny: {def.BlockName} v{newVersion} (autor: {def.CreatedBy})";
 
                 MessageBox.Show(
-                    "Blok byl úspěšně uložen a zapsán do knihovny.",
-                    "Hotovo",
+                    $"Blok byl uložen do knihovny.\n\n" +
+                    $"Název:  {def.BlockName}\n" +
+                    $"Verze:  {newVersion}\n" +
+                    $"Autor:  {def.CreatedBy}\n" +
+                    $"BlockId: {def.BlockId}",
+                    "Uloženo",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
@@ -115,30 +168,45 @@ namespace Agt.Desktop.Views
 
         private void LoadJson_OnClick(object sender, RoutedEventArgs e)
         {
-            var ofd = new OpenFileDialog
+            var win = new BlockLibraryBrowserWindow
             {
-                Filter = "AGT JSON (*.json)|*.json"
+                Owner = this
             };
-            if (ofd.ShowDialog(this) != true)
+
+            if (win.ShowDialog() != true || win.SelectedEntry == null)
                 return;
 
             try
             {
-                var json = File.ReadAllText(ofd.FileName);
+                var lib = Agt.Desktop.App.Services?.GetService(typeof(IBlockLibrary)) as IBlockLibrary
+                          ?? BlockLibraryJson.Default;
 
-                // 1) načíst doménové DTO (tolerantní k neznámým polím)
-                var def = JsonSerializer.Deserialize<BlockDefinitionDto>(json);
-                if (def == null)
-                    throw new InvalidOperationException("Soubor neobsahuje platnou definici bloku.");
+                if (!lib.TryLoadByIdVersion(win.SelectedEntry.BlockId, win.SelectedEntry.Version,
+                                            out var doc, out var entry) || doc == null)
+                {
+                    MessageBox.Show(
+                        "Vybraný blok se nepodařilo načíst z knihovny.",
+                        "Knihovna bloků",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
 
-                // 2) naplnit designer
-                VM.ImportBlockDefinition(def);
-                VM.StatusText = $"Načteno: {Path.GetFileName(ofd.FileName)}";
+                using (doc)
+                {
+                    var json = doc.RootElement.GetRawText();
+                    var def = JsonSerializer.Deserialize<BlockDefinitionDto>(json);
+                    if (def == null)
+                        throw new InvalidOperationException("JSON neobsahuje platnou definici bloku.");
+
+                    VM.ImportBlockDefinition(def);
+                    VM.StatusText = $"Načteno z knihovny: {def.BlockName} v{def.Version}";
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Soubor nelze načíst:\n{ex.Message}",
+                    $"Blok nelze načíst:\n{ex.Message}",
                     "Chyba",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);

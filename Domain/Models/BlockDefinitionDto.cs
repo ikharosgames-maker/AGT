@@ -1,5 +1,4 @@
-﻿// Domain/Models/BlockDefinitionDto.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Agt.Domain.Models
@@ -9,7 +8,7 @@ namespace Agt.Domain.Models
     /// </summary>
     public sealed class BlockDefinitionDto
     {
-        /// <summary>Globální identifikátor bloku.</summary>
+        /// <summary>Globální identifikátor bloku (interní, v UI se typicky nezobrazuje).</summary>
         public Guid BlockId { get; set; }
 
         /// <summary>Logický klíč bloku (např. CustomerAddress). Volitelný.</summary>
@@ -23,6 +22,12 @@ namespace Agt.Domain.Models
 
         /// <summary>Verze schématu JSON (kvůli budoucím migracím).</summary>
         public string? SchemaVersion { get; set; }
+
+        /// <summary>Uživatel, který blok vytvořil (aktuálně Windows Environment.UserName).</summary>
+        public string? CreatedBy { get; set; }
+
+        /// <summary>Čas založení bloku v UTC.</summary>
+        public DateTime CreatedAt { get; set; }
 
         /// <summary>Velikost mřížky v designeru.</summary>
         public double GridSize { get; set; } = 8;

@@ -16,41 +16,41 @@
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
 
-        <!-- Vstupy -->
+        <!-- TextBoxy -->
         <Style TargetType="TextBox">
             <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AppInputBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="4,2"/>
-            <!-- caret, aby byl vidět i v dark tématu -->
-            <Setter Property="CaretBrush" Value="{DynamicResource AppTextBrush}"/>
         </Style>
 
         <!-- Tlačítka -->
         <Style TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="MinWidth" Value="80"/>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="120"/>
-            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="220"/>
         </Grid.ColumnDefinitions>
 
-        <TextBlock Text="ID:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
-        <TextBox x:Name="IdBox" Grid.Row="0" Grid.Column="1" Margin="6,2" IsReadOnly="True"/>
+        <!-- ID je pouze interní – skryté -->
+        <TextBlock Text="ID:" Grid.Row="0" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Visibility="Collapsed"/>
+        <TextBox x:Name="IdBox"
+                 Grid.Row="0" Grid.Column="1"
+                 Margin="6,2"
+                 IsReadOnly="True"
+                 Visibility="Collapsed"/>
 
         <TextBlock Text="Název:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"/>
         <TextBox x:Name="NameBox" Grid.Row="1" Grid.Column="1" Margin="6,2"/>

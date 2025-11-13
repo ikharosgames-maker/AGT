@@ -27,6 +27,9 @@
 		<Page Include="Themes\Theme.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
+		<Page Include="Views\BlockLibraryBrowserWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Include="Views\BlocksEditorWindow.xaml" />
 		<Page Include="Views\AnchorDockEditor.xaml">
 		  <Generator>MSBuild:Compile</Generator>
@@ -121,6 +124,7 @@
 		<Compile Include="Validation\NumberRangeRule.cs" />
 		<Compile Include="ViewModels\FormRepositoryBrowserViewModel.cs" />
 		<Compile Include="ViewModels\SemicolonToListConverter.cs" />
+		<Compile Include="Views\BlockLibraryBrowserWindow.xaml.cs" />
 		<Compile Include="Views\CaseRunWindow.xaml.cs" />
 		<Compile Include="Views\Components\AutoSizeCanvas.cs" />
 		<Compile Include="Views\Components\ComponentKeyTemplateSelector.cs" />

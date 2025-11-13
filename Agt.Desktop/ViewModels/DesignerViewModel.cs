@@ -20,6 +20,27 @@ namespace Agt.Desktop.ViewModels
         private Block? _currentBlock;
         public Block? CurrentBlock { get => _currentBlock; set => SetProperty(ref _currentBlock, value); }
 
+        // metadata aktuálního bloku – pro verzi a autora
+        private string? _currentVersion;
+        public string? CurrentVersion
+        {
+            get => _currentVersion;
+            set => SetProperty(ref _currentVersion, value);
+        }
+
+        private string? _currentCreatedBy;
+        public string? CurrentCreatedBy
+        {
+            get => _currentCreatedBy;
+            set => SetProperty(ref _currentCreatedBy, value);
+        }
+
+        private DateTime _currentCreatedAt;
+        public DateTime CurrentCreatedAt
+        {
+            get => _currentCreatedAt;
+            set => SetProperty(ref _currentCreatedAt, value);
+        }
         private bool _showGrid = true; public bool ShowGrid { get => _showGrid; set => SetProperty(ref _showGrid, value); }
         private bool _snapToGrid = true; public bool SnapToGrid { get => _snapToGrid; set => SetProperty(ref _snapToGrid, value); }
         private double _gridSize = 8; public double GridSize { get => _gridSize; set => SetProperty(ref _gridSize, value <= 0 ? 8 : value); }
@@ -79,8 +100,16 @@ namespace Agt.Desktop.ViewModels
             CurrentBlock = block;
             Items.Clear();
             _selection.Clear();
-            StatusText = $"Založen blok {block.Name} ({block.Id})";
+
+            // nový blok – verze se určí až při prvním uložení, autor aktuální uživatel
+            CurrentVersion = null;
+            CurrentCreatedBy = Environment.UserName;
+            CurrentCreatedAt = DateTime.UtcNow;
+
+            StatusText = $"Založen blok {block.Name}";
         }
+
+
 
         private bool HasAny() => _selection.Count >= 1;
 
@@ -168,6 +197,9 @@ namespace Agt.Desktop.ViewModels
         /// <summary>
         /// Export aktuálního bloku do doménového DTO (BlockDefinitionDto).
         /// </summary>
+        /// <summary>
+        /// Export aktuálního bloku do doménového DTO (BlockDefinitionDto).
+        /// </summary>
         public BlockDefinitionDto ExportBlockDefinition(string? key = null, string? version = null)
         {
             var dto = ExportToDto();
@@ -179,8 +211,11 @@ namespace Agt.Desktop.ViewModels
                 BlockId = dto.BlockId,
                 BlockName = dto.BlockName ?? string.Empty,
                 Key = key,
-                Version = string.IsNullOrWhiteSpace(version) ? "1.0.0" : version.Trim(),
+                // verze se bere z aktuálního stavu – Save ji pak automaticky zvýší
+                Version = string.IsNullOrWhiteSpace(CurrentVersion) ? null : CurrentVersion.Trim(),
                 SchemaVersion = "1.0",
+                CreatedBy = string.IsNullOrWhiteSpace(CurrentCreatedBy) ? null : CurrentCreatedBy,
+                CreatedAt = CurrentCreatedAt,
                 GridSize = dto.GridSize,
                 ShowGrid = dto.ShowGrid,
                 SnapToGrid = dto.SnapToGrid
@@ -214,9 +249,17 @@ namespace Agt.Desktop.ViewModels
         /// <summary>
         /// Načte blok z doménového DTO (BlockDefinitionDto) do designeru.
         /// </summary>
+        /// <summary>
+        /// Načte blok z doménového DTO (BlockDefinitionDto) do designeru.
+        /// </summary>
         public void ImportBlockDefinition(BlockDefinitionDto definition)
         {
             if (definition == null) throw new ArgumentNullException(nameof(definition));
+
+            // metadata z DTO → do viewmodelu
+            CurrentVersion = definition.Version;
+            CurrentCreatedBy = definition.CreatedBy;
+            CurrentCreatedAt = definition.CreatedAt;
 
             var items = definition.Items
                 .Select(i => new ItemDto(
@@ -247,7 +290,53 @@ namespace Agt.Desktop.ViewModels
                 items);
 
             ImportFromDto(dto);
+            MarkSaved(definition);
         }
+        // Rozlišení typu změny pro verzování
+        public enum BlockChangeKind
+        {
+            None = 0,
+            LayoutOrProperties = 1,
+            Structure = 2
+        }
+        // Podpis struktury (Ids všech komponent z posledního uloženého/načteného stavu)
+        private Guid[]? _lastSavedItemIds;
+        /// <summary>
+        /// Vypočítá typ změny vůči poslední uložené/načtené struktuře.
+        /// Strukturou rozumíme sadu Id komponent.
+        /// </summary>
+        public BlockChangeKind GetChangeKind(BlockDefinitionDto current)
+        {
+            var currentIds = current.Items
+                .Select(i => i.Id)
+                .OrderBy(id => id)
+                .ToArray();
+
+            if (_lastSavedItemIds == null || _lastSavedItemIds.Length == 0)
+            {
+                // První uložení – bereme jako "Structure",
+                // ale BumpVersion zajistí, že první verze bude 1.0.0.
+                return BlockChangeKind.Structure;
+            }
+
+            if (!_lastSavedItemIds.SequenceEqual(currentIds))
+                return BlockChangeKind.Structure;
+
+            // Sada Id je stejná → změnily se jen vlastnosti/layout
+            return BlockChangeKind.LayoutOrProperties;
+        }
+
+        /// <summary>
+        /// Aktualizuje podpis struktury po úspěšném uložení nebo načtení z knihovny.
+        /// </summary>
+        public void MarkSaved(BlockDefinitionDto current)
+        {
+            _lastSavedItemIds = current.Items
+                .Select(i => i.Id)
+                .OrderBy(id => id)
+                .ToArray();
+        }
+
         public sealed record ItemDto(
     string TypeKey,
     Guid Id,
