@@ -1,22 +1,29 @@
-﻿// Agt.Domain/Models/AssignmentRule.cs
-namespace Agt.Domain.Models;
+﻿// Domain/Models/AssignmentRule.cs
+using System;
 
-/// <summary>
-/// Jednoduché přiřazovací pravidlo k určení primárního příjemce úkolu.
-/// V první fázi držíme pouze UserId/GroupId, další strategie se dají
-/// doplnit přes MetadataJson nebo rozšíření modelu.
-/// </summary>
-public sealed class AssignmentRule
+namespace Agt.Domain.Models
 {
-    /// <summary>Konkrétní uživatel, kterému se má stage/úkol přiřadit.</summary>
-    public Guid? UserId { get; set; }
-
-    /// <summary>Skupina, která má stage/úkol zpracovat.</summary>
-    public Guid? GroupId { get; set; }
-
     /// <summary>
-    /// Volitelné doplňkové informace (např. strategie, user-settings klíče…),
-    /// v JSON formátu kvůli snadné serializaci.
+    /// Jednoduché pravidlo pro přiřazení úkolu/stage.
+    /// Lze rozšířit (např. o výrazy nebo user-settings), ale zatím držíme strukturovaný základ.
     /// </summary>
-    public string? MetadataJson { get; set; }
+    public sealed class AssignmentRule
+    {
+        /// <summary>Cílový uživatel. Pokud je null, může se použít Group nebo fallback.</summary>
+        public Guid? UserId { get; set; }
+
+        /// <summary>Cílová skupina. Pokud je null, může se použít User nebo fallback.</summary>
+        public Guid? GroupId { get; set; }
+
+        /// <summary>
+        /// Volitelný výraz / JSON pro dynamické vyhodnocení (např. podle user settings).
+        /// Prozatím se nevyhodnocuje, ale je připravený pro rozšíření.
+        /// </summary>
+        public string? Expression { get; set; }
+
+        /// <summary>
+        /// SLA v hodinách od okamžiku založení úkolu. Pokud je null, termín není nastaven.
+        /// </summary>
+        public int? DueInHours { get; set; }
+    }
 }

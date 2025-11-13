@@ -1,30 +1,26 @@
-﻿// Agt.Domain/Models/StageTransition.cs
-using Agt.Domain.Primitives;
+﻿// Domain/Models/StageTransition.cs
+using System;
 
-namespace Agt.Domain.Models;
-
-public sealed class StageTransition
+namespace Agt.Domain.Models
 {
-    public Guid Id { get; set; }
+    public sealed class StageTransition
+    {
+        public Guid Id { get; set; }
+        public Guid FromStageId { get; set; }
+        public Guid ToStageId { get; set; }
 
-    /// <summary>
-    /// Source stage.
-    /// </summary>
-    public Guid FromStageId { get; set; }
+        /// <summary>
+        /// Podmínka, kdy je přechod aktivní (PlainJsonCondition / PredicateExpr).
+        /// Zatím jsme ji v runtime nevyhodnocovali – to přijde v dalším kole.
+        /// </summary>
+        public string? ConditionJson { get; set; }
 
-    /// <summary>
-    /// Target stage.
-    /// </summary>
-    public Guid ToStageId { get; set; }
+        /// <summary>
+        /// Pravidlo pro přiřazení na cílové stage, pokud přechod vede na konkrétní
+        /// jiného příjemce než default stage AssignmentRule.
+        /// </summary>
+        public AssignmentRule? AssignmentRule { get; set; }
 
-    /// <summary>
-    /// Condition under which the transition is taken.
-    /// </summary>
-    public Condition? Condition { get; set; }
-
-    /// <summary>
-    /// Volitelné přiřazovací pravidlo pro úkol v cílové stage.
-    /// Pokud je nastavené, může přebít AssignmentRule na StageDefinition.
-    /// </summary>
-    public AssignmentRule? AssignmentRule { get; set; }
+        public int Order { get; set; }
+    }
 }

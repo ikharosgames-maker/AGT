@@ -136,6 +136,39 @@ public sealed class CaseWorkflowService : ICaseWorkflowService
     }
 
     /// <summary>
+    /// Spočítá přiřazení pro CaseBlock na základě AssignmentRule stage
+    /// (do budoucna i StageTransition) a případných fallbacků.
+    /// </summary>
+    private (Guid? userId, Guid? groupId, DateTime? dueAt) ResolveAssignment(
+        StageDefinition stage,
+        Case c,
+        CaseBlock cb)
+    {
+        var rule = stage.AssignmentRule;
+
+        if (rule == null)
+        {
+            // zatím žádný automatický fallback – můžeš tady později doplnit např.:
+            // - owner case
+            // - skupinu z form metadat
+            return (null, null, null);
+        }
+
+        Guid? userId = rule.UserId;
+        Guid? groupId = rule.GroupId;
+
+        DateTime? dueAt = null;
+        if (rule.DueInHours.HasValue && rule.DueInHours.Value > 0)
+        {
+            dueAt = DateTime.UtcNow.AddHours(rule.DueInHours.Value);
+        }
+
+        // Expression zatím nevyhodnocujeme – připravené pro budoucí mini rules engine.
+        // (tam se může vyhodnotit predikát nad Case/CaseBlock/UserSettings a přepsat userId/groupId/dueAt.)
+
+        return (userId, groupId, dueAt);
+    }
+    /// <summary>
     /// Runtime pohled pro UI – jednotlivé stage a jejich bloky pro konkrétní case.
     /// Stage je ReadOnly, pokud jsou všechny její bloky Done/Rejected.
     /// </summary>
@@ -212,16 +245,13 @@ public sealed class CaseWorkflowService : ICaseWorkflowService
 
             _cases.UpsertBlock(cb);
 
-            // Assignment: zatím jednoduchý fallback – nic nepřiřazujeme.
-            // Ve chvíli, kdy doplníme AssignmentRule, nahradíme tohle logikou:
-            // var (userId, groupId, dueAt) = ResolveAssignment(stage, link, c, cb);
-            Guid? assigneeUserId = null;
-            Guid? assigneeGroupId = null;
-            DateTime? dueAt = null;
+            // AssignmentRule → userId, groupId, dueAt
+            var (userId, groupId, dueAt) = ResolveAssignment(stage, c, cb);
 
-            _tasks.Assign(cb.Id, assigneeUserId, assigneeGroupId, dueAt, actorUserId);
+            _tasks.Assign(cb.Id, userId, groupId, dueAt, actorUserId);
         }
     }
+
 
     /// <summary>
     /// Vrátí množinu BlockKey, které patří do dané stage (podle StageBlocks).
