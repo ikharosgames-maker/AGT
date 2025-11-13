@@ -12,13 +12,14 @@ public static class ServiceCollectionExtensions
     {
         // Application Services
         services.AddScoped<ICaseService, CaseService>();
+        services.AddScoped<ICaseWorkflowService, CaseWorkflowService>();
         services.AddScoped<IRoutingService, RoutingService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IProcessDefinitionService, ProcessDefinitionService>();
 
         if (useJsonStore)
         {
-            // JSON store implementace
             services.AddSingleton<IFormRepository, JsonStore.JsonFormRepository>();
             services.AddSingleton<IBlockRepository, JsonStore.JsonBlockRepository>();
             services.AddSingleton<ICaseRepository, JsonStore.JsonCaseRepository>();
@@ -28,7 +29,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            // TODO: SQLite/EF varianta
+            // TODO: SQL varianta
         }
 
         return services;
