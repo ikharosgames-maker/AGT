@@ -85,37 +85,31 @@ public sealed class CaseWorkflowService : ICaseWorkflowService
         if (stageBlocks.Count == 0)
             throw new InvalidOperationException("Stage nemá žádné bloky pro tento case.");
 
-        // 1) ověř, že všechny bloky stage jsou dokončené
-        var notDone = stageBlocks.Where(b =>
-            b.State != CaseBlockState.Done &&
-            b.State != CaseBlockState.Rejected).ToList();
-
-        if (notDone.Any())
-        {
-            var ids = string.Join(", ", notDone.Select(b => b.Id));
-            throw new InvalidOperationException($"Stage nelze dokončit – bloky nejsou hotové: {ids}");
-        }
-
-        // 2) zajisti, aby všechny bloky stage byly v TaskService označené jako Done
+        // 1) Označ všechny bloky této stage jako dokončené (včetně TaskItemů)
         foreach (var b in stageBlocks)
         {
-            _tasks.SetStatus(b.Id, "Done", actorUserId);
+            try
+            {
+                _tasks.SetStatus(b.Id, "Done", actorUserId);
+            }
+            catch
+            {
+                // podle potřeby můžeš logovat; runtime ale nemá spadnout kvůli jednomu bloku
+            }
         }
 
-        // 3) najdi cílové stage podle StageTransition
+        // 2) Najdi cílové stage podle StageTransition
         var outgoing = graph.Transitions
             .Where(t => t.FromStageId == stageId)
             .ToList();
 
         if (outgoing.Count == 0)
         {
-            // žádný další krok – case může být ukončen (logiku na Case.State
-            // můžeš přidat sem)
+            // žádná další stage – case může být hotový (logiku na Case.State případně doplníš sem)
             return;
         }
 
-        // TODO: vyhodnocení Condition pro StageTransition.
-        // Pro první integraci bereme všechny přechody jako splněné.
+        // TODO: vyhodnocení Condition pro StageTransition (teď bereme všechny přechody jako splněné)
         foreach (var tr in outgoing)
         {
             var targetStage = graph.Stages.FirstOrDefault(s => s.Id == tr.ToStageId);

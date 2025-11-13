@@ -1,5 +1,6 @@
-using Agt.Desktop.Services;
 ﻿using Agt.Desktop.Models; // FieldComponentBase + konkrétní typy + RenderMode
+using Agt.Desktop.Services;
+using Agt.Domain.Abstractions;
 using Agt.Domain.Models;
 using Agt.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -794,12 +795,12 @@ namespace Agt.Desktop.Views
         {
             try
             {
-                var caseSvc = _sp.GetService<Agt.Domain.Abstractions.ICaseService>();
+                var workflow = _sp.GetService<ICaseWorkflowService>();
                 var caseRepo = _sp.GetService<ICaseRepository>();
 
-                if (caseSvc == null || caseRepo == null)
+                if (workflow == null || caseRepo == null)
                 {
-                    SafeLog("Advance: missing services (ICaseService/ICaseRepository). Skipping advance.");
+                    SafeLog("Advance: missing services (ICaseWorkflowService/ICaseRepository). Skipping advance.");
                     return;
                 }
 
@@ -811,18 +812,17 @@ namespace Agt.Desktop.Views
 
                 SafeLog($"Advance: open blocks in this stage = {openInStage.Count}");
 
+                // zatím systémový actor – do budoucna sem přijde aktuální uživatel
                 var actor = Guid.Parse("00000000-0000-0000-0000-000000000001");
-                foreach (var b in openInStage)
+
+                try
                 {
-                    try
-                    {
-                        caseSvc.CompleteBlock(b.Id, actor);
-                        SafeLog($"Advance: Completed block instance={b.Id} (def={b.BlockDefinitionId})");
-                    }
-                    catch (Exception ex)
-                    {
-                        SafeLog($"Advance: CompleteBlock FAILED for instance={b.Id}: {ex.Message}");
-                    }
+                    workflow.CompleteStageAndAdvance(caseId, stageId, actor);
+                    SafeLog($"Advance: CompleteStageAndAdvance case={caseId}, stage={stageId}");
+                }
+                catch (Exception ex)
+                {
+                    SafeLog($"Advance: CompleteStageAndAdvance FAILED case={caseId}, stage={stageId}: {ex.Message}");
                 }
 
                 await Task.CompletedTask;
