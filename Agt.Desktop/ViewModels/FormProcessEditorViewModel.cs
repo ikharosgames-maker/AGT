@@ -1,5 +1,7 @@
 ﻿using Agt.Desktop.Models;
 using Agt.Desktop.Services;
+using Agt.Domain.Abstractions;
+using Agt.Domain.Models;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -21,6 +23,7 @@ namespace Agt.Desktop.ViewModels
         private readonly IFormSaveService? _save;
         private readonly IFormCloneService? _clone;
         private readonly IFormCaseRegistryService _registry;
+        private readonly IProcessDefinitionService? _processDefinitions;
 
         private readonly string _formsRoot =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AGT", "forms");
@@ -68,10 +71,24 @@ namespace Agt.Desktop.ViewModels
         }
 
         public FormProcessEditorViewModel(IFormSaveService save, IFormCloneService clone, IFormCaseRegistryService registry)
+            : this(
+                  save,
+                  clone,
+                  registry,
+                  Agt.Desktop.App.Services?.GetService(typeof(IProcessDefinitionService)) as IProcessDefinitionService)
+        {
+        }
+
+        public FormProcessEditorViewModel(
+            IFormSaveService save,
+            IFormCloneService clone,
+            IFormCaseRegistryService registry,
+            IProcessDefinitionService? processDefinitions)
         {
             _save = save;
             _clone = clone;
             _registry = registry;
+            _processDefinitions = processDefinitions;
 
             OpenFromRepositoryCommand = new RelayCommand(_ => OpenFromRepository());
             SaveDraftCommand = new RelayCommand(_ => SaveDraft());
@@ -571,6 +588,93 @@ namespace Agt.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Mapování UI grafu na doménový ProcessGraph (StageDefinition, StageBlock, StageTransition).
+        /// </summary>
+        private ProcessGraph BuildProcessGraph(Guid formVersionId)
+        {
+            var stages = new List<StageDefinition>();
+            var stageBlocks = new List<StageBlock>();
+            var transitions = new List<StageTransition>();
+
+            int order = 0;
+            foreach (var s in Graph.Stages)
+            {
+                var stageId = s.Id == Guid.Empty ? Guid.NewGuid() : s.Id;
+
+                var stage = new StageDefinition
+                {
+                    Id = stageId,
+                    FormVersionId = formVersionId,
+                    StageKey = SanitizeKey(s.Title ?? $"Stage_{order + 1}"),
+                    Title = s.Title ?? string.Empty,
+                    Order = order++,
+                    MetadataJson = BuildStageMetadataJson(s)
+                };
+                stages.Add(stage);
+
+                int blockOrder = 0;
+                foreach (var b in s.Blocks)
+                {
+                    var sb = new StageBlock
+                    {
+                        Id = Guid.NewGuid(),
+                        StageId = stageId,
+                        BlockDefinitionId = b.BlockId,
+                        Order = blockOrder++
+                    };
+                    stageBlocks.Add(sb);
+                }
+            }
+
+            foreach (var e in Graph.StageEdges)
+            {
+                transitions.Add(new StageTransition
+                {
+                    Id = e.Id == Guid.Empty ? Guid.NewGuid() : e.Id,
+                    FromStageId = e.FromStageId,
+                    ToStageId = e.ToStageId
+                    // Condition zatím neplníme – JSON s podmínkou zůstává v ConditionJson pro runtime/layout
+                });
+            }
+
+            return new ProcessGraph
+            {
+                FormVersionId = formVersionId,
+                Stages = stages,
+                StageBlocks = stageBlocks,
+                Transitions = transitions
+            };
+        }
+
+        private static string BuildStageMetadataJson(StageVm s)
+        {
+            var obj = new JsonObject
+            {
+                ["AssignedGroups"] = new JsonArray(s.AssignedGroups.Select(g => (JsonNode)g).ToArray()),
+                ["AssignedUsers"] = new JsonArray(s.AssignedUsers.Select(u => (JsonNode)u).ToArray()),
+                ["StartMode"] = s.StartMode,
+                ["SLAHours"] = s.SLAHours,
+                ["AllowReopen"] = s.AllowReopen,
+                ["AutoCompleteOnAllBlocks"] = s.AutoCompleteOnAllBlocks
+            };
+            return obj.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+        }
+
+        private static Guid? TryParseFormVersionIdFromPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+            try
+            {
+                var file = Path.GetFileNameWithoutExtension(path);
+                return Guid.TryParse(file, out var id) ? id : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private JsonNode ExportFormAsJsonNode()
         {
             var root = new JsonObject
@@ -739,6 +843,24 @@ namespace Agt.Desktop.ViewModels
                     $"form-versions: {paths.FormVersionPath}\n" +
                     $"layouts:       {paths.LayoutPath}",
                     "Publikace OK", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                // 3) Ulož doménový process graph (stages, blocks, transitions) pokud je k dispozici služba
+                if (_processDefinitions != null && !string.IsNullOrWhiteSpace(paths.FormVersionPath))
+                {
+                    var fvId = TryParseFormVersionIdFromPath(paths.FormVersionPath);
+                    if (fvId.HasValue)
+                    {
+                        try
+                        {
+                            var graph = BuildProcessGraph(fvId.Value);
+                            _processDefinitions.SaveGraph(graph);
+                        }
+                        catch
+                        {
+                            // chyby uloženÍ procesního grafu neblokují publikaci formuláře
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -769,7 +891,6 @@ namespace Agt.Desktop.ViewModels
         }
 
         // ================== Editor API ==================
-        // ================== Editor API ==================
         public StageVm AddStage(string title, double x, double y, double w, double h)
         {
             var st = new StageVm { Id = Guid.NewGuid(), Title = title, X = x, Y = y, W = w, H = h };
@@ -777,14 +898,12 @@ namespace Agt.Desktop.ViewModels
             return st;
         }
 
-
         public BlockVm AddBlock(StageVm stage, Guid blockId, string title, string version, double x, double y)
         {
             var b = new BlockVm { Id = Guid.NewGuid(), BlockId = blockId, Title = title, Version = version, X = x, Y = y };
             stage.Blocks.Add(b);
             return b;
         }
-
 
         public StageVm? FindStage(Guid id) => Graph.Stages.FirstOrDefault(s => s.Id == id);
 
@@ -1025,8 +1144,7 @@ namespace Agt.Desktop.ViewModels
         {
             b.Components.Clear();
 
-            if (!BlockLibraryJson.Default.TryLoadByIdVersion(b.BlockId, b.Version, out var doc, out _)
-                || doc == null)
+            if (!BlockLibraryJson.Default.TryLoadByIdVersion(b.BlockId, b.Version, out var doc, out _) || doc == null)
             {
                 b.PreviewWidth = 200;
                 b.PreviewHeight = 80;
@@ -1047,31 +1165,48 @@ namespace Agt.Desktop.ViewModels
                 }
 
                 double maxRight = 0, maxBottom = 0;
+
                 foreach (var it in itemsEl.EnumerateArray())
                 {
-                    double x = it.TryGetProperty("X", out var _x) && _x.TryGetDouble(out var ddx) ? ddx : 0;
-                    double y = it.TryGetProperty("Y", out var _y) && _y.TryGetDouble(out var ddy) ? ddy : 0;
-                    double w = it.TryGetProperty("Width", out var _w) && _w.TryGetDouble(out var ddw) ? ddw : 120;
-                    double h = it.TryGetProperty("Height", out var _h) && _h.TryGetDouble(out var ddh) ? ddh : 28;
-                    int z = it.TryGetProperty("ZIndex", out var _z) && _z.TryGetInt32(out var dzi) ? dzi : 0;
+                    // Mapuj komponentu jednotně
+                    var node = System.Text.Json.Nodes.JsonNode.Parse(it.GetRawText())!.AsObject();
+                    var component = Agt.Desktop.Services.ComponentJsonMapper.FromJson(node);
 
-                    var typeKey = (it.TryGetProperty("TypeKey", out var _tk) ? _tk.GetString() : null) ?? "";
-                    var label = (it.TryGetProperty("Label", out var _lb) ? _lb.GetString() : null) ?? "";
+                    // pozice a vrstvy (už jsou v componentu, ale pro jistotu)
+                    double x = it.TryGetProperty("X", out var _x) && _x.TryGetDouble(out var ddx) ? ddx : component.X;
+                    double y = it.TryGetProperty("Y", out var _y) && _y.TryGetDouble(out var ddy) ? ddy : component.Y;
 
-                    FieldComponentBase component = typeKey.ToLowerInvariant() switch
+                    // Rozměry pro preview: vycházíme z Width/Height + okraje dle typu
+                    double w = it.TryGetProperty("Width", out var _w) && _w.TryGetDouble(out var ddw) ? ddw : component.Width;
+                    double h = it.TryGetProperty("Height", out var _h) && _h.TryGetDouble(out var ddh) ? ddh : component.Height;
+
+                    var typeKey = (it.TryGetProperty("TypeKey", out var _tk) ? _tk.GetString() : component.TypeKey) ?? "";
+
+                    double totalW = w, totalH = h;
+                    switch (typeKey.ToLowerInvariant())
                     {
-                        "label" => new LabelField { Label = label, Width = w, Height = h },
-                        "textbox" => new TextBoxField { Label = label, Width = w, Height = h },
-                        "textarea" => new TextAreaField { Label = label, Width = w, Height = h },
-                        "number" => new NumberField { Label = label, Width = w, Height = h },
-                        "date" => new DateField { Label = label, Width = w, Height = h },
-                        "combobox" => new ComboBoxField { Label = label, Width = w, Height = h },
-                        "checkbox" => new CheckBoxField { Label = label, Width = w, Height = h },
-                        _ => new LabelField { Label = string.IsNullOrWhiteSpace(label) ? $"[{typeKey}]" : label, Width = w, Height = h }
-                    };
+                        case "textbox":
+                        case "textarea":
+                        case "number":
+                        case "date":
+                        case "combobox":
+                            totalW = w + 2;     // border L/R
+                            totalH = h + 2;     // border T/B
+                            break;
+                        case "checkbox":
+                            double textW = MeasureTextWidth(component.Label ?? "", component.FontFamily ?? "Segoe UI", component.FontSize > 0 ? component.FontSize : 12);
+                            totalW = Math.Max(w, 20 + 4 + textW);
+                            totalH = Math.Max(h, 20);
+                            break;
+                        default:
+                            totalW = w; totalH = h;
+                            break;
+                    }
 
-                    component.X = x; component.Y = y; component.ZIndex = z;
-                    component.TotalWidth = w; component.TotalHeight = h;
+                    component.X = x;
+                    component.Y = y;
+                    component.TotalWidth = totalW;
+                    component.TotalHeight = totalH;
 
                     b.Components.Add(component);
 
@@ -1241,8 +1376,6 @@ namespace Agt.Desktop.ViewModels
         private double _previewWidth = 320; public double PreviewWidth { get => _previewWidth; set { _previewWidth = value; Raise(); } }
         private double _previewHeight = 200; public double PreviewHeight { get => _previewHeight; set { _previewHeight = value; Raise(); } }
     }
-
-
 
     public sealed class StageEdgeVm : ViewModelBase
     {

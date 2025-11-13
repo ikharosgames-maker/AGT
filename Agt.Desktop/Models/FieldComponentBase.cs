@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 
@@ -9,11 +13,13 @@ namespace Agt.Desktop.Models
     public enum AnchorSides { None = 0, Left = 1, Top = 2, Right = 4, Bottom = 8 }
     public enum DockTo { None, Left, Top, Right, Bottom, Fill }
 
-    public abstract class FieldComponentBase : INotifyPropertyChanged
+    public abstract class FieldComponentBase : INotifyPropertyChanged, INotifyDataErrorInfo
     {
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        // ---------- Hodnota ----------
         private object? _value;
         public object? Value
         {
@@ -27,26 +33,28 @@ namespace Agt.Desktop.Models
                 }
             }
         }
+
         private double _totalWidth;
         public double TotalWidth
         {
             get => _totalWidth;
-            set { if (_totalWidth != value) { _totalWidth = value; OnPropertyChanged(nameof(TotalWidth)); } }
+            set { if (_totalWidth != value) { _totalWidth = value; OnPropertyChanged(); } }
         }
 
         private double _totalHeight;
         public double TotalHeight
         {
             get => _totalHeight;
-            set { if (_totalHeight != value) { _totalHeight = value; OnPropertyChanged(nameof(TotalHeight)); } }
+            set { if (_totalHeight != value) { _totalHeight = value; OnPropertyChanged(); } }
         }
 
-        // doporučuji v ctoru nebo při tvorbě komponent nastavit default
         protected FieldComponentBase()
         {
-            TotalWidth = Width;   // pokud někdo nenastaví, padne to na skutečné Width/Height
+            // Výchozí celková velikost = vlastní velikost, dokud si ji někdo nepřepíše
+            TotalWidth = Width;
             TotalHeight = Height;
         }
+
         // ---------- Identita ----------
         private Guid _id = Guid.NewGuid();
         public Guid Id
@@ -150,18 +158,32 @@ namespace Agt.Desktop.Models
         }
 
         // ---------- Vzhled ----------
-        private Brush _background = Brushes.Transparent;
+        private Brush _background = Brushes.Transparent; // výchozí: transparent (uživatel může kdykoli nastavit barvu)
         public Brush Background
         {
             get => _background;
-            set { if (_background != value) { _background = value; OnPropertyChanged(); } }
+            set
+            {
+                if (!ReferenceEquals(_background, value))
+                {
+                    _background = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
-        private Brush _foreground = Brushes.Transparent;
+        private Brush _foreground = Brushes.Black; // bezpečný default pro text
         public Brush Foreground
         {
             get => _foreground;
-            set { if (_foreground != value) { _foreground = value; OnPropertyChanged(); } }
+            set
+            {
+                if (!ReferenceEquals(_foreground, value))
+                {
+                    _foreground = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
         private string _fontFamily = "Segoe UI";
@@ -193,8 +215,81 @@ namespace Agt.Desktop.Models
             set { if (_dock != value) { _dock = value; OnPropertyChanged(); } }
         }
 
-        // ---------- Klonování (využívá VM/SelectionService) ----------
+        // ---------- Klonování ----------
         public virtual FieldComponentBase Clone()
-            => (FieldComponentBase)MemberwiseClone();
+        {
+            var copy = (FieldComponentBase)MemberwiseClone();
+
+            // důležité: Brushes jsou Freezable (reference). Potřebujeme vlastní instance.
+            if (Background is SolidColorBrush b1) copy.Background = b1.CloneCurrentValue();
+            else if (Background is LinearGradientBrush lb1) copy.Background = lb1.CloneCurrentValue();
+            else if (Background != null) copy.Background = Background.CloneCurrentValue();
+
+            if (Foreground is SolidColorBrush b2) copy.Foreground = b2.CloneCurrentValue();
+            else if (Foreground is LinearGradientBrush lb2) copy.Foreground = lb2.CloneCurrentValue();
+            else if (Foreground != null) copy.Foreground = Foreground.CloneCurrentValue();
+
+            return copy;
+        }
+
+        // ---------- Data pro výběry (ComboBox apod.) ----------
+        public ObservableCollection<OptionItem> Options { get; } = new();
+
+        // ---------- Uživatelský databinding (JSON pro DbAgent) ----------
+        public string? DataBinding { get; set; }
+
+        // ========= INotifyDataErrorInfo =========
+        private readonly Dictionary<string, List<string>> _errors =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        public bool HasErrors => _errors.Count > 0;
+
+        public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
+
+        public IEnumerable GetErrors(string? propertyName)
+        {
+            if (string.IsNullOrWhiteSpace(propertyName))
+                return _errors.SelectMany(kv => kv.Value).ToList();
+
+            return _errors.TryGetValue(propertyName, out var list)
+                ? (IEnumerable)list
+                : Array.Empty<string>();
+        }
+
+        /// <summary>
+        /// Veřejné kvůli DbAgentu (volá reflexí).
+        /// </summary>
+        public void SetErrors(string propertyName, IEnumerable<string>? messages)
+        {
+            if (string.IsNullOrWhiteSpace(propertyName)) return;
+
+            if (messages == null || !messages.Any())
+            {
+                if (_errors.Remove(propertyName))
+                    ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(propertyName));
+                return;
+            }
+
+            _errors[propertyName] = messages.ToList();
+            ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(propertyName));
+        }
+
+        /// <summary>
+        /// Zkopíruje vizuální vlastnosti z jiné komponenty – důležité: klonuje Brushes,
+        /// aby se nepřenášely reference (sdílené štětce).
+        /// </summary>
+        public void CopyVisualsFrom(FieldComponentBase other)
+        {
+            if (other.Background is SolidColorBrush b1) Background = b1.CloneCurrentValue();
+            else if (other.Background is LinearGradientBrush lb1) Background = lb1.CloneCurrentValue();
+            else if (other.Background != null) Background = other.Background.CloneCurrentValue();
+
+            if (other.Foreground is SolidColorBrush b2) Foreground = b2.CloneCurrentValue();
+            else if (other.Foreground is LinearGradientBrush lb2) Foreground = lb2.CloneCurrentValue();
+            else if (other.Foreground != null) Foreground = other.Foreground.CloneCurrentValue();
+
+            FontFamily = other.FontFamily;
+            FontSize = other.FontSize;
+        }
     }
 }

@@ -11,22 +11,27 @@ namespace Agt.Desktop.Models
 
         public override FieldComponentBase Clone()
         {
-            var c = new ComboBoxField
+            var n = new ComboBoxField
             {
                 FieldKey = FieldKey,
                 Label = Label,
                 Required = Required,
                 Placeholder = Placeholder,
                 DefaultValue = DefaultValue,
-                IsEditable = IsEditable,
                 X = X,
                 Y = Y,
                 Width = Width,
                 Height = Height,
                 ZIndex = ZIndex
             };
-            foreach (var o in Options) c.Options.Add(o);
-            return c;
+            // POZOR: Options je jen getter (read-only kolekce) a je typu ObservableCollection<string>
+            foreach (var s in Options)
+                n.Options.Add(s);
+
+            n.CopyVisualsFrom(this);
+            return n;
         }
+
+
     }
 }

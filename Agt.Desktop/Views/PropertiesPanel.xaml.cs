@@ -3,7 +3,6 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
 namespace Agt.Desktop.Views
@@ -15,153 +14,131 @@ namespace Agt.Desktop.Views
             InitializeComponent();
         }
 
-        // ===== Jednotlivé položky =====
-
+        // ====== Click handlery z XAMLu ======
         private void PickForeground_Click(object sender, RoutedEventArgs e)
-            => PickBrushWithPalette(sender as FrameworkElement, "Foreground");
+            => PickBrushOnSelectedItem("Foreground");
 
         private void PickBackground_Click(object sender, RoutedEventArgs e)
-            => PickBrushWithPalette(sender as FrameworkElement, "Background");
-
-        // ===== Hromadné (bulk) =====
+            => PickBrushOnSelectedItem("Background");
 
         private void PickBulkForeground_Click(object sender, RoutedEventArgs e)
-            => PickBrushWithPalette(sender as FrameworkElement, "BulkForeground");
+            => PickBrushOnViewModel("BulkForeground");
 
         private void PickBulkBackground_Click(object sender, RoutedEventArgs e)
-            => PickBrushWithPalette(sender as FrameworkElement, "BulkBackground");
+            => PickBrushOnViewModel("BulkBackground");
 
-        // ===== Společná logika výběru barvy přes malou paletu =====
-
-        private void PickBrushWithPalette(FrameworkElement? origin, string propertyName)
+        // ====== Pomůcky ======
+        private void PickBrushOnSelectedItem(string propertyName)
         {
-            if (origin == null) return;
+            var vm = DataContext;
+            if (vm == null) return;
 
-            // Předpřipravená paleta (možné rozšířit)
-            var colors = new[]
-            {
-                Colors.Black, Colors.White, Colors.DimGray, Colors.Silver,
-                Colors.Red, Colors.Orange, Colors.Gold, Colors.Yellow,
-                Colors.LimeGreen, Colors.SeaGreen, Colors.Teal, Colors.SteelBlue,
-                Colors.DodgerBlue, Colors.MediumPurple, Colors.DeepPink, Colors.Brown,
-                Color.FromRgb(0x1E,0x1E,0x1E), Color.FromRgb(0x2D,0x2D,0x30), // VS-like dark
-                Color.FromRgb(0xF3,0xF3,0xF3), Color.FromRgb(0xEE,0xEE,0xEE)  // světlé
-            };
+            var sel = vm.GetType().GetProperty("SelectedItem")?.GetValue(vm);
+            if (sel == null) return;
 
-            var popup = new Popup
+            var prop = sel.GetType().GetProperty(propertyName);
+            if (prop == null || prop.PropertyType != typeof(Brush)) return;
+
+            var current = prop.GetValue(sel) as SolidColorBrush;
+            var picked = ShowColorPicker(current);
+            if (picked == null) return;
+
+            if (prop.CanWrite)
+                prop.SetValue(sel, picked);
+        }
+
+        private void PickBrushOnViewModel(string vmPropertyName)
+        {
+            var vm = DataContext;
+            if (vm == null) return;
+
+            var prop = vm.GetType().GetProperty(vmPropertyName);
+            if (prop == null || prop.PropertyType != typeof(Brush)) return;
+
+            var current = prop.GetValue(vm) as SolidColorBrush;
+            var picked = ShowColorPicker(current);
+            if (picked == null) return;
+
+            if (prop.CanWrite)
+                prop.SetValue(vm, picked);
+        }
+
+        /// <summary>
+        /// Otevře ColorPickerWindow a vrátí zvolený Brush. 
+        /// Podporuje ctor se SolidColorBrush? i parameterless a různé názvy výstupních vlastností.
+        /// </summary>
+        private Brush? ShowColorPicker(SolidColorBrush? initial)
+        {
+            try
             {
-                StaysOpen = true,
-                PlacementTarget = origin,
-                Placement = PlacementMode.Bottom,
-                AllowsTransparency = true,
-                Child = BuildPaletteGrid(colors, brush =>
+                // Zjisti typ okna v tomtéž assembly
+                var t = typeof(PropertiesPanel).Assembly.GetType("Agt.Desktop.Views.ColorPickerWindow");
+                if (t == null) return null;
+
+                object? dlgObj = null;
+
+                // Preferuj konstruktor se SolidColorBrush?
+                var ctor = t.GetConstructors()
+                            .FirstOrDefault(c =>
+                            {
+                                var ps = c.GetParameters();
+                                return ps.Length == 1 && ps[0].ParameterType == typeof(SolidColorBrush);
+                            });
+
+                if (ctor != null)
                 {
-                    SetBrushProperty(origin.DataContext, propertyName, brush);
-                })
-            };
-
-            // zavírání mimo
-            popup.Opened += (_, __) =>
-            {
-                Agt.Desktop.App.Current.MainWindow.PreviewMouseDown += CloseOnOutsideClick;
-            };
-            void CloseOnOutsideClick(object? s, System.Windows.Input.MouseButtonEventArgs e)
-            {
-                if (popup.IsOpen && !IsAncestorOf(popup.Child, e.OriginalSource as DependencyObject))
-                {
-                    popup.IsOpen = false;
-                    Agt.Desktop.App.Current.MainWindow.PreviewMouseDown -= CloseOnOutsideClick;
+                    dlgObj = ctor.Invoke(new object?[] { initial });
                 }
-            }
-
-            popup.IsOpen = true;
-        }
-
-        private UIElement BuildPaletteGrid(Color[] colors, Action<Brush> onPick)
-        {
-            var grid = new UniformGrid
-            {
-                Rows = (int)Math.Ceiling(colors.Length / 6.0),
-                Columns = 6,
-                Margin = new Thickness(6),
-            };
-
-            var border = new Border
-            {
-                Background = new SolidColorBrush(Color.FromArgb(230, 30, 30, 30)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(160, 255, 255, 255)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Child = grid
-            };
-
-            foreach (var c in colors)
-            {
-                var btn = new Button
+                else
                 {
-                    Margin = new Thickness(4),
-                    Padding = new Thickness(0),
-                    Width = 24,
-                    Height = 24,
-                    BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(1),
-                    Background = new SolidColorBrush(c),
-                    ToolTip = $"#{c.R:X2}{c.G:X2}{c.B:X2}"
-                };
-                btn.Click += (_, __) =>
-                {
-                    onPick(btn.Background);
-                    // zavři popup (nejbližší Popup předka)
-                    var p = FindAncestor<Popup>(btn);
-                    if (p != null) p.IsOpen = false;
-                };
-                grid.Children.Add(btn);
-            }
-
-            // zabalíme do drobného „hostu“, aby Popup.Child byl právě jeden element
-            var host = new Grid();
-            host.Children.Add(border);
-            return host;
-        }
-
-        private static T? FindAncestor<T>(DependencyObject? d) where T : DependencyObject
-        {
-            while (d != null)
-            {
-                if (d is T t) return t;
-                d = VisualTreeHelper.GetParent(d);
-            }
-            return null;
-        }
-
-        private static bool IsAncestorOf(DependencyObject? root, DependencyObject? node)
-        {
-            while (node != null)
-            {
-                if (node == root) return true;
-                node = VisualTreeHelper.GetParent(node);
-            }
-            return false;
-        }
-
-        private static void SetBrushProperty(object? ctx, string propName, Brush value)
-        {
-            if (ctx == null) return;
-            var prop = ctx.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
-            if (prop != null && prop.CanWrite && typeof(Brush).IsAssignableFrom(prop.PropertyType))
-            {
-                prop.SetValue(ctx, value);
-                return;
-            }
-
-            // fallback: pokud je to string (např. HEX v nějaké implementaci)
-            if (prop != null && prop.CanWrite && prop.PropertyType == typeof(string))
-            {
-                if (value is SolidColorBrush scb)
-                {
-                    string hex = $"#{scb.Color.R:X2}{scb.Color.G:X2}{scb.Color.B:X2}";
-                    prop.SetValue(ctx, hex);
+                    // fallback: parameterless
+                    ctor = t.GetConstructor(Type.EmptyTypes);
+                    dlgObj = ctor?.Invoke(Array.Empty<object>());
                 }
+
+                if (dlgObj is not Window dlg)
+                    return null;
+
+                dlg.Owner = Window.GetWindow(this);
+                var ok = dlg.ShowDialog() == true;
+
+                if (!ok) return null;
+
+                // Zkusíme různé property se zvolenou hodnotou
+                var props = dlgObj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+                // 1) Brush/SolidColorBrush
+                var brushProp = props.FirstOrDefault(pi =>
+                    pi.PropertyType == typeof(Brush) || pi.PropertyType == typeof(SolidColorBrush)) ??
+                    props.FirstOrDefault(pi =>
+                        string.Equals(pi.Name, "ResultBrush", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(pi.Name, "SelectedBrush", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(pi.Name, "Brush", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(pi.Name, "Result", StringComparison.OrdinalIgnoreCase));
+
+                if (brushProp != null)
+                {
+                    var val = brushProp.GetValue(dlgObj) as Brush;
+                    if (val != null) return val;
+                }
+
+                // 2) Color
+                var colorProp = props.FirstOrDefault(pi => pi.PropertyType == typeof(Color)) ??
+                                props.FirstOrDefault(pi =>
+                                    string.Equals(pi.Name, "SelectedColor", StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(pi.Name, "Color", StringComparison.OrdinalIgnoreCase));
+
+                if (colorProp != null)
+                {
+                    var c = (Color)colorProp.GetValue(dlgObj)!;
+                    return new SolidColorBrush(c);
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
             }
         }
     }

@@ -91,14 +91,22 @@
 	<ItemGroup>
 		<Compile Include="Adapters\RelayCommandAdapter.cs" />
 		<Compile Include="App.xaml.cs" />
+		<Compile Include="Behaviors\DbAgent.cs" />
 		<Compile Include="Behaviors\NumericBox.cs" />
 		<Compile Include="Controls\BlockPreviewControl.xaml.cs" />
+		<Compile Include="Converters\BrushFallbackConverter.cs" />
 		<Compile Include="Converters\BrushOrSystemResourceConverter.cs" />
+		<Compile Include="Converters\BrushToHexThemeFallbackConverter .cs" />
 		<Compile Include="Converters\ColorStringToBrushConverter.cs" />
+		<Compile Include="Converters\FontFamilyNameConverter.cs" />
+		<Compile Include="Converters\NullToUnsetValueConverter .cs" />
+		<Compile Include="Converters\RowsToMinHeightConverter.cs" />
+		<Compile Include="Models\OptionItem.cs" />
 		<Compile Include="Models\RenderMode.cs" />
 		<Compile Include="Services\BlockLibraryJson.cs" />
 		<Compile Include="Services\BlockMeasure.cs" />
 		<Compile Include="Services\ComponentFactory.cs" />
+		<Compile Include="Services\ComponentJsonMapper.cs" />
 		<Compile Include="Services\FormCaseRegistryService.cs" />
 		<Compile Include="Services\FormCloneService.cs" />
 		<Compile Include="Services\FormDiffService.cs" />
@@ -107,13 +115,16 @@
 		<Compile Include="Services\FormVersioningService.cs" />
 		<Compile Include="Services\IBlockLibrary.cs" />
 		<Compile Include="Services\IFormCaseRegistryService.cs" />
+		<Compile Include="Services\JsonVisuals.cs" />
 		<Compile Include="Services\LayoutStore.cs" />
+		<Compile Include="Services\VisualDefaults.cs" />
 		<Compile Include="Validation\NumberRangeRule.cs" />
 		<Compile Include="ViewModels\FormRepositoryBrowserViewModel.cs" />
 		<Compile Include="ViewModels\SemicolonToListConverter.cs" />
 		<Compile Include="Views\CaseRunWindow.xaml.cs" />
 		<Compile Include="Views\Components\AutoSizeCanvas.cs" />
 		<Compile Include="Views\Components\ComponentKeyTemplateSelector.cs" />
+		<Compile Include="Views\Components\ComponentPropertyTemplateSelector.cs" />
 		<Compile Include="Views\Components\ComponentViewerControl.xaml.cs" />
 		<Compile Include="Views\ContrastForegroundConverter.cs" />
 		<Compile Include="Views\FormCanvas.xaml.cs" />
@@ -183,7 +194,6 @@
 		<Compile Include="Views\ComponentLibraryView.xaml.cs" />
 		<Compile Include="Views\ComponentsListView.xaml.cs" />
 		<Compile Include="Views\NewBlockDialog.xaml.cs" />
-		<Compile Include="Views\FieldTemplateSelector.cs" />
 
 		<Compile Include="Converters\BoolToVisibilityConverter.cs" />
 		<Compile Include="Converters\CountGreaterOrEqualConverter.cs" />
@@ -195,6 +205,7 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.2" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
 	</ItemGroup>
 	

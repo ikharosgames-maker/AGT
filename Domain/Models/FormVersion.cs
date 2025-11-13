@@ -13,4 +13,7 @@ public sealed class FormVersion
 
     // JSON: pole objektů { key, version } – pin na konkrétní verze bloků
     public string BlockPinsJson { get; set; } = "[]";
+
+    // JSON: definice stage grafu (stages, blocks, transitions) pro editor/workflow engine.
+    public string StageGraphJson { get; set; } = "{}";
 }

@@ -3,17 +3,138 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:m="clr-namespace:Agt.Desktop.Models"
              xmlns:views="clr-namespace:Agt.Desktop.Views"
+             xmlns:comp="clr-namespace:Agt.Desktop.Views.Components"
              xmlns:conv="clr-namespace:Agt.Desktop.Converters">
+
+    <!-- ====== Resources ====== -->
     <UserControl.Resources>
-        <!-- původní převodníky -->
+        <!-- převodníky -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <conv:IntEqualsToVisibilityConverter x:Key="EqVis"/>
         <conv:IntGreaterOrEqualToVisibilityConverter x:Key="GeVis"/>
         <conv:BrushToHexConverter x:Key="BrushToHex"/>
 
-        <!-- nový stringový převodník -->
-        <conv:StringEqualsToVisibilityConverter x:Key="StrEqVis"/>
+        <!-- Nové: HEX s fallbackem na theme (viz Converter ve tvém projektu) -->
+        <conv:BrushToHexThemeFallbackConverter x:Key="BrushToHexThemeFallback"/>
+
+        <!-- selector pro typové šablony z ComponentTemplates.xaml (Props.*) -->
+        <comp:ComponentPropertyTemplateSelector x:Key="ComponentPropertyTemplateSelector"/>
+
+        <!-- ROOT: jediná šablona pro 1 vybranou položku -->
+        <DataTemplate x:Key="Props.Root">
+            <StackPanel>
+                <TextBlock Text="Vlastnosti" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                <!-- Obecné vlastnosti (JEDINÁ verze, česky) -->
+                <UniformGrid Columns="2" Margin="0,0,0,12">
+                    <TextBlock Text="Název prvku"/>
+                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Klíč pole"/>
+                    <TextBox Text="{Binding FieldKey, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Typ"/>
+                    <TextBlock Text="{Binding TypeKey}"/>
+
+                    <TextBlock Text="Popisek (Label)"/>
+                    <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Placeholder"/>
+                    <TextBox Text="{Binding Placeholder, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Povinné"/>
+                    <CheckBox IsChecked="{Binding Required, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Výchozí hodnota"/>
+                    <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Písmo (FontFamily)"/>
+                    <TextBox Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Velikost písma"/>
+                    <TextBox Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="X"/>
+                    <TextBox Text="{Binding X, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Y"/>
+                    <TextBox Text="{Binding Y, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Šířka"/>
+                    <TextBox Text="{Binding Width, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Výška"/>
+                    <TextBox Text="{Binding Height, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Z-index"/>
+                    <TextBox Text="{Binding ZIndex, UpdateSourceTrigger=PropertyChanged}"/>
+                </UniformGrid>
+
+                <!-- Typově specifické vlastnosti (už jen SPECIFIKA; Common je výše) -->
+                <ContentPresenter Margin="0,6,0,6"
+                                  Content="{Binding}"
+                                  ContentTemplateSelector="{StaticResource ComponentPropertyTemplateSelector}"/>
+
+                <!-- Datové vazby (uživatelský JSON pro DbAgent) -->
+                <TextBlock Text="Datové vazby (JSON)" FontWeight="SemiBold" Margin="6,6,0,6"/>
+                <DockPanel LastChildFill="True" Margin="0,0,0,8">
+                    <TextBox AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto"
+                             MinLines="6"
+                             FontFamily="Consolas"
+                             FontSize="12">
+                        <TextBox.Text>
+                            <PriorityBinding>
+                                <!-- preferuj string vlastnost -->
+                                <Binding Path="DataBindingJson" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged"/>
+                                <!-- fallback na objekt (vyžaduje konvertor v getteru/setteru nebo ToString/Parse v VM) -->
+                                <Binding Path="DataBinding" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged"/>
+                            </PriorityBinding>
+                        </TextBox.Text>
+                    </TextBox>
+                </DockPanel>
+
+                <!-- Barvy (s color pickery) -->
+                <TextBlock Text="Barvy" FontWeight="SemiBold" Margin="6,6,0,6"/>
+                <UniformGrid Columns="2" Margin="0,0,0,8">
+                    <TextBlock Text="Barva textu"/>
+                    <DockPanel LastChildFill="True">
+                        <!-- Náhled ukazuje efektivní barvu: pokud je null, spadne na AppTextBrush -->
+                        <Button Width="20" Height="20" Margin="0,0,6,0" DockPanel.Dock="Left"
+                                BorderBrush="#666" BorderThickness="1"
+                                Background="{Binding Foreground, TargetNullValue={StaticResource AppTextBrush}}"
+                                ToolTip="Změnit barvu"
+                                Click="PickForeground_Click"/>
+                        <!-- HEX zobrazuje theme fallback, ale zapisuje lokální Brush -->
+                        <TextBox Text="{Binding Foreground,
+                                                Converter={StaticResource BrushToHexThemeFallback},
+                                                ConverterParameter=AppTextBrush,
+                                                Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DockPanel>
+
+                    <TextBlock Text="Barva pozadí"/>
+                    <DockPanel LastChildFill="True">
+                        <Button Width="20" Height="20" Margin="0,0,6,0" DockPanel.Dock="Left"
+                                BorderBrush="#666" BorderThickness="1"
+                                Background="{Binding Background, TargetNullValue={StaticResource AppBackgroundBrush}}"
+                                ToolTip="Změnit barvu"
+                                Click="PickBackground_Click"/>
+                        <TextBox Text="{Binding Background,
+                                                Converter={StaticResource BrushToHexThemeFallback},
+                                                ConverterParameter=AppBackgroundBrush,
+                                                Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DockPanel>
+                </UniformGrid>
+
+                <!-- Ukotvení / Dock -->
+                <TextBlock Text="Ukotvení / Dock" FontWeight="SemiBold" Margin="6,6,0,6"/>
+                <views:AnchorDockEditor Anchor="{Binding Anchor, Mode=TwoWay}"
+                                        Dock="{Binding Dock, Mode=TwoWay}"/>
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
+    <!-- ====== Layout ====== -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="10">
 
@@ -25,178 +146,54 @@
 
             <!-- Jedna položka -->
             <ContentControl Visibility="{Binding SelectedCount, Converter={StaticResource EqVis}, ConverterParameter=1}"
-                            Content="{Binding SelectedItem}">
-                <ContentControl.Resources>
-
-                    <!-- Šablona pro libovolný FieldComponentBase -->
-                    <DataTemplate DataType="{x:Type m:FieldComponentBase}">
-                        <StackPanel>
-                            <TextBlock Text="Vlastnosti" FontWeight="SemiBold" Margin="0,0,0,8"/>
-
-                            <!-- Obecné vlastnosti -->
-                            <UniformGrid Columns="2" Margin="0,0,0,12">
-                                <TextBlock Text="Name"/>
-                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="FieldKey"/>
-                                <TextBox Text="{Binding FieldKey, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="Type"/>
-                                <TextBlock Text="{Binding TypeKey}"/>
-
-                                <TextBlock Text="Label"/>
-                                <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="Placeholder"/>
-                                <TextBox Text="{Binding Placeholder, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="Required"/>
-                                <CheckBox IsChecked="{Binding Required, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="Default"/>
-                                <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="FontFamily"/>
-                                <TextBox Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="FontSize"/>
-                                <TextBox Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <!-- Foreground s náhledem + HEX -->
-                                <TextBlock Text="Foreground"/>
-                                <DockPanel LastChildFill="True">
-                                    <Button Width="20" Height="20"
-                                            Margin="0,0,6,0"
-                                            DockPanel.Dock="Left"
-                                            BorderBrush="#666" BorderThickness="1"
-                                            Background="{Binding Foreground}"
-                                            ToolTip="Změnit barvu"
-                                            Click="PickForeground_Click"/>
-                                    <TextBox Text="{Binding Foreground, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                </DockPanel>
-
-                                <!-- Background s náhledem + HEX -->
-                                <TextBlock Text="Background"/>
-                                <DockPanel LastChildFill="True">
-                                    <Button Width="20" Height="20"
-                                            Margin="0,0,6,0"
-                                            DockPanel.Dock="Left"
-                                            BorderBrush="#666" BorderThickness="1"
-                                            Background="{Binding Background}"
-                                            ToolTip="Změnit barvu"
-                                            Click="PickBackground_Click"/>
-                                    <TextBox Text="{Binding Background, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                </DockPanel>
-
-                                <TextBlock Text="Šířka"/>
-                                <TextBox Text="{Binding Width, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="Výška"/>
-                                <TextBox Text="{Binding Height, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="Z-index"/>
-                                <TextBox Text="{Binding ZIndex, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="X"/>
-                                <TextBox Text="{Binding X, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <TextBlock Text="Y"/>
-                                <TextBox Text="{Binding Y, UpdateSourceTrigger=PropertyChanged}"/>
-                            </UniformGrid>
-
-                            <!-- Dynamické – specifické vlastnosti podle TypeKey -->
-
-                            <!-- CHECKBOX -->
-                            <StackPanel Margin="0,0,0,12"
-                                        Visibility="{Binding TypeKey, Converter={StaticResource StrEqVis}, ConverterParameter=checkbox}">
-                                <TextBlock Text="Zaškrtávátko" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <UniformGrid Columns="2">
-                                    <TextBlock Text="Checked (výchozí)"/>
-                                    <CheckBox IsChecked="{Binding IsCheckedDefault, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                </UniformGrid>
-                            </StackPanel>
-
-                            <!-- TEXTBOX -->
-                            <StackPanel Margin="0,0,0,12"
-                                        Visibility="{Binding TypeKey, Converter={StaticResource StrEqVis}, ConverterParameter=textbox}">
-                                <TextBlock Text="TextBox" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <UniformGrid Columns="2">
-                                    <TextBlock Text="Max length"/>
-                                    <TextBox Text="{Binding MaxLength, UpdateSourceTrigger=PropertyChanged}"/>
-                                </UniformGrid>
-                            </StackPanel>
-
-                            <!-- TEXTAREA -->
-                            <StackPanel Margin="0,0,0,12"
-                                        Visibility="{Binding TypeKey, Converter={StaticResource StrEqVis}, ConverterParameter=textarea}">
-                                <TextBlock Text="TextArea" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <UniformGrid Columns="2">
-                                    <TextBlock Text="Rows"/>
-                                    <TextBox Text="{Binding Rows, UpdateSourceTrigger=PropertyChanged}"/>
-                                </UniformGrid>
-                            </StackPanel>
-
-                            <!-- COMBOBOX -->
-                            <StackPanel Margin="0,0,0,12"
-                                        Visibility="{Binding TypeKey, Converter={StaticResource StrEqVis}, ConverterParameter=combobox}">
-                                <TextBlock Text="ComboBox" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <UniformGrid Columns="2">
-                                    <TextBlock Text="Editable"/>
-                                    <CheckBox IsChecked="{Binding IsEditable, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <TextBlock Text="Options (CSV)"/>
-                                    <TextBox Text="{Binding OptionsCsv, UpdateSourceTrigger=PropertyChanged}"/>
-                                </UniformGrid>
-                            </StackPanel>
-
-                            <!-- Anchor/Dock editor -->
-                            <views:AnchorDockEditor Anchor="{Binding Anchor, Mode=TwoWay}"
-                                                    Dock="{Binding Dock, Mode=TwoWay}"
-                                                    Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </DataTemplate>
-
-                </ContentControl.Resources>
-            </ContentControl>
+                            Content="{Binding SelectedItem}"
+                            ContentTemplate="{StaticResource Props.Root}"/>
 
             <!-- Více položek -->
             <StackPanel Visibility="{Binding SelectedCount, Converter={StaticResource GeVis}, ConverterParameter=2}">
                 <TextBlock Text="{Binding SelectedCount, StringFormat={}{0} vybraných}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                <TextBlock Text="Společné vlastnosti (ponech prázdné to, co nechceš měnit)" Margin="0,0,0,6"/>
+                <TextBlock Text="Hromadná úprava (ponech prázdné to, co nechceš měnit)" Margin="0,0,0,6"/>
 
                 <UniformGrid Columns="2" Margin="0,0,0,12">
-                    <TextBlock Text="Name"/>
+                    <TextBlock Text="Název prvku"/>
                     <TextBox Text="{Binding BulkName, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="Label"/>
+                    <TextBlock Text="Popisek (Label)"/>
                     <TextBox Text="{Binding BulkLabel, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="FieldKey"/>
+                    <TextBlock Text="Klíč pole"/>
                     <TextBox Text="{Binding BulkFieldKey, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="FontFamily"/>
+                    <TextBlock Text="Písmo (FontFamily)"/>
                     <TextBox Text="{Binding BulkFontFamily, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="FontSize"/>
+                    <TextBlock Text="Velikost písma"/>
                     <TextBox Text="{Binding BulkFontSize, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="Foreground"/>
+                    <TextBlock Text="Barva textu"/>
                     <DockPanel LastChildFill="True">
                         <Button Width="20" Height="20" Margin="0,0,6,0" DockPanel.Dock="Left"
                                 BorderBrush="#666" BorderThickness="1"
-                                Background="{Binding BulkForeground}"
+                                Background="{Binding BulkForeground, TargetNullValue={StaticResource AppTextBrush}}"
                                 ToolTip="Změnit barvu"
                                 Click="PickBulkForeground_Click"/>
-                        <TextBox Text="{Binding BulkForeground, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox Text="{Binding BulkForeground,
+                                                Converter={StaticResource BrushToHexThemeFallback},
+                                                ConverterParameter=AppTextBrush,
+                                                Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </DockPanel>
 
-                    <TextBlock Text="Background"/>
+                    <TextBlock Text="Barva pozadí"/>
                     <DockPanel LastChildFill="True">
                         <Button Width="20" Height="20" Margin="0,0,6,0" DockPanel.Dock="Left"
                                 BorderBrush="#666" BorderThickness="1"
-                                Background="{Binding BulkBackground}"
+                                Background="{Binding BulkBackground, TargetNullValue={StaticResource AppBackgroundBrush}}"
                                 ToolTip="Změnit barvu"
                                 Click="PickBulkBackground_Click"/>
-                        <TextBox Text="{Binding BulkBackground, Converter={StaticResource BrushToHex}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox Text="{Binding BulkBackground,
+                                                Converter={StaticResource BrushToHexThemeFallback},
+                                                ConverterParameter=AppBackgroundBrush,
+                                                Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </DockPanel>
 
                     <TextBlock Text="Šířka"/>

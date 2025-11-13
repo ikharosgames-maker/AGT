@@ -1,7 +1,7 @@
 using Agt.Application.InMemory;
 using Agt.Application.Interfaces;
 using Agt.Contracts;
-using Microsoft.AspNetCore.Mvc; // <-- DÙLEŽITÉ pro [FromServices]
+using Microsoft.AspNetCore.Mvc; // <-- DLEIT pro [FromServices]
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,7 +50,7 @@ app.MapGet("/defs/blocks", ([FromServices] IDefRepo repo) => repo.GetBlocksAsync
 app.MapGet("/defs/blocks/{id}/{version:int}", ([FromServices] IDefRepo repo, string id, int version) => repo.GetBlockAsync(id, version));
 app.MapPost("/defs/blocks", async ([FromServices] IDefRepo repo, [FromBody] BlockDefinitionDto dto) =>
 {
-    // jednoduchá validace klíèù
+    // jednoduch validace kl
     if (dto.Fields.GroupBy(f => f.Key).Any(g => g.Count() > 1))
         return Results.BadRequest("Duplicity field keys");
     var saved = await repo.SaveBlockAsync(dto);
@@ -62,8 +62,8 @@ app.MapGet("/defs/forms", ([FromServices] IDefRepo repo) => repo.GetFormsAsync()
 app.MapGet("/defs/forms/{id}/{version:int}", ([FromServices] IDefRepo repo, string id, int version) => repo.GetFormAsync(id, version));
 app.MapPost("/defs/forms", async ([FromServices] IDefRepo repo, [FromBody] FormDefinitionDto dto) =>
 {
-    // kontrola, že referenced bloky existují
-    // (MVP – bez verze validace detailnì)
+    // kontrola, e referenced bloky existuj
+    // (MVP  bez verze validace detailn)
     var saved = await repo.SaveFormAsync(dto);
     return Results.Ok(saved);
 });

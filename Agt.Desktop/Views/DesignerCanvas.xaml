@@ -3,34 +3,30 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:m="clr-namespace:Agt.Desktop.Models"
              xmlns:local="clr-namespace:Agt.Desktop.Views"
+             xmlns:beh="clr-namespace:Agt.Desktop.Behaviors"
              Loaded="AnchorDock_OnLoaded"
              Unloaded="AnchorDock_OnUnloaded"
-             SizeChanged="AnchorDock_OnSizeChanged">
+             SizeChanged="AnchorDock_OnSizeChanged"
+             beh:DbAgent.ConnectionKey="MainDb">
 
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/Agt.Desktop;component/Views/Components/ComponentTemplates.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-            <local:FieldTemplateSelector x:Key="CompSelector" />
-        </ResourceDictionary>
-    </UserControl.Resources>
+    
 
     <Grid>
         <ItemsControl x:Name="ItemsHost"
-                      ItemsSource="{Binding Items}">
+                  ItemsSource="{Binding Items}"
+                  local:RenderModeHelper.Mode="{x:Static m:RenderMode.Edit}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <Canvas Background="{DynamicResource EditorGridBrush}"
-                            AllowDrop="True"
-                            ContextMenuOpening="Canvas_ContextMenuOpening"
-                            MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
-                            MouseMove="Canvas_MouseMove"
-                            MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
-                            MouseLeave="Canvas_MouseLeave"
-                            LostMouseCapture="Canvas_LostMouseCapture"
-                            DragOver="RootCanvas_DragOver"
-                            Drop="RootCanvas_Drop"/>
+                  AllowDrop="True"
+                  ContextMenuOpening="Canvas_ContextMenuOpening"
+                  MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                  MouseMove="Canvas_MouseMove"
+                  MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                  MouseLeave="Canvas_MouseLeave"
+                  LostMouseCapture="Canvas_LostMouseCapture"
+                  DragOver="RootCanvas_DragOver"
+                  Drop="RootCanvas_Drop"/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
 
@@ -45,36 +41,34 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Grid Width="{Binding Width}"
-                          Height="{Binding Height}"
-                          PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
+                Height="{Binding Height}"
+                PreviewMouseLeftButtonDown="Item_PreviewMouseLeftButtonDown">
 
-                        <!-- ⬇️ všechny komponenty přes univerzální šablony; mód = Run -->
-                        <ContentControl Content="{Binding}"
-                                        ContentTemplateSelector="{StaticResource CompSelector}"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Stretch"
-                                        local:RenderModeHelper.Mode="{x:Static m:RenderMode.Edit}"/>
+                        <!-- Obsah pole: vybere se automaticky podle typu (mdl:*Field) -->
+                        <ContentPresenter Content="{Binding}"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"/>
 
-                        <!-- selection overlay -->
+                        <!-- Overlay: výběr -->
                         <Border BorderBrush="{DynamicResource EditorAccentBrush}"
-                                BorderThickness="2"
-                                CornerRadius="2"
-                                IsHitTestVisible="False"
-                                Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
+                    BorderThickness="2"
+                    CornerRadius="2"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
 
-                        <!-- move -->
+                        <!-- Overlay: drag-move -->
                         <Thumb Opacity="0.01"
-                               Background="Transparent"
-                               DragStarted="MoveThumb_DragStarted"
-                               DragDelta="MoveThumb_DragDelta"
-                               DragCompleted="MoveThumb_DragCompleted"/>
+                   Background="Transparent"
+                   DragStarted="MoveThumb_DragStarted"
+                   DragDelta="MoveThumb_DragDelta"
+                   DragCompleted="MoveThumb_DragCompleted"/>
 
-                        <!-- resize -->
+                        <!-- Overlay: resize -->
                         <Thumb Width="8" Height="8"
-                               HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                               Background="{DynamicResource EditorSurfaceAltBrush}"
-                               Cursor="SizeNWSE"
-                               DragDelta="ResizeThumb_DragDelta"/>
+                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                   Background="{DynamicResource EditorSurfaceAltBrush}"
+                   Cursor="SizeNWSE"
+                   DragDelta="ResizeThumb_DragDelta"/>
                     </Grid>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>

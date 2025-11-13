@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoutingService, RoutingService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IProcessDefinitionService, ProcessDefinitionService>();
         services.AddSingleton<IAuthZ, AuthZ>();
 
         if (useJsonStore)

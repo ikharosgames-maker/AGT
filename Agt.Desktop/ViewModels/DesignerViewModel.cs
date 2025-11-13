@@ -52,13 +52,12 @@ namespace Agt.Desktop.ViewModels
         private double? _bulkFontSize, _bulkWidth, _bulkHeight;
 
         private readonly FieldCatalogService _catalog;
-        private readonly FieldFactory _factory;
 
         public DesignerViewModel()
         {
             _selection = (SelectionService)Agt.Desktop.App.Current.Resources["SelectionService"];
             _catalog = (FieldCatalogService)Agt.Desktop.App.Current.Resources["FieldCatalog"];
-            _factory = (FieldFactory)Agt.Desktop.App.Current.Resources["FieldFactory"];
+
 
             _selection.PropertyChanged += (_, __) =>
             {
@@ -100,7 +99,7 @@ namespace Agt.Desktop.ViewModels
             if (CurrentBlock == null) { StatusText = "Nejprve založte blok."; return; }
 
             var desc = _catalog.Items.FirstOrDefault(i => i.Key == key);
-            var field = _factory.Create(key, position.X, position.Y, desc?.Defaults);
+            var field = FieldFactory.Create(key, position.X, position.Y, desc?.Defaults);
 
             var blockName = Sanitize(CurrentBlock.Name);
             var labelPart = Sanitize(string.IsNullOrWhiteSpace(field.Label) ? "field" : field.Label);
@@ -231,7 +230,7 @@ namespace Agt.Desktop.ViewModels
             Items.Clear();
             foreach (var it in dto.Items)
             {
-                var created = _factory.Create(it.TypeKey, it.X, it.Y, null);
+                var created = FieldFactory.Create(it.TypeKey, it.X, it.Y, null);
                 created.Id = it.Id;
                 created.Name = it.Name;
                 created.FieldKey = it.FieldKey;
