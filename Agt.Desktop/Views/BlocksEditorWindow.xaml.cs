@@ -212,6 +212,66 @@ namespace Agt.Desktop.Views
                     MessageBoxImage.Error);
             }
         }
+        private void CloneBlock_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (VM.CurrentBlock == null)
+            {
+                MessageBox.Show(
+                    "Nejprve otevřete nebo založte blok, který chcete klonovat.",
+                    "Klonovat blok",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            // 1) Zeptat se na nový název
+            var dlg = new CloneBlockDialog
+            {
+                Owner = this,
+                OriginalName = VM.CurrentBlock.Name  // pokud se jmenuje jinak, uprav na skutečnou property
+            };
+
+            if (dlg.ShowDialog() != true || string.IsNullOrWhiteSpace(dlg.NewName))
+                return;
+
+            try
+            {
+                // 2) Export aktuální definice
+                var def = VM.ExportBlockDefinition();
+
+                // 3) Vytvořit "nový" blok: nový BlockId, nový název, verze vynulovaná
+                def.BlockId = Guid.NewGuid();
+                def.BlockName = dlg.NewName.Trim();
+                def.Version = null;                 // první Uložit → 1.0.0
+                def.CreatedBy = Environment.UserName;
+                def.CreatedAt = DateTime.UtcNow;
+
+                // 4) Naimportovat definici jako aktuální blok do editoru
+                VM.ImportBlockDefinition(def);
+
+                // pokud potřebuješ aktualizovat i CurrentBlock (meta objekt),
+                // a typ má vlastnosti Id/Name, můžeš něco jako:
+                if (VM.CurrentBlock != null)
+                {
+                    VM.CurrentBlock.Id = def.BlockId;
+                    VM.CurrentBlock.Name = def.BlockName;
+                }
+
+                VM.CurrentVersion = def.Version;      // zatím null
+                VM.CurrentCreatedBy = def.CreatedBy;
+                VM.CurrentCreatedAt = def.CreatedAt;
+
+                VM.StatusText = $"Klonován blok jako nový: {def.BlockName} (nové ID: {def.BlockId})";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Klonování bloku selhalo:\n{ex.Message}",
+                    "Klonovat blok",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
 
         private void GridPlus_OnClick(object sender, RoutedEventArgs e)
         {

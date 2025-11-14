@@ -46,6 +46,7 @@
                 <MenuItem Header="_Nový blok…" Click="NewBlock_OnClick"/>
                 <MenuItem Header="_Otevřít…" Click="LoadJson_OnClick"/>
                 <MenuItem Header="_Uložit…" Click="SaveJson_OnClick"/>
+                <MenuItem Header="_Klonovat jako nový blok…" Click="CloneBlock_OnClick"/>
                 <Separator/>
                 <MenuItem Header="_Konec" Click="Exit_OnClick"/>
             </MenuItem>
@@ -92,28 +93,31 @@
         <!-- Obsah -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
+                <!-- Levý panel: knihovna + seznam komponent v tabech -->
                 <ColumnDefinition Width="260"/>
-                <ColumnDefinition Width="260"/>
+                <!-- Canvas -->
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="0"/>
+                <!-- Pravý panel: vlastnosti -->
                 <ColumnDefinition Width="320"/>
             </Grid.ColumnDefinitions>
 
+            <!-- Levý panel: ComponentLibrary + ComponentsList v záložkách -->
             <Border Grid.Column="0"
                     BorderBrush="{DynamicResource EditorBorderBrush}"
                     BorderThickness="0,0,1,0"
                     Background="{DynamicResource EditorPanelBrush}">
-                <views:ComponentLibraryView/>
+                <TabControl>
+                    <TabItem Header="Knihovna prvků">
+                        <views:ComponentLibraryView/>
+                    </TabItem>
+                    <TabItem Header="Seznam prvků">
+                        <views:ComponentsListView/>
+                    </TabItem>
+                </TabControl>
             </Border>
 
+            <!-- Canvas uprostřed -->
             <Border Grid.Column="1"
-                    BorderBrush="{DynamicResource EditorBorderBrush}"
-                    BorderThickness="0,0,1,0"
-                    Background="{DynamicResource EditorPanelBrush}">
-                <views:ComponentsListView/>
-            </Border>
-
-            <Border Grid.Column="2"
                     Background="{DynamicResource EditorCanvasBrush}"
                     BorderBrush="{DynamicResource EditorBorderBrush}"
                     BorderThickness="1">
@@ -121,7 +125,8 @@
                 <views:DesignerCanvas/>
             </Border>
 
-            <Border Grid.Column="4"
+            <!-- Pravý panel: Properties -->
+            <Border Grid.Column="2"
                     BorderBrush="{DynamicResource EditorBorderBrush}"
                     BorderThickness="1,0,0,0"
                     Background="{DynamicResource EditorPanelBrush}">

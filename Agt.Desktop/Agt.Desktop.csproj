@@ -40,6 +40,9 @@
 		<Page Include="Views\CaseRunWindow.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
+		<Page Include="Views\CloneBlockDialog.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Include="Views\ColorPickerWindow.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
@@ -126,6 +129,7 @@
 		<Compile Include="ViewModels\SemicolonToListConverter.cs" />
 		<Compile Include="Views\BlockLibraryBrowserWindow.xaml.cs" />
 		<Compile Include="Views\CaseRunWindow.xaml.cs" />
+		<Compile Include="Views\CloneBlockDialog.xaml.cs" />
 		<Compile Include="Views\Components\AutoSizeCanvas.cs" />
 		<Compile Include="Views\Components\ComponentKeyTemplateSelector.cs" />
 		<Compile Include="Views\Components\ComponentPropertyTemplateSelector.cs" />
