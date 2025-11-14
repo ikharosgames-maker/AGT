@@ -45,8 +45,12 @@ namespace Agt.Desktop.ViewModels
         private bool _snapToGrid = true; public bool SnapToGrid { get => _snapToGrid; set => SetProperty(ref _snapToGrid, value); }
         private double _gridSize = 8; public double GridSize { get => _gridSize; set => SetProperty(ref _gridSize, value <= 0 ? 8 : value); }
 
-        private string _statusText = "Připraveno"; public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
-
+        private string _statusText = "Nejprve vytvořte nebo načtěte blok.";
+        public string StatusText
+        {
+            get => _statusText;
+            set => SetProperty(ref _statusText, value);
+        }
         private readonly SelectionService _selection;
         public int SelectedCount => _selection.Count;
         public FieldComponentBase? SelectedItem => _selection.SelectedItems.FirstOrDefault() as FieldComponentBase;

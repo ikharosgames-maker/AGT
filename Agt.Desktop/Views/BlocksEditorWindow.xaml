@@ -28,20 +28,35 @@
         </ResourceDictionary>
     </Window.Resources>
 
+    <!-- Klávesové zkratky – přímo na commandy z DesignerViewModel -->
+    <Window.InputBindings>
+        <!-- Delete = smazat vybrané komponenty -->
+        <KeyBinding Key="Delete"
+                    Command="{Binding DeleteCommand}"/>
+        <!-- Ctrl+D = duplikovat vybrané komponenty -->
+        <KeyBinding Key="D"
+                    Modifiers="Control"
+                    Command="{Binding DuplicateCommand}"/>
+    </Window.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <!-- menu -->
             <RowDefinition Height="36"/>
+            <!-- info bar -->
             <RowDefinition Height="*"/>
+            <!-- obsah -->
             <RowDefinition Height="28"/>
+            <!-- status bar -->
         </Grid.RowDefinitions>
 
         <!-- Menu -->
         <Menu Grid.Row="0"
               Background="{DynamicResource EditorSurfaceAltBrush}"
               Foreground="{DynamicResource EditorTextBrush}"
-              FontSize="13"
-              IsHitTestVisible="True">
+              FontSize="13">
+
             <MenuItem Header="_Soubor">
                 <MenuItem Header="_Nový blok…" Click="NewBlock_OnClick"/>
                 <MenuItem Header="_Otevřít…" Click="LoadJson_OnClick"/>
@@ -50,15 +65,25 @@
                 <Separator/>
                 <MenuItem Header="_Konec" Click="Exit_OnClick"/>
             </MenuItem>
+
             <MenuItem Header="_Úpravy">
-                <MenuItem Header="_Smazat" Command="{Binding DeleteCommand}"/>
-                <MenuItem Header="_Duplikovat" Command="{Binding DuplicateCommand}"/>
+                <!-- napojeno na existující commandy ve DesignerViewModel -->
+                <MenuItem Header="_Smazat"
+                          Command="{Binding DeleteCommand}"
+                          InputGestureText="Del"/>
+                <MenuItem Header="_Duplikovat"
+                          Command="{Binding DuplicateCommand}"
+                          InputGestureText="Ctrl+D"/>
                 <Separator/>
-                <MenuItem Header="Do_předu" Command="{Binding BringToFrontCommand}"/>
-                <MenuItem Header="Do_zadu" Command="{Binding SendToBackCommand}"/>
+                <MenuItem Header="Do_předu"
+                          Command="{Binding BringToFrontCommand}"/>
+                <MenuItem Header="Do_zadu"
+                          Command="{Binding SendToBackCommand}"/>
                 <Separator/>
-                <MenuItem Header="Zarovnat v_levo" Command="{Binding AlignLeftCommand}"/>
+                <MenuItem Header="Zarovnat v_levo"
+                          Command="{Binding AlignLeftCommand}"/>
             </MenuItem>
+
             <MenuItem Header="_Zobrazení">
                 <MenuItem Header="Mřížka −" Click="GridMinus_OnClick"/>
                 <MenuItem Header="Mřížka +" Click="GridPlus_OnClick"/>
@@ -74,6 +99,7 @@
                     </MenuItem.HeaderTemplate>
                 </MenuItem>
             </MenuItem>
+
             <MenuItem Header="_Layout">
                 <MenuItem Header="_Auto layout" Click="AutoLayout_OnClick"/>
             </MenuItem>
@@ -85,7 +111,9 @@
                 BorderBrush="{DynamicResource EditorBorderBrush}"
                 BorderThickness="0,0,0,1">
             <DockPanel>
-                <TextBlock Margin="10,0" VerticalAlignment="Center" FontSize="12"
+                <TextBlock Margin="10,0"
+                           VerticalAlignment="Center"
+                           FontSize="12"
                            Text="{Binding CurrentBlockTitle}"/>
             </DockPanel>
         </Border>
@@ -94,18 +122,33 @@
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <!-- Levý panel: knihovna + seznam komponent v tabech -->
-                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="Auto"/>
                 <!-- Canvas -->
                 <ColumnDefinition Width="*"/>
                 <!-- Pravý panel: vlastnosti -->
-                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <!-- Levý panel: ComponentLibrary + ComponentsList v záložkách -->
             <Border Grid.Column="0"
+                    Width="260"
                     BorderBrush="{DynamicResource EditorBorderBrush}"
                     BorderThickness="0,0,1,0"
                     Background="{DynamicResource EditorPanelBrush}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <!-- pokud není vybraný / načtený blok, panel se schová -->
+                            <DataTrigger
+                                Binding="{Binding CurrentBlock}"
+                                Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
                 <TabControl>
                     <TabItem Header="Knihovna prvků">
                         <views:ComponentLibraryView/>
@@ -127,9 +170,24 @@
 
             <!-- Pravý panel: Properties -->
             <Border Grid.Column="2"
+                    Width="320"
                     BorderBrush="{DynamicResource EditorBorderBrush}"
                     BorderThickness="1,0,0,0"
                     Background="{DynamicResource EditorPanelBrush}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <!-- pokud není vybraný / načtený blok, panel se schová -->
+                            <DataTrigger
+                                Binding="{Binding CurrentBlock}"
+                                Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
                 <views:PropertiesPanel/>
             </Border>
         </Grid>
@@ -140,8 +198,22 @@
                 BorderBrush="{DynamicResource EditorBorderBrush}"
                 BorderThickness="0,1,0,0">
             <DockPanel>
-                <TextBlock Margin="8,0" VerticalAlignment="Center" FontSize="12"
-                           Text="{Binding StatusText}"/>
+                <TextBlock Margin="8,0"
+                           VerticalAlignment="Center"
+                           FontSize="12">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <!-- defaultně zobrazuj StatusText -->
+                            <Setter Property="Text" Value="{Binding StatusText}" />
+                            <Style.Triggers>
+                                <!-- pokud není blok, zobraz hint -->
+                                <DataTrigger Binding="{Binding CurrentBlock}" Value="{x:Null}">
+                                    <Setter Property="Text" Value="Nejprve vytvořte nebo načtěte blok." />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </DockPanel>
         </Border>
     </Grid>

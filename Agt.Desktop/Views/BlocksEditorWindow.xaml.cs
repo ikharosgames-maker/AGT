@@ -1,9 +1,6 @@
 ﻿using System;
-using System.IO;
 using System.Text.Json;
 using System.Windows;
-using System.Windows.Controls;
-using Microsoft.Win32;
 using Agt.Desktop.Services;
 using Agt.Desktop.ViewModels;
 using Agt.Domain.Models;
@@ -34,11 +31,6 @@ namespace Agt.Desktop.Views
             }
         }
 
-        /// <summary>
-        /// Pomocná funkce pro automatické zvýšení verze.
-        /// Vstupní verze může být null / prázdná – v tom případě vrací "1.0.0".
-        /// Jinak očekává tvar "major.minor.patch" a zvýší patch o 1.
-        /// </summary>
         /// <summary>
         /// Vypočítá novou verzi podle typu změny.
         /// - první uložení → 1.0.0
@@ -212,6 +204,7 @@ namespace Agt.Desktop.Views
                     MessageBoxImage.Error);
             }
         }
+
         private void CloneBlock_OnClick(object sender, RoutedEventArgs e)
         {
             if (VM.CurrentBlock == null)
@@ -228,7 +221,7 @@ namespace Agt.Desktop.Views
             var dlg = new CloneBlockDialog
             {
                 Owner = this,
-                OriginalName = VM.CurrentBlock.Name  // pokud se jmenuje jinak, uprav na skutečnou property
+                OriginalName = VM.CurrentBlock.Name
             };
 
             if (dlg.ShowDialog() != true || string.IsNullOrWhiteSpace(dlg.NewName))
@@ -249,8 +242,6 @@ namespace Agt.Desktop.Views
                 // 4) Naimportovat definici jako aktuální blok do editoru
                 VM.ImportBlockDefinition(def);
 
-                // pokud potřebuješ aktualizovat i CurrentBlock (meta objekt),
-                // a typ má vlastnosti Id/Name, můžeš něco jako:
                 if (VM.CurrentBlock != null)
                 {
                     VM.CurrentBlock.Id = def.BlockId;
