@@ -46,22 +46,31 @@ namespace Agt.Desktop.Views
 
         private void Item_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (ShouldSuspendAnchorDock()) return;
+            if (ShouldSuspendAnchorDock())
+                return;
 
-            if (sender == null) return;
+            if (sender == null)
+                return;
+
+            var parentSize = new Size(ActualWidth, ActualHeight);
+
             switch (e.PropertyName)
             {
                 case "Anchor": // změna flags
-                    AnchorDockService.ResetBaseline(sender, new Size(ActualWidth, ActualHeight));
-                    AnchorDockService.Apply(sender, new Size(ActualWidth, ActualHeight));
+                case "Dock":   // změna dokování
+                               // změna režimu -> nová baseline podle aktuální pozice/velikosti
+                    AnchorDockService.ResetBaseline(sender, parentSize);
+                    AnchorDockService.Apply(sender, parentSize);
                     break;
 
-                case "Dock":
                 case "X":
                 case "Y":
                 case "Width":
                 case "Height":
-                    AnchorDockService.Apply(sender, new Size(ActualWidth, ActualHeight));
+                    // změna pozice/rozměru z kódu (AutoLayout, zarovnání, property panel...)
+                    // -> bereme jako novou baseline pro Anchor/Dock
+                    AnchorDockService.ResetBaseline(sender, parentSize);
+                    AnchorDockService.Apply(sender, parentSize);
                     break;
             }
         }

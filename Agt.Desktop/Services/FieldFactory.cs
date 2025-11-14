@@ -84,7 +84,7 @@ namespace Agt.Desktop.Services
                 case "input":
                     {
                         var c = ApplyVisuals(new TextBoxField { Label = "Text" });
-                        height ??= 60;
+                        height ??= 50;
                         return ApplyPositionAndSize(c, x, y, width, height);
                     }
 
@@ -102,7 +102,7 @@ namespace Agt.Desktop.Services
                 case "double":
                     {
                         var c = ApplyVisuals(new NumberField { Label = "Číslo" });
-                        height ??= 60;
+                        height ??= 50;
                         return ApplyPositionAndSize(c, x, y, width, height);
                     }
 
@@ -111,7 +111,7 @@ namespace Agt.Desktop.Services
                 case "datum":
                     {
                         var c = ApplyVisuals(new DateField { Label = "Datum" });
-                        height ??= 60;
+                        height ??= 50;
                         return ApplyPositionAndSize(c, x, y, width, height);
                     }
 
@@ -127,7 +127,7 @@ namespace Agt.Desktop.Services
                             IsEditable = false,
                             Background = Brushes.White   // ← přidáno: neprůhledný default uvnitř kontrolu
                         });
-                        height ??= 60;
+                        height ??= 50;
                         return ApplyPositionAndSize(c, x, y, width, height);
                     }
 

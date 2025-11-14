@@ -445,21 +445,84 @@ namespace Agt.Desktop.ViewModels
 
         public void AutoLayout()
         {
-            if (Items.Count == 0) return;
-            const int columns = 2;
-            double colWidth = Items.Max(i => i.Width) + GridSize * 2;
-            double rowH = Items.Average(i => i.Height) + GridSize;
+            // 1) Které prvky skládat:
+            //    - když je něco vybrané, skládej jen výběr
+            //    - jinak všechny
+            var candidates = Items.Where(i => i.IsSelected).ToList();
+            if (candidates.Count == 0)
+                candidates = Items.ToList();
 
-            int index = 0;
-            foreach (var it in Items.OrderBy(i => i.Y).ThenBy(i => i.X))
+            if (candidates.Count <= 1)
             {
-                int col = index % columns;
-                int row = index / columns;
-                it.X = col * (colWidth + GridSize);
-                it.Y = row * (rowH + GridSize);
-                index++;
+                StatusText = "Auto layout: nic k uspořádání.";
+                return;
             }
-            StatusText = "Auto layout hotov.";
+
+            // 2) Základní parametry
+            int n = candidates.Count;
+            double grid = GridSize > 0 ? GridSize : 8;
+
+            // celková plocha prvků (pro odhad „čtvercové“ šířky)
+            double totalArea = candidates.Sum(i =>
+            {
+                double w = Math.Max(1, i.Width);
+                double h = Math.Max(1, i.Height);
+                return w * h;
+            });
+
+            // cílová šířka řádku ~ sqrt(plocha)
+            double targetRowWidth = Math.Sqrt(totalArea);
+            if (double.IsNaN(targetRowWidth) || targetRowWidth <= 0)
+            {
+                targetRowWidth = candidates.Max(i => i.Width) + grid;
+            }
+
+            // začínáme vždy od (0,0)
+            double currentX = 0;
+            double currentY = 0;
+            double currentRowHeight = 0;
+            int rowCount = 1;
+
+            // 3) Zachovej pořadí shora dolů, zleva doprava
+            var ordered = candidates
+                .OrderBy(i => i.Y)
+                .ThenBy(i => i.X)
+                .ToList();
+
+            foreach (var it in ordered)
+            {
+                double itemWidth = Math.Max(1, it.Width);
+                double itemHeight = Math.Max(1, it.Height);
+
+                // pokud by se prvek do řádku už "nevešel", začni nový řádek
+                if (currentX > 0 && currentX + itemWidth > targetRowWidth)
+                {
+                    currentX = 0;
+                    currentY += currentRowHeight + grid;
+                    currentRowHeight = 0;
+                    rowCount++;
+                }
+
+                // umístění prvku
+                double targetX = currentX;
+                double targetY = currentY;
+
+                // snap na mřížku
+                double snappedX = Math.Round(targetX / grid) * grid;
+                double snappedY = Math.Round(targetY / grid) * grid;
+
+                it.X = snappedX;
+                it.Y = snappedY;
+
+                // posun pro další prvek v řádku
+                currentX += itemWidth + grid;
+                // výška řádku = max výška prvků v něm
+                if (itemHeight > currentRowHeight)
+                    currentRowHeight = itemHeight;
+            }
+
+            StatusText = $"Auto layout: uspořádáno {n} prvků od (0,0) do {rowCount} řádků.";
         }
+
     }
 }
