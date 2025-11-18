@@ -43,15 +43,13 @@ namespace Agt.Domain.Models
     }
 
     /// <summary>Definice jedné komponenty uvnitř bloku.</summary>
-    public sealed class FieldDefinitionDto
+    public class FieldDefinitionDto
     {
-        public string TypeKey { get; set; } = string.Empty;
+        public string TypeKey { get; set; } = "";
         public Guid Id { get; set; }
-
-        public string Name { get; set; } = string.Empty;
-        public string FieldKey { get; set; } = string.Empty;
-        public string Label { get; set; } = string.Empty;
-
+        public string Name { get; set; } = "";
+        public string FieldKey { get; set; } = "";
+        public string Label { get; set; } = "";
         public double X { get; set; }
         public double Y { get; set; }
         public double Width { get; set; }
@@ -59,11 +57,30 @@ namespace Agt.Domain.Models
         public int ZIndex { get; set; }
 
         public string? DefaultValue { get; set; }
-
         public string Background { get; set; } = "#00000000";
         public string Foreground { get; set; } = "#FF000000";
-
         public string FontFamily { get; set; } = "Segoe UI";
         public double FontSize { get; set; } = 12;
+
+        // nové:
+        public string Placeholder { get; set; } = "";
+        public bool Required { get; set; }
+
+        public string LabelForeground { get; set; } = "#FF000000";
+        public string LabelBackground { get; set; } = "#00000000";
+
+        public bool LabelBold { get; set; }
+        public bool LabelItalic { get; set; }
+        public bool LabelUnderline { get; set; }
+        public bool LabelStrikeThrough { get; set; }
+
+        public bool FontBold { get; set; }
+        public bool FontItalic { get; set; }
+        public bool FontUnderline { get; set; }
+        public bool FontStrikeThrough { get; set; }
+
+        public string LabelHorizontalAlignment { get; set; } = "Left";   // Left/Center/Right
+        public string TextAlignment { get; set; } = "Left";              // Left/Center/Right
     }
+
 }

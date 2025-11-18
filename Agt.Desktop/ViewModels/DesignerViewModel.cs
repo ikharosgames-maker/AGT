@@ -245,9 +245,26 @@ namespace Agt.Desktop.ViewModels
                     Background = it.Background,
                     Foreground = it.Foreground,
                     FontFamily = it.FontFamily,
-                    FontSize = it.FontSize
+                    FontSize = it.FontSize,
+
+                    // nové vlastnosti
+                    Placeholder = it.Placeholder,
+                    Required = it.Required,
+                    LabelForeground = it.LabelForeground,
+                    LabelBackground = it.LabelBackground,
+                    LabelBold = it.LabelBold,
+                    LabelItalic = it.LabelItalic,
+                    LabelUnderline = it.LabelUnderline,
+                    LabelStrikeThrough = it.LabelStrikeThrough,
+                    FontBold = it.FontBold,
+                    FontItalic = it.FontItalic,
+                    FontUnderline = it.FontUnderline,
+                    FontStrikeThrough = it.FontStrikeThrough,
+                    LabelHorizontalAlignment = it.LabelHorizontalAlignment,
+                    TextAlignment = it.TextAlignment
                 });
             }
+
 
             return def;
         }
@@ -283,9 +300,24 @@ namespace Agt.Desktop.ViewModels
                     i.Background,
                     i.Foreground,
                     i.FontFamily,
-                    i.FontSize
+                    i.FontSize,
+                    i.LabelForeground,
+                    i.LabelBackground,
+                    i.LabelBold,
+                    i.LabelItalic,
+                    i.LabelUnderline,
+                    i.LabelStrikeThrough,
+                    i.FontBold,
+                    i.FontItalic,
+                    i.FontUnderline,
+                    i.FontStrikeThrough,
+                    i.LabelHorizontalAlignment,
+                    i.TextAlignment,
+                    i.Placeholder,
+                    i.Required
                 ))
                 .ToArray();
+
 
             var dto = new Dto(
                 definition.BlockId,
@@ -344,21 +376,35 @@ namespace Agt.Desktop.ViewModels
         }
 
         public sealed record ItemDto(
-    string TypeKey,
-    Guid Id,
-    string Name,
-    string FieldKey,
-    string Label,
-    double X,
-    double Y,
-    double Width,
-    double Height,
-    int ZIndex,
-    string? DefaultValue,
-    string Background,
-    string Foreground,
-    string FontFamily,
-    double FontSize);
+            string TypeKey,
+            Guid Id,
+            string Name,
+            string FieldKey,
+            string Label,
+            double X,
+            double Y,
+            double Width,
+            double Height,
+            int ZIndex,
+            string? DefaultValue,
+            string Background,
+            string Foreground,
+            string FontFamily,
+            double FontSize,
+            string LabelForeground,
+            string LabelBackground,
+            bool LabelBold,
+            bool LabelItalic,
+            bool LabelUnderline,
+            bool LabelStrikeThrough,
+            bool FontBold,
+            bool FontItalic,
+            bool FontUnderline,
+            bool FontStrikeThrough,
+            string LabelHorizontalAlignment,
+            string TextAlignment,
+            string Placeholder,
+            bool Required);
 
         public sealed record Dto(
             Guid BlockId,
@@ -367,6 +413,7 @@ namespace Agt.Desktop.ViewModels
             bool ShowGrid,
             bool SnapToGrid,
             ItemDto[] Items);
+
 
         private Task OnDeleteAsync()
         {
@@ -402,7 +449,6 @@ namespace Agt.Desktop.ViewModels
             StatusText = "Hromadná změna aplikována.";
         }
 
-
         private static string BrushToString(Brush b)
         {
             if (b is SolidColorBrush scb) return scb.Color.ToString();
@@ -413,21 +459,67 @@ namespace Agt.Desktop.ViewModels
             try { return (Brush)new BrushConverter().ConvertFromString(s)!; }
             catch { return Brushes.Transparent; }
         }
+        private static string AlignmentToString(HorizontalAlignment alignment)
+    => alignment.ToString();
+
+        private static HorizontalAlignment StringToAlignment(string s)
+            => Enum.TryParse<HorizontalAlignment>(s, out var value) ? value : HorizontalAlignment.Left;
+
+        private static string TextAlignmentToString(TextAlignment alignment)
+            => alignment.ToString();
+
+        private static TextAlignment StringToTextAlignment(string s)
+            => Enum.TryParse<TextAlignment>(s, out var value) ? value : TextAlignment.Left;
+
 
         public Dto ExportToDto()
         {
             var b = CurrentBlock ?? new Block { Id = Guid.Empty, Name = "" };
-            return new Dto(b.Id, b.Name, GridSize, ShowGrid, SnapToGrid,
+            return new Dto(
+                b.Id,
+                b.Name,
+                GridSize,
+                ShowGrid,
+                SnapToGrid,
                 Items.Select(i => new ItemDto(
-                    i.TypeKey, i.Id, i.Name, i.FieldKey, i.Label, i.X, i.Y, i.Width, i.Height, i.ZIndex, i.DefaultValue,
-                    BrushToString(i.Background), BrushToString(i.Foreground), i.FontFamily, i.FontSize
+                    i.TypeKey,
+                    i.Id,
+                    i.Name,
+                    i.FieldKey,
+                    i.Label,
+                    i.X,
+                    i.Y,
+                    i.Width,
+                    i.Height,
+                    i.ZIndex,
+                    i.DefaultValue,
+                    BrushToString(i.Background),
+                    BrushToString(i.Foreground),
+                    i.FontFamily,
+                    i.FontSize,
+                    BrushToString(i.LabelForeground),
+                    BrushToString(i.LabelBackground),
+                    i.LabelBold,
+                    i.LabelItalic,
+                    i.LabelUnderline,
+                    i.LabelStrikeThrough,
+                    i.FontBold,
+                    i.FontItalic,
+                    i.FontUnderline,
+                    i.FontStrikeThrough,
+                    AlignmentToString(i.LabelHorizontalAlignment),
+                    TextAlignmentToString(i.TextAlignment),
+                    i.Placeholder,
+                    i.Required
                 )).ToArray());
         }
 
         public void ImportFromDto(Dto dto)
         {
             CurrentBlock = new Block { Id = dto.BlockId, Name = dto.BlockName };
-            GridSize = dto.GridSize; ShowGrid = dto.ShowGrid; SnapToGrid = dto.SnapToGrid;
+            GridSize = dto.GridSize;
+            ShowGrid = dto.ShowGrid;
+            SnapToGrid = dto.SnapToGrid;
 
             Items.Clear();
             foreach (var it in dto.Items)
@@ -440,13 +532,40 @@ namespace Agt.Desktop.ViewModels
                 created.Width = it.Width;
                 created.Height = it.Height;
                 created.ZIndex = it.ZIndex;
-                created.DefaultValue = it.DefaultValue ?? "";
+                created.DefaultValue = it.DefaultValue ?? string.Empty;
+
+                // Vzhled vstupu
                 created.Background = StringToBrush(it.Background);
                 created.Foreground = StringToBrush(it.Foreground);
                 created.FontFamily = it.FontFamily;
                 created.FontSize = it.FontSize;
+
+                // Vzhled labelu
+                created.LabelForeground = StringToBrush(it.LabelForeground);
+                created.LabelBackground = StringToBrush(it.LabelBackground);
+
+                created.LabelBold = it.LabelBold;
+                created.LabelItalic = it.LabelItalic;
+                created.LabelUnderline = it.LabelUnderline;
+                created.LabelStrikeThrough = it.LabelStrikeThrough;
+
+                // Vzhled textu
+                created.FontBold = it.FontBold;
+                created.FontItalic = it.FontItalic;
+                created.FontUnderline = it.FontUnderline;
+                created.FontStrikeThrough = it.FontStrikeThrough;
+
+                // Zarovnání
+                created.LabelHorizontalAlignment = StringToAlignment(it.LabelHorizontalAlignment);
+                created.TextAlignment = StringToTextAlignment(it.TextAlignment);
+
+                // Placeholder / Required
+                created.Placeholder = it.Placeholder ?? string.Empty;
+                created.Required = it.Required;
+
                 Items.Add(created);
             }
+
             StatusText = $"Načten blok {CurrentBlock.Name}";
         }
 
