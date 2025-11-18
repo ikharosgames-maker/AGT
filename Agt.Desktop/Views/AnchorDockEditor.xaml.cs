@@ -76,9 +76,6 @@ namespace Agt.Desktop.Views
             if (btn == BtnRight) a ^= AnchorSides.Right;
             if (btn == BtnBottom) a ^= AnchorSides.Bottom;
 
-            // nikdy nenech prázdné — vrať default Left|Top
-            if (a == AnchorSides.None)
-                a = AnchorSides.Left | AnchorSides.Top;
 
             Anchor = a;
             RefreshAnchorButtons();

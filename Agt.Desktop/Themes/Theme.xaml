@@ -22,7 +22,8 @@
                    Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
     <SolidColorBrush x:Key="AppDisabledTextBrush"
                    Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
-
+    <SolidColorBrush x:Key="AppInputBackgroundBrush"
+                   Color="{DynamicResource {x:Static SystemColors.ControlLightColorKey}}"/>
     <!-- Doplneno: placeholder + selection/caret -->
     <SolidColorBrush x:Key="AppPlaceholderBrush"
                  Color="{DynamicResource {x:Static SystemColors.ControlTextColorKey}}"

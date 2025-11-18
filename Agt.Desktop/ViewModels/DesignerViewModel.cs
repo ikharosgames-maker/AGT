@@ -68,13 +68,15 @@ namespace Agt.Desktop.ViewModels
         public string? BulkFieldKey { get => _bulkFieldKey; set => SetProperty(ref _bulkFieldKey, value); }
         public Brush? BulkBackground { get => _bulkBackground; set => SetProperty(ref _bulkBackground, value); }
         public Brush? BulkForeground { get => _bulkForeground; set => SetProperty(ref _bulkForeground, value); }
+        public Brush? BulkLabelForeground { get => _bulkLabelForeground; set => SetProperty(ref _bulkLabelForeground, value); }
+        public Brush? BulkLabelBackground { get => _bulkLabelBackground; set => SetProperty(ref _bulkLabelBackground, value); }
         public string? BulkFontFamily { get => _bulkFontFamily; set => SetProperty(ref _bulkFontFamily, value); }
         public double? BulkFontSize { get => _bulkFontSize; set => SetProperty(ref _bulkFontSize, value); }
         public double? BulkWidth { get => _bulkWidth; set => SetProperty(ref _bulkWidth, value); }
         public double? BulkHeight { get => _bulkHeight; set => SetProperty(ref _bulkHeight, value); }
 
         private string? _bulkName, _bulkLabel, _bulkFieldKey, _bulkFontFamily;
-        private Brush? _bulkBackground, _bulkForeground;
+        private Brush? _bulkBackground, _bulkForeground, _bulkLabelForeground, _bulkLabelBackground;
         private double? _bulkFontSize, _bulkWidth, _bulkHeight;
 
         private readonly FieldCatalogService _catalog;
@@ -375,7 +377,7 @@ namespace Agt.Desktop.ViewModels
             return Task.CompletedTask;
         }
 
-        private void ApplyBulk()
+        void ApplyBulk()
         {
             var selected = _selection.SelectedItems.OfType<FieldComponentBase>().ToList();
             if (selected.Count < 2) return;
@@ -385,8 +387,12 @@ namespace Agt.Desktop.ViewModels
                 if (BulkName != null) it.Name = BulkName;
                 if (BulkLabel != null) it.Label = BulkLabel;
                 if (BulkFieldKey != null) it.FieldKey = BulkFieldKey;
+
                 if (BulkBackground != null) it.Background = BulkBackground;
                 if (BulkForeground != null) it.Foreground = BulkForeground;
+                if (BulkLabelForeground != null) it.LabelForeground = BulkLabelForeground;
+                if (BulkLabelBackground != null) it.LabelBackground = BulkLabelBackground;
+
                 if (BulkFontFamily != null) it.FontFamily = BulkFontFamily;
                 if (BulkFontSize.HasValue) it.FontSize = BulkFontSize.Value;
                 if (BulkWidth.HasValue) it.Width = BulkWidth.Value;
@@ -395,6 +401,7 @@ namespace Agt.Desktop.ViewModels
 
             StatusText = "Hromadná změna aplikována.";
         }
+
 
         private static string BrushToString(Brush b)
         {

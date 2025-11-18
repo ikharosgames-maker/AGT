@@ -8,12 +8,13 @@ namespace Agt.Desktop.Services
     public static class FieldFactory
     {
         private static readonly Brush DefaultForeground = Brushes.Black;
+        private static readonly Brush DefaultBackground = (Brush)App.Current.FindResource("AppInputBackgroundBrush");
         private const string DefaultFontFamily = "Segoe UI";
         private const double DefaultFontSize = 12;
 
         private static T ApplyVisuals<T>(T c) where T : FieldComponentBase
         {
-            // Background ponecháváme (default = Transparent)
+            c.Background = DefaultBackground.CloneCurrentValue();
             c.Foreground = DefaultForeground.Clone();
             c.FontFamily = DefaultFontFamily;
             c.FontSize = DefaultFontSize;
@@ -174,6 +175,6 @@ namespace Agt.Desktop.Services
             => ApplyVisuals(new CheckBoxField { Label = label, IsCheckedDefault = isChecked, Width = 220, Height = 40 });
 
         public static LabelField CreateLabel(string text = "")
-            => ApplyVisuals(new LabelField { Label = text, Width = 220, Height = 40 });
+            => ApplyVisuals(new LabelField { Label = text, Width = 220, Height = 24 });
     }
 }

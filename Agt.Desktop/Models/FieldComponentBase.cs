@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Media;
 
 namespace Agt.Desktop.Models
@@ -158,7 +159,183 @@ namespace Agt.Desktop.Models
         }
 
         // ---------- Vzhled ----------
-        private Brush _background = Brushes.Transparent; // výchozí: transparent (uživatel může kdykoli nastavit barvu)
+        // Label – barvy
+        private Brush _labelForeground;
+        public Brush LabelForeground
+        {
+            get => _labelForeground ?? Foreground;
+            set
+            {
+                if (!ReferenceEquals(_labelForeground, value))
+                {
+                    _labelForeground = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private Brush _labelBackground = Brushes.Transparent;
+        public Brush LabelBackground
+        {
+            get => _labelBackground;
+            set
+            {
+                if (!ReferenceEquals(_labelBackground, value))
+                {
+                    _labelBackground = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // Label – styl písma
+        private bool _labelBold;
+        public bool LabelBold
+        {
+            get => _labelBold;
+            set
+            {
+                if (_labelBold != value)
+                {
+                    _labelBold = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _labelItalic;
+        public bool LabelItalic
+        {
+            get => _labelItalic;
+            set
+            {
+                if (_labelItalic != value)
+                {
+                    _labelItalic = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _labelUnderline;
+        public bool LabelUnderline
+        {
+            get => _labelUnderline;
+            set
+            {
+                if (_labelUnderline != value)
+                {
+                    _labelUnderline = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _labelStrikeThrough;
+        public bool LabelStrikeThrough
+        {
+            get => _labelStrikeThrough;
+            set
+            {
+                if (_labelStrikeThrough != value)
+                {
+                    _labelStrikeThrough = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // Obsah – styl písma (TextBox, TextArea, atd.)
+        private bool _fontBold;
+        public bool FontBold
+        {
+            get => _fontBold;
+            set
+            {
+                if (_fontBold != value)
+                {
+                    _fontBold = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _fontItalic;
+        public bool FontItalic
+        {
+            get => _fontItalic;
+            set
+            {
+                if (_fontItalic != value)
+                {
+                    _fontItalic = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _fontUnderline;
+        public bool FontUnderline
+        {
+            get => _fontUnderline;
+            set
+            {
+                if (_fontUnderline != value)
+                {
+                    _fontUnderline = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _fontStrikeThrough;
+        public bool FontStrikeThrough
+        {
+            get => _fontStrikeThrough;
+            set
+            {
+                if (_fontStrikeThrough != value)
+                {
+                    _fontStrikeThrough = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        // Zarovnání labelu a textu
+        private HorizontalAlignment _labelHorizontalAlignment = HorizontalAlignment.Left;
+        /// <summary>
+        /// Zarovnání labelu uvnitř jeho prostoru (Left/Center/Right).
+        /// </summary>
+        public HorizontalAlignment LabelHorizontalAlignment
+        {
+            get => _labelHorizontalAlignment;
+            set
+            {
+                if (_labelHorizontalAlignment != value)
+                {
+                    _labelHorizontalAlignment = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private TextAlignment _textAlignment = TextAlignment.Left;
+        /// <summary>
+        /// Zarovnání textu uvnitř vstupního pole (Left/Center/Right).
+        /// </summary>
+        public TextAlignment TextAlignment
+        {
+            get => _textAlignment;
+            set
+            {
+                if (_textAlignment != value)
+                {
+                    _textAlignment = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        private Brush _background = (Brush)App.Current.FindResource("AppInputBackgroundBrush"); // výchozí: transparent (uživatel může kdykoli nastavit barvu)
         public Brush Background
         {
             get => _background;
