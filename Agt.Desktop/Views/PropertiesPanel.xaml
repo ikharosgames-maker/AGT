@@ -47,7 +47,11 @@
                     <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Text="Písmo (FontFamily)"/>
-                    <TextBox Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}"/>
+                    <ComboBox ItemsSource="{x:Static Fonts.SystemFontFamilies}"
+                              DisplayMemberPath="Source"
+                              SelectedValuePath="Source"
+                              IsEditable="True"
+                              SelectedValue="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Text="Velikost písma"/>
                     <TextBox Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}"/>
@@ -236,7 +240,11 @@
                     <TextBox Text="{Binding BulkFieldKey, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Text="Písmo (FontFamily)"/>
-                    <TextBox Text="{Binding BulkFontFamily, UpdateSourceTrigger=PropertyChanged}"/>
+                    <ComboBox ItemsSource="{x:Static Fonts.SystemFontFamilies}"
+                              DisplayMemberPath="Source"
+                              SelectedValuePath="Source"
+                              IsEditable="True"
+                              SelectedValue="{Binding BulkFontFamily, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Text="Velikost písma"/>
                     <TextBox Text="{Binding BulkFontSize, UpdateSourceTrigger=PropertyChanged}"/>
