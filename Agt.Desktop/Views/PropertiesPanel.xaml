@@ -34,18 +34,137 @@
                     <TextBlock Text="Typ"/>
                     <TextBlock Text="{Binding TypeKey}"/>
 
-                    <TextBlock Text="Popisek (Label)"/>
-                    <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"/>
+                    <!-- Label – řídí se CanEditLabel (aktuálně všude true, ale připraveno) -->
+                    <TextBlock Text="Popisek (Label)">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditLabel}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditLabel}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
 
-                    <TextBlock Text="Placeholder"/>
-                    <TextBox Text="{Binding Placeholder, UpdateSourceTrigger=PropertyChanged}"/>
+                    <!-- Placeholder -->
+                    <TextBlock Text="Placeholder">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditPlaceholder}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBox Text="{Binding Placeholder, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditPlaceholder}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
 
-                    <TextBlock Text="Povinné"/>
-                    <CheckBox IsChecked="{Binding Required, UpdateSourceTrigger=PropertyChanged}"/>
+                    <!-- Required -->
+                    <TextBlock Text="Povinné">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditRequired}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <CheckBox IsChecked="{Binding Required, UpdateSourceTrigger=PropertyChanged}">
+                        <CheckBox.Style>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditRequired}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </CheckBox.Style>
+                    </CheckBox>
 
-                    <TextBlock Text="Výchozí hodnota"/>
-                    <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"/>
+                    <!-- Výchozí hodnota (text) -->
+                    <TextBlock Text="Výchozí hodnota">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditDefaultValue}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditDefaultValue}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
 
+                    <!-- Checkbox-specific: Checked -->
+                    <TextBlock Text="Zaškrtnuto (výchozí)">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasCheckedState}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <CheckBox IsChecked="{Binding Checked, UpdateSourceTrigger=PropertyChanged}">
+                        <CheckBox.Style>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasCheckedState}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </CheckBox.Style>
+                    </CheckBox>
+
+                    <!-- Font -->
                     <TextBlock Text="Písmo (FontFamily)"/>
                     <ComboBox ItemsSource="{x:Static Fonts.SystemFontFamilies}"
                               DisplayMemberPath="Source"
@@ -56,18 +175,62 @@
                     <TextBlock Text="Velikost písma"/>
                     <TextBox Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <!-- Zarovnání -->
-                    <TextBlock Text="Zarovnání labelu"/>
+                    <!-- Zarovnání labelu -->
+                    <TextBlock Text="Zarovnání labelu">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditLabelAlignment}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                     <ComboBox SelectedValue="{Binding LabelHorizontalAlignment}"
                               SelectedValuePath="Tag">
+                        <ComboBox.Style>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditLabelAlignment}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.Style>
                         <ComboBoxItem Content="Vlevo" Tag="Left"/>
                         <ComboBoxItem Content="Na střed" Tag="Center"/>
                         <ComboBoxItem Content="Vpravo" Tag="Right"/>
                     </ComboBox>
 
-                    <TextBlock Text="Zarovnání textu"/>
+                    <!-- Zarovnání textu -->
+                    <TextBlock Text="Zarovnání textu">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditTextAlignment}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
                     <ComboBox SelectedValue="{Binding TextAlignment}"
                               SelectedValuePath="Tag">
+                        <ComboBox.Style>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanEditTextAlignment}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.Style>
                         <ComboBoxItem Content="Vlevo" Tag="Left"/>
                         <ComboBoxItem Content="Na střed" Tag="Center"/>
                         <ComboBoxItem Content="Vpravo" Tag="Right"/>
@@ -222,7 +385,7 @@
                             Content="{Binding SelectedItem}"
                             ContentTemplate="{StaticResource Props.Root}"/>
 
-            <!-- Více položek -->
+            <!-- Více položek – beze změny kromě font ComboBoxu -->
             <StackPanel Visibility="{Binding SelectedCount,
                                              Converter={StaticResource GeVis},
                                              ConverterParameter=2}">

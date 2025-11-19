@@ -6,7 +6,9 @@
     xmlns:views="clr-namespace:Agt.Desktop.Views"
     xmlns:beh="clr-namespace:Agt.Desktop.Behaviors">
 
-    <!-- LABEL STYLE -->
+    <!-- ====== ZÁKLADNÍ STYLY ====== -->
+
+    <!-- Společný styl pro všechny labely polí -->
     <Style x:Key="Field_Label" TargetType="TextBlock">
         <Setter Property="Margin" Value="0,0,0,2"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
@@ -14,10 +16,10 @@
         <Setter Property="Background" Value="{Binding LabelBackground}"/>
         <Setter Property="FontFamily" Value="{Binding FontFamily}"/>
         <Setter Property="FontSize" Value="{Binding FontSize}"/>
-        <Setter Property="HorizontalAlignment" Value="{Binding LabelHorizontalAlignment}"/>
         <Setter Property="FontWeight" Value="Normal"/>
         <Setter Property="FontStyle" Value="Normal"/>
         <Setter Property="TextDecorations" Value="{x:Null}"/>
+        <Setter Property="HorizontalAlignment" Value="{Binding LabelHorizontalAlignment}"/>
 
         <Style.Triggers>
             <DataTrigger Binding="{Binding LabelBold}" Value="True">
@@ -35,7 +37,6 @@
         </Style.Triggers>
     </Style>
 
-    <!-- HOST BORDER (aktuálně nepoužitý, ale nechávám pro případné obalení) -->
     <Style x:Key="Field_BackgroundHost" TargetType="Border">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
@@ -44,7 +45,6 @@
         <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
 
-    <!-- BASE INPUT -->
     <Style x:Key="Field_InputBase" TargetType="Control">
         <Setter Property="Margin" Value="0"/>
         <Setter Property="Padding" Value="6,2"/>
@@ -55,7 +55,7 @@
         <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
 
-    <!-- TEXTBOX BASE + WATERMARK (placeholder přes Tag) -->
+    <!-- TextBox s watermarkem -->
     <Style x:Key="Field_TextBox" TargetType="TextBox" BasedOn="{StaticResource Field_InputBase}">
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment"   Value="Stretch"/>
@@ -64,9 +64,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Grid>
-                        <Border BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Background="{TemplateBinding Background}">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
                             <ScrollViewer x:Name="PART_ContentHost"/>
                         </Border>
                         <TextBlock x:Name="Watermark"
@@ -95,22 +95,19 @@
         </Setter>
     </Style>
 
-    <!-- TEXTAREA BASE -->
     <Style x:Key="Field_TextArea" TargetType="TextBox" BasedOn="{StaticResource Field_TextBox}">
         <Setter Property="AcceptsReturn"               Value="True"/>
         <Setter Property="TextWrapping"                Value="Wrap"/>
         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
         <Setter Property="VerticalContentAlignment"    Value="Top"/>
-        <Setter Property="TextAlignment"               Value="Left"/>
     </Style>
 
-    <!-- COMBOBOX BASE -->
+    <!-- ComboBox + watermark -->
     <Style x:Key="Field_ComboBox" TargetType="ComboBox" BasedOn="{StaticResource Field_InputBase}">
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment"   Value="Stretch"/>
         <Setter Property="IsEditable"          Value="False"/>
         <Setter Property="BorderBrush"         Value="{DynamicResource AppBorderBrush}"/>
-        <Setter Property="Background"          Value="{DynamicResource AppInputBackgroundBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
@@ -120,6 +117,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="2"/>
+
                         <ContentPresenter x:Name="ContentSite"
                                           Margin="6,2,22,2"
                                           VerticalAlignment="Center"
@@ -128,6 +126,18 @@
                                           Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+
+                        <!-- watermark pro ne-edit mód -->
+                        <TextBlock x:Name="Watermark"
+                                   Margin="6,2,22,2"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Left"
+                                   Foreground="{DynamicResource AppTextBrush}"
+                                   Opacity="0.4"
+                                   IsHitTestVisible="False"
+                                   Visibility="Collapsed"
+                                   Text="{TemplateBinding Tag}"/>
+
                         <ToggleButton x:Name="DropDownToggle"
                                       Grid.ZIndex="1"
                                       Focusable="False"
@@ -139,10 +149,10 @@
                             <Path Data="M 0 0 L 4 4 L 8 0 Z"
                                   Stretch="Uniform"
                                   Width="10" Height="6"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
                                   Fill="{TemplateBinding Foreground}"/>
                         </ToggleButton>
+
                         <Popup x:Name="PART_Popup"
                                Placement="Bottom"
                                IsOpen="{TemplateBinding IsDropDownOpen}"
@@ -157,18 +167,31 @@
                                 </ScrollViewer>
                             </Border>
                         </Popup>
+
                         <TextBox x:Name="PART_EditableTextBox"
                                  Visibility="Hidden"
                                  Background="{TemplateBinding Background}"
                                  Foreground="{TemplateBinding Foreground}"
                                  BorderThickness="0"
-                                 Margin="6,2,22,2"/>
+                                 Margin="6,2,22,2"
+                                 Tag="{TemplateBinding Tag}"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsEditable" Value="True">
                             <Setter TargetName="ContentSite" Property="Visibility" Value="Hidden"/>
                             <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="Watermark" Property="Visibility" Value="Collapsed"/>
                         </Trigger>
+
+                        <!-- watermark pro ne-edit mód -->
+                        <Trigger Property="SelectedItem" Value="{x:Null}">
+                            <Setter TargetName="Watermark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Watermark" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
                         </Trigger>
@@ -181,7 +204,6 @@
         </Setter>
     </Style>
 
-    <!-- DATEPICKER BASE -->
     <Style x:Key="Field_DatePicker" TargetType="DatePicker" BasedOn="{StaticResource Field_InputBase}">
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment"   Value="Stretch"/>
@@ -190,7 +212,6 @@
         <Setter Property="BorderThickness"     Value="1"/>
     </Style>
 
-    <!-- CHECKBOX BASE -->
     <Style x:Key="Field_CheckBox" TargetType="CheckBox" BasedOn="{StaticResource Field_InputBase}">
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template">
@@ -198,8 +219,8 @@
                 <ControlTemplate TargetType="CheckBox">
                     <StackPanel Orientation="Horizontal"
                                 VerticalAlignment="Center"
-                                Margin="0">
-                        <Grid Width="16" Height="16" Margin="0,0,4,0">
+                                Margin="4,0,0,0">
+                        <Grid Width="16" Height="16" Margin="0,0,6,0">
                             <Border x:Name="Box"
                                     CornerRadius="2"
                                     BorderThickness="1"
@@ -229,9 +250,9 @@
         </Setter>
     </Style>
 
-    <!-- ===== DATATEMPLATES ===== -->
+    <!-- ====== DATATEMPLATES ====== -->
 
-    <!-- LabelField -->
+    <!-- Label -->
     <DataTemplate DataType="{x:Type mdl:LabelField}">
         <Border Width="{Binding Width}"
                 Height="{Binding Height}"
@@ -246,7 +267,7 @@
         </Border>
     </DataTemplate>
 
-    <!-- TextBoxField -->
+    <!-- TextBox -->
     <DataTemplate DataType="{x:Type mdl:TextBoxField}">
         <Grid Width="{Binding Width}"
               Height="{Binding Height}">
@@ -254,11 +275,9 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-
             <TextBlock Grid.Row="0"
                        Style="{StaticResource Field_Label}"
                        Text="{Binding Label}"/>
-
             <TextBox Grid.Row="1"
                      Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                      Tag="{Binding Placeholder}"
@@ -290,7 +309,7 @@
         </Grid>
     </DataTemplate>
 
-    <!-- TextAreaField -->
+    <!-- TextArea -->
     <DataTemplate DataType="{x:Type mdl:TextAreaField}">
         <Grid Width="{Binding Width}"
               Height="{Binding Height}">
@@ -298,11 +317,9 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-
             <TextBlock Grid.Row="0"
                        Style="{StaticResource Field_Label}"
                        Text="{Binding Label}"/>
-
             <TextBox Grid.Row="1"
                      Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                      Tag="{Binding Placeholder}"
@@ -334,26 +351,24 @@
         </Grid>
     </DataTemplate>
 
-    <!-- NumberField -->
+    <!-- Number -->
     <DataTemplate DataType="{x:Type mdl:NumberField}">
         <Grid Width="{Binding Width}" Height="{Binding Height}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-
             <TextBlock Grid.Row="0"
                        Style="{StaticResource Field_Label}"
                        Text="{Binding Label}"/>
-
             <TextBox Grid.Row="1"
-                     Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Tag="{Binding Placeholder}"
-                     TextAlignment="{Binding TextAlignment}"
                      Background="{Binding Background}"
                      Foreground="{Binding Foreground}"
                      FontFamily="{Binding FontFamily}"
                      FontSize="{Binding FontSize}"
+                     TextAlignment="{Binding TextAlignment}"
+                     Tag="{Binding Placeholder}"
+                     Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      beh:NumericBox.IsEnabled="True"
                      beh:NumericBox.AllowDecimal="{Binding AllowDecimal, FallbackValue=True}"
                      beh:NumericBox.AllowNegative="{Binding AllowNegative, FallbackValue=True}">
@@ -361,18 +376,6 @@
                     <Style TargetType="TextBox" BasedOn="{StaticResource Field_TextBox}">
                         <Setter Property="BorderThickness" Value="1"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding FontBold}" Value="True">
-                                <Setter Property="FontWeight" Value="Bold"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontItalic}" Value="True">
-                                <Setter Property="FontStyle" Value="Italic"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontUnderline}" Value="True">
-                                <Setter Property="TextDecorations" Value="Underline"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontStrikeThrough}" Value="True">
-                                <Setter Property="TextDecorations" Value="Strikethrough"/>
-                            </DataTrigger>
                             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl},
                                                            Path=(views:RenderModeHelper.Mode)}"
                                          Value="{x:Static mdl:RenderMode.ReadOnly}">
@@ -387,7 +390,7 @@
         </Grid>
     </DataTemplate>
 
-    <!-- DateField -->
+    <!-- Date (upraveno: Border + Stretch + watermark) -->
     <DataTemplate DataType="{x:Type mdl:DateField}">
         <Grid Width="{Binding Width}" Height="{Binding Height}">
             <Grid.RowDefinitions>
@@ -399,60 +402,95 @@
                        Style="{StaticResource Field_Label}"
                        Text="{Binding Label}"/>
 
-            <DatePicker Grid.Row="1"
-                        Style="{StaticResource Field_DatePicker}"
-                        Background="{Binding Background}"
-                        Foreground="{Binding Foreground}"
-                        SelectedDate="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                <DatePicker.Resources>
-                    <Style TargetType="DatePickerTextBox">
-                        <Setter Property="Background"     Value="{Binding Background}"/>
-                        <Setter Property="Foreground"     Value="{Binding Foreground}"/>
-                        <Setter Property="FontFamily"     Value="{Binding FontFamily}"/>
-                        <Setter Property="FontSize"       Value="{Binding FontSize}"/>
-                        <Setter Property="TextAlignment"  Value="{Binding TextAlignment}"/>
-                        <Setter Property="BorderBrush"    Value="{DynamicResource AppBorderBrush}"/>
-                        <Setter Property="BorderThickness" Value="1"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding FontBold}" Value="True">
-                                <Setter Property="FontWeight" Value="Bold"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontItalic}" Value="True">
-                                <Setter Property="FontStyle" Value="Italic"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontUnderline}" Value="True">
-                                <Setter Property="TextDecorations" Value="Underline"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontStrikeThrough}" Value="True">
-                                <Setter Property="TextDecorations" Value="Strikethrough"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </DatePicker.Resources>
-            </DatePicker>
+            <!-- host, aby se datepicker roztáhl -->
+            <Border Grid.Row="1"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                <DatePicker HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Background="{Binding Background}"
+                            Foreground="{Binding Foreground}"
+                            SelectedDate="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <DatePicker.Resources>
+                        <Style TargetType="DatePickerTextBox">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DatePickerTextBox">
+                                        <Grid>
+                                            <Border x:Name="border"
+                                                    Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"/>
+                                            <ScrollViewer x:Name="PART_ContentHost"
+                                                          Margin="3,0,3,0"/>
+                                            <!-- watermark -->
+                                            <TextBlock x:Name="Watermark"
+                                                       Margin="6,2,4,2"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Left"
+                                                       Foreground="{DynamicResource AppTextBrush}"
+                                                       Opacity="0.4"
+                                                       IsHitTestVisible="False"
+                                                       Visibility="Collapsed"
+                                                       Text="{Binding Placeholder}"/>
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="Text" Value="">
+                                                <Setter TargetName="Watermark" Property="Visibility" Value="Visible"/>
+                                            </Trigger>
+                                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                                <Setter TargetName="Watermark" Property="Visibility" Value="Collapsed"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+
+                            <Setter Property="Background"      Value="{Binding Background}"/>
+                            <Setter Property="Foreground"      Value="{Binding Foreground}"/>
+                            <Setter Property="FontFamily"      Value="{Binding FontFamily}"/>
+                            <Setter Property="FontSize"        Value="{Binding FontSize}"/>
+                            <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                        </Style>
+                    </DatePicker.Resources>
+                    <DatePicker.Style>
+                        <Style TargetType="DatePicker" BasedOn="{StaticResource Field_DatePicker}">
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl},
+                                                               Path=(views:RenderModeHelper.Mode)}"
+                                             Value="{x:Static mdl:RenderMode.ReadOnly}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="Focusable" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DatePicker.Style>
+                </DatePicker>
+            </Border>
         </Grid>
     </DataTemplate>
 
-    <!-- ComboBoxField -->
+    <!-- ComboBox -->
     <DataTemplate DataType="{x:Type mdl:ComboBoxField}">
         <Grid Width="{Binding Width}" Height="{Binding Height}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-
             <TextBlock Grid.Row="0"
                        Style="{StaticResource Field_Label}"
                        Text="{Binding Label}"/>
-
             <ComboBox Grid.Row="1"
-                      ItemsSource="{Binding Options}"
-                      SelectedItem="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                      IsEditable="{Binding IsEditable}"
                       Background="{Binding Background}"
                       Foreground="{Binding Foreground}"
                       FontFamily="{Binding FontFamily}"
-                      FontSize="{Binding FontSize}">
+                      FontSize="{Binding FontSize}"
+                      ItemsSource="{Binding Options}"
+                      SelectedItem="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      IsEditable="{Binding IsEditable}"
+                      Tag="{Binding Placeholder}">
                 <ComboBox.Style>
                     <Style TargetType="ComboBox" BasedOn="{StaticResource Field_ComboBox}">
                         <Style.Triggers>
@@ -469,14 +507,13 @@
         </Grid>
     </DataTemplate>
 
-    <!-- CheckBoxField -->
+    <!-- CheckBox -->
     <DataTemplate DataType="{x:Type mdl:CheckBoxField}">
         <Grid Width="{Binding Width}" Height="{Binding Height}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-
             <CheckBox Grid.Column="0"
                       Panel.ZIndex="1"
                       Style="{StaticResource Field_CheckBox}"
@@ -485,11 +522,10 @@
                       FontFamily="{Binding FontFamily}"
                       FontSize="{Binding FontSize}"
                       IsChecked="{Binding IsCheckedDefault, Mode=TwoWay}"/>
-
             <TextBlock Grid.Column="1"
                        Margin="4,0,0,0"
-                       VerticalAlignment="Center"
                        Style="{StaticResource Field_Label}"
+                       VerticalAlignment="Center"
                        Text="{Binding Label}"/>
         </Grid>
     </DataTemplate>

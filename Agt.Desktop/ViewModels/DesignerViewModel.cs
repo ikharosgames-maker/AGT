@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -516,57 +517,119 @@ namespace Agt.Desktop.ViewModels
 
         public void ImportFromDto(Dto dto)
         {
-            CurrentBlock = new Block { Id = dto.BlockId, Name = dto.BlockName };
+            CurrentBlock = new Block
+            {
+                Id = dto.BlockId,
+                Name = dto.BlockName
+            };
+
             GridSize = dto.GridSize;
             ShowGrid = dto.ShowGrid;
             SnapToGrid = dto.SnapToGrid;
 
             Items.Clear();
+
             foreach (var it in dto.Items)
             {
+                // vytvoření komponenty podle TypeKey
                 var created = FieldFactory.Create(it.TypeKey, it.X, it.Y, null);
+
                 created.Id = it.Id;
                 created.Name = it.Name;
                 created.FieldKey = it.FieldKey;
                 created.Label = it.Label;
+
+                created.X = it.X;
+                created.Y = it.Y;
                 created.Width = it.Width;
                 created.Height = it.Height;
                 created.ZIndex = it.ZIndex;
+
                 created.DefaultValue = it.DefaultValue ?? string.Empty;
 
-                // Vzhled vstupu
+                // vizuál
                 created.Background = StringToBrush(it.Background);
                 created.Foreground = StringToBrush(it.Foreground);
                 created.FontFamily = it.FontFamily;
                 created.FontSize = it.FontSize;
 
-                // Vzhled labelu
-                created.LabelForeground = StringToBrush(it.LabelForeground);
-                created.LabelBackground = StringToBrush(it.LabelBackground);
-
-                created.LabelBold = it.LabelBold;
-                created.LabelItalic = it.LabelItalic;
-                created.LabelUnderline = it.LabelUnderline;
-                created.LabelStrikeThrough = it.LabelStrikeThrough;
-
-                // Vzhled textu
-                created.FontBold = it.FontBold;
-                created.FontItalic = it.FontItalic;
-                created.FontUnderline = it.FontUnderline;
-                created.FontStrikeThrough = it.FontStrikeThrough;
-
-                // Zarovnání
-                created.LabelHorizontalAlignment = StringToAlignment(it.LabelHorizontalAlignment);
-                created.TextAlignment = StringToTextAlignment(it.TextAlignment);
-
-                // Placeholder / Required
-                created.Placeholder = it.Placeholder ?? string.Empty;
-                created.Required = it.Required;
+                // aplikace DefaultValue → Value / IsCheckedDefault / SelectedItem podle typu
+                ApplyDefaultValue(created);
 
                 Items.Add(created);
             }
 
-            StatusText = $"Načten blok {CurrentBlock.Name}";
+            StatusText = $"Načten blok {CurrentBlock?.Name}";
+        }
+        private void ApplyDefaultValue(FieldComponentBase created)
+        {
+            var dv = created.DefaultValue;
+
+            // nic nenastavuj, když není co
+            if (string.IsNullOrWhiteSpace(dv))
+                return;
+
+            // podle typu komponenty
+            switch (created.TypeKey.ToLowerInvariant())
+            {
+                // Textové vstupy – drží se jako string v Value
+                case "textbox":
+                case "textarea":
+                case "number":
+                    if (created.Value == null)
+                    {
+                        created.Value = dv;
+                    }
+                    break;
+
+                // Datum – uložíme přímo DateTime do Value (Value je object)
+                case "date":
+                    if (created.Value == null && DateTime.TryParse(dv, out var dt))
+                    {
+                        created.Value = dt;
+                    }
+                    break;
+
+                // ComboBox – najdeme položku podle textu, jinak uložíme string
+                case "combobox":
+                    if (created is ComboBoxField cb)
+                    {
+                        if (cb.Value == null)
+                        {
+                            string dvTrim = dv.Trim();
+                            if (cb.Options != null && cb.Options.Count > 0)
+                            {
+                                var match = cb.Options
+                                    .FirstOrDefault(o =>
+                                        string.Equals(o, dvTrim, StringComparison.OrdinalIgnoreCase));
+
+                                cb.Value = match ?? (object)dvTrim;
+                            }
+                            else
+                            {
+                                cb.Value = dvTrim;
+                            }
+                        }
+                    }
+                    break;
+
+                // CheckBox – DefaultValue → IsCheckedDefault
+                case "checkbox":
+                    if (created is CheckBoxField chb)
+                    {
+                        var norm = dv.Trim().ToLowerInvariant();
+                        chb.IsCheckedDefault =
+                            norm == "1" ||
+                            norm == "true" ||
+                            norm == "yes" ||
+                            norm == "ano";
+                    }
+                    break;
+
+                // Label / ostatní nic
+                default:
+                    break;
+            }
         }
 
         public void AutoLayout()

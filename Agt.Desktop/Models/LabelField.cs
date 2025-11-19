@@ -1,12 +1,26 @@
-﻿namespace Agt.Desktop.Models
+﻿using System.Windows;
+
+namespace Agt.Desktop.Models
 {
     public class LabelField : FieldComponentBase
     {
-        public double FontSize { get; set; } = 14;
-        public LabelField() { TypeKey = "label"; Height = 24; Width = 160; }
+        public override bool CanEditValue => false;
+        public override bool CanEditPlaceholder => false;
+        public override bool CanEditDefaultValue => false;
+        public override bool CanEditRequired => false;
+        public override bool CanEditTextAlignment => false;
+
+        public LabelField()
+        {
+            TypeKey = "label";
+            Width = 120;
+            Height = 24;
+            Label = "Label";
+        }
+
         public override FieldComponentBase Clone()
         {
-            var n = new LabelField
+            var l = new LabelField
             {
                 FieldKey = FieldKey,
                 Label = Label,
@@ -16,9 +30,9 @@
                 Height = Height,
                 ZIndex = ZIndex
             };
-            n.CopyVisualsFrom(this);
-            return n;
-        }
 
+            l.CopyVisualsFrom(this);
+            return l;
+        }
     }
 }

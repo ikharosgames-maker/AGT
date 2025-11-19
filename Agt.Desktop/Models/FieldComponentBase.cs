@@ -16,6 +16,53 @@ namespace Agt.Desktop.Models
 
     public abstract class FieldComponentBase : INotifyPropertyChanged, INotifyDataErrorInfo
     {
+
+        // Capabilities – určují, které vlastnosti/editor se mají v UI zobrazovat
+
+        /// <summary>
+        /// Má smysl editovat hodnotu (Value / DefaultValue) jako text.
+        /// U LabelField např. false.
+        /// </summary>
+        public virtual bool CanEditValue => true;
+
+        /// <summary>
+        /// Má smysl editovat placeholder (watermark).
+        /// </summary>
+        public virtual bool CanEditPlaceholder => true;
+
+        /// <summary>
+        /// Má smysl editovat DefaultValue (string).
+        /// U checkboxu false – má vlastní Checked.
+        /// </summary>
+        public virtual bool CanEditDefaultValue => true;
+
+        /// <summary>
+        /// Má smysl editovat Required.
+        /// </summary>
+        public virtual bool CanEditRequired => true;
+
+        /// <summary>
+        /// Má smysl editovat zarovnání textu (TextAlignment).
+        /// U LabelField / CheckBoxField typicky false.
+        /// </summary>
+        public virtual bool CanEditTextAlignment => true;
+
+        /// <summary>
+        /// Má smysl editovat Label (popisek).
+        /// </summary>
+        public virtual bool CanEditLabel => true;
+
+        /// <summary>
+        /// Má smysl editovat zarovnání labelu.
+        /// </summary>
+        public virtual bool CanEditLabelAlignment => true;
+
+        /// <summary>
+        /// Má komponenta boolean „checked“ stav, který dává smysl editovat?
+        /// </summary>
+        public virtual bool HasCheckedState => false;
+
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -376,6 +423,9 @@ namespace Agt.Desktop.Models
             get => _fontSize;
             set { if (Math.Abs(_fontSize - value) > double.Epsilon) { _fontSize = value; OnPropertyChanged(); } }
         }
+
+
+
 
         // ---------- Ukotvení ----------
         private AnchorSides _anchor = AnchorSides.Left | AnchorSides.Top;
