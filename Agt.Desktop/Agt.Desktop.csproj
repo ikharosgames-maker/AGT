@@ -59,13 +59,13 @@
 		<Page Include="Views\FormCanvas.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
-		<Page Include="Views\FormEditorView.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</Page>
 		<Page Include="Views\FormProcessEditorWindow.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
 		<Page Include="Views\FormRepositoryBrowserWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\NewNameDialogWindow.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
 		<Page Include="Views\NotificationView.xaml">
@@ -105,6 +105,7 @@
 		<Compile Include="Converters\BrushToHexThemeFallbackConverter .cs" />
 		<Compile Include="Converters\ColorStringToBrushConverter.cs" />
 		<Compile Include="Converters\FontFamilyNameConverter.cs" />
+		<Compile Include="Converters\InverseBooleanToVisibilityConverter.cs" />
 		<Compile Include="Converters\NullToUnsetValueConverter .cs" />
 		<Compile Include="Converters\RowsToMinHeightConverter.cs" />
 		<Compile Include="Models\OptionItem.cs" />
@@ -134,9 +135,9 @@
 		<Compile Include="Views\Components\ComponentKeyTemplateSelector.cs" />
 		<Compile Include="Views\Components\ComponentPropertyTemplateSelector.cs" />
 		<Compile Include="Views\Components\ComponentViewerControl.xaml.cs" />
-		<Compile Include="Views\ContrastForegroundConverter.cs" />
 		<Compile Include="Views\FormCanvas.xaml.cs" />
 		<Compile Include="Views\FormRepositoryBrowserWindow.xaml.cs" />
+		<Compile Include="Views\NewNameDialogWindow.xaml.cs" />
 		<Compile Include="Views\PublishFormDialog.xaml.cs" />
 		<Compile Include="Views\RenderModeHelper.cs" />
 		<Compile Include="Views\StageEdgePathConverter.cs" />
@@ -195,8 +196,6 @@
 
 		<Compile Include="Views\FlowDesignerView.xaml.cs" />
 
-		<Compile Include="Views\FormEditorView.xaml.cs" />
-
 		<Compile Include="Views\NotificationView.xaml.cs" />
 		<Compile Include="Views\PropertiesPanel.xaml.cs" />
 		<Compile Include="Views\ComponentLibraryView.xaml.cs" />
@@ -222,9 +221,6 @@
 		<None Include="Data\FieldCatalog.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Views\Adorners\" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\Agt.Application\Agt.Application.csproj" />

@@ -19,15 +19,22 @@ namespace Agt.Desktop.Views
 
         private void NewBlock_OnClick(object sender, RoutedEventArgs e)
         {
-            var dlg = new NewBlockDialog
+            // univerzální dialog jen na jméno bloku
+            var dlg = new NewNameDialogWindow(objectType: "blok", defaultName: "Nový blok")
             {
                 Owner = this,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            if (dlg.ShowDialog() == true && dlg.ResultBlock != null)
+            if (dlg.ShowDialog() == true)
             {
-                VM.NewBlock(dlg.ResultBlock);
+                // GUID je vygenerovaný uvnitř dialogu, ale uživateli se neukazuje
+                var blockId = dlg.IdValue;
+                var name = dlg.NameValue;
+
+                // DesignerViewModel by měl mít metodu typu:
+                // public void NewBlock(Guid blockId, string name)
+                VM.NewBlock(blockId, name);
             }
         }
 
@@ -217,24 +224,31 @@ namespace Agt.Desktop.Views
                 return;
             }
 
-            // 1) Zeptat se na nový název
-            var dlg = new CloneBlockDialog
+            // název pro klon
+            var defaultName = string.IsNullOrWhiteSpace(VM.CurrentBlock.Name)
+                ? "Nový blok"
+                : VM.CurrentBlock.Name + " - kopie";
+
+            var dlg = new NewNameDialogWindow(objectType: "blok", defaultName: defaultName)
             {
                 Owner = this,
-                OriginalName = VM.CurrentBlock.Name
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            if (dlg.ShowDialog() != true || string.IsNullOrWhiteSpace(dlg.NewName))
+            if (dlg.ShowDialog() != true)
                 return;
 
             try
             {
+                var newName = dlg.NameValue;
+                var newId = dlg.IdValue;
+
                 // 2) Export aktuální definice
                 var def = VM.ExportBlockDefinition();
 
-                // 3) Vytvořit "nový" blok: nový BlockId, nový název, verze vynulovaná
-                def.BlockId = Guid.NewGuid();
-                def.BlockName = dlg.NewName.Trim();
+                // 3) „Nový“ blok: nový BlockId, nový název, verze vynulovaná
+                def.BlockId = newId;
+                def.BlockName = string.IsNullOrWhiteSpace(newName) ? "(bez názvu)" : newName.Trim();
                 def.Version = null;                 // první Uložit → 1.0.0
                 def.CreatedBy = Environment.UserName;
                 def.CreatedAt = DateTime.UtcNow;

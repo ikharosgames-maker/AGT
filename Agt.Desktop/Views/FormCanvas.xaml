@@ -2,85 +2,29 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:m="clr-namespace:Agt.Desktop.Models"
-             xmlns:local="clr-namespace:Agt.Desktop.Controls"
+             xmlns:views="clr-namespace:Agt.Desktop.Views"
              x:Name="Root"
              SnapsToDevicePixels="True"
              UseLayoutRounding="True">
 
-    <UserControl.Resources>
-<!-- =======================
-             EDIT šablony
-             ======================= -->
-
-        <!-- LABEL -->
-        
-
-        <!-- TEXTBOX -->
-        
-
-        <!-- TEXTAREA -->
-        
-
-        <!-- NUMBER -->
-        
-
-        <!-- DATE -->
-        
-
-        <!-- COMBO -->
-        
-
-        <!-- CHECKBOX -->
-        
-
-        <!-- =======================
-             READONLY šablony
-             ======================= -->
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        
-
-        <!-- =======================
-             RUN šablony (TwoWay binding na RuntimeData[BindingPath])
-             ======================= -->
-</UserControl.Resources>
-
     <Grid>
-        <!-- Canvas s absolutním layoutem -->
-        <Canvas x:Name="RootCanvas"
-                Width="{Binding CanvasWidth, ElementName=Root}"
-                Height="{Binding CanvasHeight, ElementName=Root}"
-                Background="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}">
+        <ItemsControl Width="{Binding CanvasWidth, ElementName=Root}"
+                      Height="{Binding CanvasHeight, ElementName=Root}"
+                      ItemsSource="{Binding Items, ElementName=Root}"
+                      views:RenderModeHelper.Mode="{Binding Mode, ElementName=Root}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Canvas/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
 
-            <ItemsControl ItemsSource="{Binding Items, ElementName=Root}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Canvas/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemContainerStyle>
-                    <Style TargetType="ContentPresenter">
-                        <Setter Property="Canvas.Left"   Value="{Binding X}"/>
-                        <Setter Property="Canvas.Top"    Value="{Binding Y}"/>
-                        <Setter Property="Panel.ZIndex"  Value="{Binding ZIndex}"/>
-                    </Style>
-                </ItemsControl.ItemContainerStyle>
-                <ItemsControl.ItemTemplateSelector>
-                    <local:FieldTemplateSelector/>
-                </ItemsControl.ItemTemplateSelector>
-            </ItemsControl>
-
-        </Canvas>
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="Canvas.Left"  Value="{Binding X}"/>
+                    <Setter Property="Canvas.Top"   Value="{Binding Y}"/>
+                    <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+        </ItemsControl>
     </Grid>
 </UserControl>

@@ -14,8 +14,8 @@ namespace Agt.Desktop.Services
 
         private static T ApplyVisuals<T>(T c) where T : FieldComponentBase
         {
-            c.Background = DefaultBackground.CloneCurrentValue();
-            c.Foreground = DefaultForeground.Clone();
+            //c.Background = DefaultBackground.CloneCurrentValue();
+            //c.Foreground = DefaultForeground.Clone();
             c.FontFamily = DefaultFontFamily;
             c.FontSize = DefaultFontSize;
             return c;
@@ -86,6 +86,7 @@ namespace Agt.Desktop.Services
                     {
                         var c = ApplyVisuals(new TextBoxField { Label = "Text" });
                         height ??= 50;
+                        
                         return ApplyPositionAndSize(c, x, y, width, height);
                     }
 

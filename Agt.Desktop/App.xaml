@@ -13,10 +13,8 @@
 
 
             <!-- Služby -->
-        <services:SelectionService x:Key="SelectionService"/>
-        <services:FieldCatalogService x:Key="FieldCatalog"/>
-        <services:FieldFactory x:Key="FieldFactory"/>
-        <views:FieldTemplateSelector x:Key="FieldTemplateSelector"/>
+            <services:SelectionService x:Key="SelectionService"/>
+            <services:FieldCatalogService x:Key="FieldCatalog"/>
             <!-- Konvertory -->
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
 

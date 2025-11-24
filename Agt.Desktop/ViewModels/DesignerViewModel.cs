@@ -115,6 +115,31 @@ namespace Agt.Desktop.ViewModels
 
             StatusText = $"Založen blok {block.Name}";
         }
+        public void NewBlock(Guid blockId, string name)
+        {
+            var def = new BlockDefinitionDto
+            {
+                BlockId = blockId,
+                BlockName = name,
+                Version = null,
+                SchemaVersion = "1.0"
+                // ostatní defaulty podle potřeby
+            };
+
+            ImportBlockDefinition(def);
+
+            if (CurrentBlock != null)
+            {
+                CurrentBlock.Id = def.BlockId;
+                CurrentBlock.Name = def.BlockName;
+            }
+
+            CurrentVersion = def.Version;
+            CurrentCreatedBy = Environment.UserName;
+            CurrentCreatedAt = DateTime.UtcNow;
+
+            StatusText = $"Založen nový blok: {def.BlockName} (ID: {def.BlockId})";
+        }
 
 
 
@@ -517,6 +542,8 @@ namespace Agt.Desktop.ViewModels
 
         public void ImportFromDto(Dto dto)
         {
+            if (dto == null) throw new ArgumentNullException(nameof(dto));
+
             CurrentBlock = new Block
             {
                 Id = dto.BlockId,
@@ -534,24 +561,49 @@ namespace Agt.Desktop.ViewModels
                 // vytvoření komponenty podle TypeKey
                 var created = FieldFactory.Create(it.TypeKey, it.X, it.Y, null);
 
+                // základní identita / metadata
                 created.Id = it.Id;
                 created.Name = it.Name;
                 created.FieldKey = it.FieldKey;
                 created.Label = it.Label;
 
+                // pozice a rozměry
                 created.X = it.X;
                 created.Y = it.Y;
                 created.Width = it.Width;
                 created.Height = it.Height;
                 created.ZIndex = it.ZIndex;
 
+                // logická hodnota – řetězec, dále se přemapuje v ApplyDefaultValue
                 created.DefaultValue = it.DefaultValue ?? string.Empty;
 
-                // vizuál
+                // vizuál: obsah
                 created.Background = StringToBrush(it.Background);
                 created.Foreground = StringToBrush(it.Foreground);
                 created.FontFamily = it.FontFamily;
                 created.FontSize = it.FontSize;
+
+                // vizuál: label
+                created.LabelForeground = StringToBrush(it.LabelForeground);
+                created.LabelBackground = StringToBrush(it.LabelBackground);
+                created.LabelBold = it.LabelBold;
+                created.LabelItalic = it.LabelItalic;
+                created.LabelUnderline = it.LabelUnderline;
+                created.LabelStrikeThrough = it.LabelStrikeThrough;
+
+                // vizuál: text (obsah)
+                created.FontBold = it.FontBold;
+                created.FontItalic = it.FontItalic;
+                created.FontUnderline = it.FontUnderline;
+                created.FontStrikeThrough = it.FontStrikeThrough;
+
+                // zarovnání
+                created.LabelHorizontalAlignment = StringToAlignment(it.LabelHorizontalAlignment);
+                created.TextAlignment = StringToTextAlignment(it.TextAlignment);
+
+                // nové logické vlastnosti
+                created.Placeholder = it.Placeholder;
+                created.Required = it.Required;
 
                 // aplikace DefaultValue → Value / IsCheckedDefault / SelectedItem podle typu
                 ApplyDefaultValue(created);

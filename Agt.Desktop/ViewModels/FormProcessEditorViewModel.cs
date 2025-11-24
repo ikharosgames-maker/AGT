@@ -15,6 +15,7 @@ using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using Agt.Desktop.Views;   // kvůli NewBlockDialog
 
 namespace Agt.Desktop.ViewModels
 {
@@ -24,6 +25,7 @@ namespace Agt.Desktop.ViewModels
         private readonly IFormCloneService? _clone;
         private readonly IFormCaseRegistryService _registry;
         private readonly IProcessDefinitionService? _processDefinitions;
+
 
         private readonly string _formsRoot =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AGT", "forms");
@@ -53,22 +55,23 @@ namespace Agt.Desktop.ViewModels
         public string? OriginalFilePath { get => _originalFilePath; set { _originalFilePath = value; Raise(); } }
         private string? _originalFilePath;
 
+        // start obrazovka / stav editoru
+        private bool _hasLoadedDefinition;
+        public bool HasLoadedDefinition
+        {
+            get => _hasLoadedDefinition;
+            set { _hasLoadedDefinition = value; Raise(); }
+        }
+
         // Commands
         public ICommand OpenFromRepositoryCommand { get; }
         public ICommand SaveDraftCommand { get; }
         public ICommand OpenDraftCommand { get; }
         public ICommand PublishCommand { get; }
+        public ICommand NewFormCommand { get; }
         // kompatibilita se starým XAMLEM/handlery
         public ICommand PublishAutoCommand => PublishCommand;
 
-        public FormProcessEditorViewModel()
-            : this(
-                  Agt.Desktop.App.Services?.GetService(typeof(IFormSaveService)) as IFormSaveService,
-                  Agt.Desktop.App.Services?.GetService(typeof(IFormCloneService)) as IFormCloneService,
-                  Agt.Desktop.App.Services?.GetService(typeof(IFormCaseRegistryService)) as IFormCaseRegistryService)
-        {
-            SeedDirectoryDemo();
-        }
 
         public FormProcessEditorViewModel(IFormSaveService save, IFormCloneService clone, IFormCaseRegistryService registry)
             : this(
@@ -93,8 +96,12 @@ namespace Agt.Desktop.ViewModels
             OpenFromRepositoryCommand = new RelayCommand(_ => OpenFromRepository());
             SaveDraftCommand = new RelayCommand(_ => SaveDraft());
             OpenDraftCommand = new RelayCommand(_ => OpenDraft());
-
             PublishCommand = new RelayCommand(_ => Publish(), _ => _save != null);
+
+            NewFormCommand = new RelayCommand(_ => CreateNewForm());
+
+            // případně demo data pro assignery
+            // SeedDirectoryDemo();
         }
 
         public void LoadPaletteFromLibrary(IBlockLibrary lib)
@@ -337,6 +344,7 @@ namespace Agt.Desktop.ViewModels
             if (json?["Stages"] is JsonArray stagesA)
             {
                 ImportShapeA(json, stagesA);
+                HasLoadedDefinition = true;
                 return;
             }
 
@@ -344,6 +352,7 @@ namespace Agt.Desktop.ViewModels
             if (json?["Blocks"] is JsonArray blocksB)
             {
                 ImportShapeB(json, blocksB);
+                HasLoadedDefinition = true;
                 return;
             }
 
@@ -724,7 +733,37 @@ namespace Agt.Desktop.ViewModels
             return root;
         }
 
-        // =============== Otevření / Drafty / Publikace ===============
+        // =============== Nový formulář / Otevření / Drafty / Publikace ===============
+
+
+        private void CreateNewForm()
+        {
+            // univerzální dialog – tady pro "formulář"
+            var dlg = new NewNameDialogWindow(objectType: "formulář", defaultName: "Nový formulář")
+            {
+                Owner = System.Windows.Application.Current?.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            if (dlg.ShowDialog() != true)
+                return;
+
+            var name = dlg.NameValue?.Trim();
+
+            // FormKey = název, GUID z dialogu se použije v dalších scénářích, pokud bude potřeba
+            FormKey = string.IsNullOrWhiteSpace(name) ? "Process" : name;
+
+            // vyčisti graf
+            Graph.Stages.Clear();
+            Graph.StageEdges.Clear();
+
+            // reset baseline
+            _originalBaselineJson = null;
+            OriginalFilePath = null;
+
+            // od teď je editor "aktivní"
+            HasLoadedDefinition = true;
+        }
 
         private void OpenFromRepository()
         {
@@ -739,6 +778,7 @@ namespace Agt.Desktop.ViewModels
                 {
                     FormKey = key;
                     ImportFromJsonNode(json);
+                    HasLoadedDefinition = true;
                     MessageBox.Show($"Načten formulář „{FormKey}“.", "Otevřít", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
@@ -784,6 +824,7 @@ namespace Agt.Desktop.ViewModels
                 var node = JsonNode.Parse(text);
                 if (node == null) throw new InvalidOperationException("Soubor je prázdný nebo neplatný JSON.");
                 ImportFromJsonNode(node);
+                HasLoadedDefinition = true;
                 MessageBox.Show("Pracovní verze načtena.", "Draft", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -960,17 +1001,29 @@ namespace Agt.Desktop.ViewModels
 
         public void SelectStage(StageVm? s)
         {
-            foreach (var st in Graph.Stages) st.IsSelected = false;
-            if (s != null) s.IsSelected = true;
-            SelectedStage = s; SelectedBlock = null; SelectedStageEdge = null;
+            foreach (var st in Graph.Stages)
+                st.IsSelected = ReferenceEquals(st, s);
+
+            SelectedStage = s;
+            SelectedBlock = null;
+            SelectedStageEdge = null;
+
             Raise(nameof(Graph));
         }
 
+
         public void SelectBlock(BlockVm? b)
         {
-            foreach (var st in Graph.Stages) foreach (var bb in st.Blocks) bb.IsSelected = false;
-            if (b != null) b.IsSelected = true;
-            SelectedBlock = b; SelectedStage = null; SelectedStageEdge = null;
+            foreach (var st in Graph.Stages)
+                foreach (var bb in st.Blocks)
+                    bb.IsSelected = false;
+
+            if (b != null)
+                b.IsSelected = true;
+
+            SelectedBlock = b;
+            SelectedStage = null;
+            SelectedStageEdge = null;
             Raise(nameof(Graph));
         }
 

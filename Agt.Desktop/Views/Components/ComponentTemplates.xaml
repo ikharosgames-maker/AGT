@@ -45,40 +45,47 @@
         <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
 
+    <!-- základní vstupní styl -->
     <Style x:Key="Field_InputBase" TargetType="Control">
-        <Setter Property="Margin" Value="0"/>
-        <Setter Property="Padding" Value="6,2"/>
-        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
     </Style>
 
-    <!-- TextBox s watermarkem -->
-    <Style x:Key="Field_TextBox" TargetType="TextBox" BasedOn="{StaticResource Field_InputBase}">
-        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="VerticalAlignment"   Value="Stretch"/>
-        <Setter Property="BorderBrush"         Value="{DynamicResource AppBorderBrush}"/>
+    <!-- Lokální styl pro editorový TextBox – ignoruje globální TextBox styl -->
+    <!-- PŘEJMENOVÁNO: původně AgtEditorTextBox, teď Field_TextBox -->
+    <Style x:Key="Field_TextBox" TargetType="TextBox">
+        <!-- základní vzhled -->
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+
+        <!-- VLASTNÍ TEMPLATE – používá TemplateBinding Background -->
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
-                    <Grid>
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}">
-                            <ScrollViewer x:Name="PART_ContentHost"/>
-                        </Border>
-                        <TextBlock x:Name="Watermark"
-                                   Text="{TemplateBinding Tag}"
-                                   Margin="6,2,4,2"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Left"
-                                   Foreground="{DynamicResource AppTextBrush}"
-                                   Opacity="0.4"
-                                   IsHitTestVisible="False"
-                                   Visibility="Collapsed"/>
-                    </Grid>
+                    <Border Background="{TemplateBinding Background}">
+                        <Grid>
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="0"
+                                          Focusable="False" />
+
+                            <!-- jednoduchý placeholder z Tag -->
+                            <TextBlock x:Name="Watermark"
+                                       Margin="0"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"
+                                       Foreground="{DynamicResource AppPlaceholderBrush}"
+                                       IsHitTestVisible="False"
+                                       Opacity="0.7"
+                                       Text="{TemplateBinding Tag}"
+                                       Visibility="Collapsed" />
+                        </Grid>
+                    </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="Text" Value="">
                             <Setter TargetName="Watermark" Property="Visibility" Value="Visible"/>
@@ -87,7 +94,7 @@
                             <Setter TargetName="Watermark" Property="Visibility" Value="Collapsed"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.6"/>
+                            <Setter Property="Opacity" Value="0.5"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -275,37 +282,54 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
+
+            <!-- Label -->
             <TextBlock Grid.Row="0"
                        Style="{StaticResource Field_Label}"
                        Text="{Binding Label}"/>
-            <TextBox Grid.Row="1"
-                     Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                     Tag="{Binding Placeholder}"
-                     TextAlignment="{Binding TextAlignment}"
-                     Background="{Binding Background}"
-                     Foreground="{Binding Foreground}"
-                     FontFamily="{Binding FontFamily}"
-                     FontSize="{Binding FontSize}">
-                <TextBox.Style>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource Field_TextBox}">
-                        <Setter Property="BorderThickness" Value="1"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding FontBold}" Value="True">
-                                <Setter Property="FontWeight" Value="Bold"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontItalic}" Value="True">
-                                <Setter Property="FontStyle" Value="Italic"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontUnderline}" Value="True">
-                                <Setter Property="TextDecorations" Value="Underline"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding FontStrikeThrough}" Value="True">
-                                <Setter Property="TextDecorations" Value="Strikethrough"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBox.Style>
-            </TextBox>
+
+            <!-- Rámeček komponenty + vlastní barevné pozadí pod textboxem -->
+            <Border Grid.Row="1"
+                    Style="{StaticResource Field_BackgroundHost}">
+                <Grid>
+                    <!-- TADY se barví pozadí komponenty -->
+                    <Border Background="{Binding Background}"/>
+
+                    <!-- Vlastní TextBox, průhledný, bez rámečku -->
+                    <TextBox
+                        Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                        Tag="{Binding Placeholder}"
+                        TextAlignment="{Binding TextAlignment}"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="{Binding Foreground}"
+                        FontFamily="{Binding FontFamily}"
+                        FontSize="{Binding FontSize}">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource Field_TextBox}">
+                                <!-- Border už ne, dělá ho Field_BackgroundHost -->
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="BorderBrush"     Value="Transparent"/>
+
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding FontBold}" Value="True">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding FontItalic}" Value="True">
+                                        <Setter Property="FontStyle" Value="Italic"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding FontUnderline}" Value="True">
+                                        <Setter Property="TextDecorations" Value="Underline"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding FontStrikeThrough}" Value="True">
+                                        <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                </Grid>
+            </Border>
         </Grid>
     </DataTemplate>
 
@@ -390,7 +414,7 @@
         </Grid>
     </DataTemplate>
 
-    <!-- Date (upraveno: Border + Stretch + watermark) -->
+    <!-- Date -->
     <DataTemplate DataType="{x:Type mdl:DateField}">
         <Grid Width="{Binding Width}" Height="{Binding Height}">
             <Grid.RowDefinitions>
@@ -398,66 +422,46 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
+            <!-- Label -->
             <TextBlock Grid.Row="0"
                        Style="{StaticResource Field_Label}"
                        Text="{Binding Label}"/>
 
-            <!-- host, aby se datepicker roztáhl -->
+            <!-- Rámeček komponenty: jen border, bez pozadí -->
             <Border Grid.Row="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch">
-                <DatePicker HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Background="{Binding Background}"
-                            Foreground="{Binding Foreground}"
-                            SelectedDate="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <DatePicker.Resources>
-                        <Style TargetType="DatePickerTextBox">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="DatePickerTextBox">
-                                        <Grid>
-                                            <Border x:Name="border"
-                                                    Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"/>
-                                            <ScrollViewer x:Name="PART_ContentHost"
-                                                          Margin="3,0,3,0"/>
-                                            <!-- watermark -->
-                                            <TextBlock x:Name="Watermark"
-                                                       Margin="6,2,4,2"
-                                                       VerticalAlignment="Center"
-                                                       HorizontalAlignment="Left"
-                                                       Foreground="{DynamicResource AppTextBrush}"
-                                                       Opacity="0.4"
-                                                       IsHitTestVisible="False"
-                                                       Visibility="Collapsed"
-                                                       Text="{Binding Placeholder}"/>
-                                        </Grid>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="Text" Value="">
-                                                <Setter TargetName="Watermark" Property="Visibility" Value="Visible"/>
-                                            </Trigger>
-                                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                                <Setter TargetName="Watermark" Property="Visibility" Value="Collapsed"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
+                    Style="{StaticResource Field_BackgroundHost}"
+                    Background="Transparent">
 
-                            <Setter Property="Background"      Value="{Binding Background}"/>
-                            <Setter Property="Foreground"      Value="{Binding Foreground}"/>
-                            <Setter Property="FontFamily"      Value="{Binding FontFamily}"/>
-                            <Setter Property="FontSize"        Value="{Binding FontSize}"/>
-                            <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
-                            <Setter Property="BorderThickness" Value="1"/>
+                <DatePicker
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Background="Transparent"
+                    Foreground="{Binding Foreground}"
+                    SelectedDate="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+
+                    <!-- DatePickerTextBox dostane stejný styl jako TextBox -->
+                    <DatePicker.Resources>
+                        <Style TargetType="{x:Type DatePickerTextBox}"
+                               BasedOn="{StaticResource Field_TextBox}">
+                            <!-- Background jde z komponenty -->
+                            <Setter Property="Background" Value="{Binding Background}"/>
+                            <Setter Property="Foreground" Value="{Binding Foreground}"/>
+                            <Setter Property="FontFamily" Value="{Binding FontFamily}"/>
+                            <Setter Property="FontSize" Value="{Binding FontSize}"/>
+                            <!-- nemá vlastní border, o ten se stará Field_BackgroundHost -->
+                            <Setter Property="BorderThickness" Value="0"/>
                         </Style>
                     </DatePicker.Resources>
+
                     <DatePicker.Style>
-                        <Style TargetType="DatePicker" BasedOn="{StaticResource Field_DatePicker}">
+                        <Style TargetType="DatePicker" BasedOn="{StaticResource Field_InputBase}">
                             <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="SelectedDateFormat" Value="Short"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalContentAlignment"   Value="Center"/>
+
                             <Style.Triggers>
+                                <!-- ReadOnly mód -->
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl},
                                                                Path=(views:RenderModeHelper.Mode)}"
                                              Value="{x:Static mdl:RenderMode.ReadOnly}">

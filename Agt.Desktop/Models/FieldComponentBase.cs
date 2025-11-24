@@ -210,7 +210,7 @@ namespace Agt.Desktop.Models
         private Brush _labelForeground;
         public Brush LabelForeground
         {
-            get => _labelForeground ?? Foreground;
+            get => _labelForeground;
             set
             {
                 if (!ReferenceEquals(_labelForeground, value))

@@ -52,7 +52,7 @@
                         <!-- Overlay: výběr -->
                         <Border BorderBrush="{DynamicResource EditorAccentBrush}"
                     BorderThickness="2"
-                    CornerRadius="2"
+                    CornerRadius="3"
                     IsHitTestVisible="False"
                     Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"/>
 
