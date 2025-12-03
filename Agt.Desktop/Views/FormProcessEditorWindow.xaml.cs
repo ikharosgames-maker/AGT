@@ -156,13 +156,23 @@ namespace Agt.Desktop.Views
 
             vm.GeneratePreview(b);
 
-            var (nx, ny) = vm.FindNearestFreeSlot(stage, localX, localY, b.PreviewWidth, b.PreviewHeight, grid: 8, header: 36);
-            vm.MoveBlockTo(b, stage, nx, ny, grid: 8, headerHeight: 0);
+            // důležité: používáme skutečnou výšku hlavičky stage
+            var (nx, ny) = vm.FindNearestFreeSlot(
+                stage,
+                localX,
+                localY,
+                b.PreviewWidth,
+                b.PreviewHeight,
+                grid: 8,
+                header: HeaderHeight);
+
+            vm.MoveBlockTo(b, stage, nx, ny, grid: 8, headerHeight: HeaderHeight);
 
             vm.SelectBlock(b);
             if (vm.SelectedStage == null) vm.SelectStage(stage);
             return b;
         }
+
 
         private void OnPaletteDoubleClick(object sender, MouseButtonEventArgs e)
         {
@@ -288,6 +298,7 @@ namespace Agt.Desktop.Views
                 // místo fixních 260x140 (BlockW/BlockH) respektuj reálný preview rozměr každého bloku:
                 foreach (var b in st.Blocks)
                     vm.ClampBlockInside(b, st, b.PreviewWidth, b.PreviewHeight, HeaderHeight);
+
 
                 RedrawEdges();
             }

@@ -4,6 +4,7 @@ namespace Agt.Domain.Models;
 public sealed class FormVersion
 {
     public Guid Id { get; set; }
+    public string Name { get; set; }
     public Guid FormId { get; set; }
     public string Version { get; set; } = "1.0.0";
     public FormStatus Status { get; set; } = FormStatus.Draft;

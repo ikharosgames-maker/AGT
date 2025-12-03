@@ -5,64 +5,73 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Extensions.DependencyInjection;
 using Agt.Domain.Models;
 using Agt.Domain.Repositories;
+using Agt.Domain.Abstractions;
 
 namespace Agt.Desktop.Views
 {
     /// <summary>
     /// Zobrazí publikovaný layout (stage + bloky) a umožní průchod dle rout.
-    /// Layout se čte ze souboru layouts/{FormVersionId}.json (viz patch publikace).
-    /// Routy se načtou z repozitáře (pokud máte metodu) nebo z JSON fallbacku.
+    /// Layout se čte ze souboru layouts/{FormVersionId}.json.
+    /// Routy se načtou z repozitáře (pokud je k dispozici) nebo z JSON fallbacku.
     /// </summary>
     public partial class CaseRunWindow : Window
     {
         private readonly Guid _formVersionId;
-        private readonly HashSet<string> _active = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> _done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> _selected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly List<Route> _routes = new List<Route>();
-        private readonly LayoutSnapshot _layout = new LayoutSnapshot();
+        // bloky ve stavech
+        private readonly HashSet<string> _active = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _done = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _selected = new(StringComparer.OrdinalIgnoreCase);
 
-        // mapování: blockKey -> UI prvek
-        private readonly Dictionary<string, Border> _blockVisuals = new Dictionary<string, Border>(StringComparer.OrdinalIgnoreCase);
+        // definované routy
+        private List<Route> _routes = new();
+
+        // layout stage + bloků
+        private LayoutSnapshot _layout = new();
+
+        // mapování blockKey -> UI border
+        private readonly Dictionary<string, Border> _blockVisuals =
+            new(StringComparer.OrdinalIgnoreCase);
 
         public CaseRunWindow(Guid formVersionId, IEnumerable<string> startBlockKeys)
         {
             InitializeComponent();
 
-            if (formVersionId == Guid.Empty) throw new ArgumentException("formVersionId nesmí být Guid.Empty", nameof(formVersionId));
+            if (formVersionId == Guid.Empty)
+                throw new ArgumentException("formVersionId nesmí být Guid.Empty", nameof(formVersionId));
+
             _formVersionId = formVersionId;
 
-            // Header: jméno formuláře + verze
-            var sp = Agt.Desktop.App.Services;
+            // Header: jméno / verze formuláře – aktuálně zobrazujeme pouze verzi
+            var sp = App.Services;
             var forms = sp.GetRequiredService<IFormRepository>();
             var fv = forms.GetVersion(formVersionId);
-            string header = "Běh případu";
+
+            var header = "Běh případu";
             if (fv != null)
             {
-                var f = forms.Get(fv.FormId);
-                header = f != null ? (f.Name + "  v" + fv.Version) : ("Form v" + fv.Version);
+                header = "Form v" + fv.Version;
             }
             HeaderTitle.Text = header;
 
-            // Načti routes
+            // načti routy a layout
             _routes = GetRoutesForVersion(sp, formVersionId);
-
-            // Načti layout snapshot
             _layout = LoadLayout(formVersionId);
 
-            // Nastav počáteční aktivní
+            // počáteční aktivní bloky (z MainShellu / jiného volajícího)
             if (startBlockKeys != null)
             {
-                foreach (var k in startBlockKeys) if (!string.IsNullOrWhiteSpace(k)) _active.Add(k);
+                foreach (var k in startBlockKeys)
+                {
+                    if (!string.IsNullOrWhiteSpace(k))
+                        _active.Add(k);
+                }
             }
 
-            // Vykresli
             RenderLayout();
             UpdateAllBlockStyles();
         }
@@ -74,12 +83,12 @@ namespace Agt.Desktop.Views
             StageCanvas.Children.Clear();
             _blockVisuals.Clear();
 
-            // Stage (jako rámečky)
+            // Stage jako rámečky
             foreach (var st in _layout.Stages)
             {
                 var gb = new GroupBox
                 {
-                    Header = st.Title ?? ("Stage " + st.Id.ToString().Substring(0, 8)),
+                    Header = st.Title ?? ("Stage " + st.Id.ToString("N")[..8]),
                     BorderBrush = (Brush)FindResource("AppBorderBrush"),
                     BorderThickness = new Thickness(1),
                     Background = (Brush)FindResource("AppPanelAltBrush"),
@@ -87,28 +96,34 @@ namespace Agt.Desktop.Views
                     Width = st.Width > 0 ? st.Width : 600,
                     Height = st.Height > 0 ? st.Height : 400
                 };
+
                 Canvas.SetLeft(gb, st.X);
                 Canvas.SetTop(gb, st.Y);
+
                 StageCanvas.Children.Add(gb);
             }
 
-            // Bloky (uvnitř canvasu, vizuálně nad stagemi)
+            // Bloky (vykreslené nad stagemi)
             foreach (var b in _layout.Blocks)
             {
+                if (string.IsNullOrWhiteSpace(b.Key))
+                    continue;
+
                 var border = new Border
                 {
                     Width = b.Width > 0 ? b.Width : 140,
                     Height = b.Height > 0 ? b.Height : 64,
                     CornerRadius = new CornerRadius(4),
-                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(4),
                     Background = (Brush)FindResource("AppPanelAltBrush"),
                     BorderBrush = (Brush)FindResource("AppBorderBrush"),
-                    ToolTip = (b.Title ?? b.Key)
+                    BorderThickness = new Thickness(1),
+                    ToolTip = b.Title ?? b.Key
                 };
 
                 var tb = new TextBlock
                 {
-                    Text = (b.Title ?? b.Key),
+                    Text = b.Title ?? b.Key,
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(8),
                     Foreground = (Brush)FindResource("AppTextBrush")
@@ -119,9 +134,8 @@ namespace Agt.Desktop.Views
 
                 Canvas.SetLeft(border, b.X);
                 Canvas.SetTop(border, b.Y);
-                Panel.SetZIndex(border, 10);
-                StageCanvas.Children.Add(border);
 
+                StageCanvas.Children.Add(border);
                 _blockVisuals[b.Key] = border;
             }
         }
@@ -130,26 +144,26 @@ namespace Agt.Desktop.Views
 
         private void ToggleSelect(string key)
         {
-            if (string.IsNullOrWhiteSpace(key)) return;
+            if (string.IsNullOrWhiteSpace(key))
+                return;
 
-            if (_selected.Contains(key)) _selected.Remove(key);
-            else _selected.Add(key);
+            if (_selected.Contains(key))
+                _selected.Remove(key);
+            else
+                _selected.Add(key);
 
             UpdateBlockStyle(key);
-        }
-
-        private void ClearSelection_Click(object sender, RoutedEventArgs e)
-        {
-            _selected.Clear();
-            UpdateAllBlockStyles();
         }
 
         private void CompleteSelected_Click(object sender, RoutedEventArgs e)
         {
             if (_selected.Count == 0)
             {
-                MessageBox.Show("Vyber alespoň jeden blok k dokončení (klikem na blok).", "Běh případu",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    "Vyber alespoň jeden blok k dokončení (klikem na blok).",
+                    "Běh případu",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
@@ -160,7 +174,7 @@ namespace Agt.Desktop.Views
                 _done.Add(k);
             }
 
-            // rozvinout následníky dle rout (MVP: bez joinů/podmínek)
+            // rozvinout následníky dle rout (MVP – bez joinů / podmínek)
             foreach (var k in _selected.ToArray())
             {
                 var outs = _routes
@@ -169,12 +183,21 @@ namespace Agt.Desktop.Views
 
                 foreach (var to in outs)
                 {
-                    if (string.IsNullOrWhiteSpace(to)) continue;
-                    if (_done.Contains(to)) continue;
+                    if (string.IsNullOrWhiteSpace(to))
+                        continue;
+                    if (_done.Contains(to))
+                        continue;
+
                     _active.Add(to);
                 }
             }
 
+            _selected.Clear();
+            UpdateAllBlockStyles();
+        }
+
+        private void ClearSelection_Click(object sender, RoutedEventArgs e)
+        {
             _selected.Clear();
             UpdateAllBlockStyles();
         }
@@ -184,13 +207,15 @@ namespace Agt.Desktop.Views
         private void UpdateAllBlockStyles()
         {
             foreach (var key in _blockVisuals.Keys.ToList())
+            {
                 UpdateBlockStyle(key);
+            }
         }
 
         private void UpdateBlockStyle(string key)
         {
-            Border border;
-            if (!_blockVisuals.TryGetValue(key, out border)) return;
+            if (!_blockVisuals.TryGetValue(key, out var border))
+                return;
 
             // základ
             border.Background = (Brush)FindResource("AppPanelAltBrush");
@@ -223,44 +248,57 @@ namespace Agt.Desktop.Views
 
         private static List<Route> GetRoutesForVersion(IServiceProvider sp, Guid formVersionId)
         {
-            // pokus o repo (připravené pro MSSQL/EF)
+            // 1) pokus o repo (připravené pro MSSQL/EF)
             try
             {
                 var repo = sp.GetService<IRouteRepository>();
                 if (repo != null)
                 {
+                    // preferuj ListByFormVersion(Guid)
                     var mi = repo.GetType().GetMethod("ListByFormVersion", new[] { typeof(Guid) });
                     if (mi != null)
                     {
                         var res = mi.Invoke(repo, new object[] { formVersionId }) as IEnumerable<Route>;
-                        if (res != null) return res.ToList();
+                        if (res != null)
+                            return res.ToList();
                     }
 
-                    // fallback přes případné ListAll():
+                    // fallback: případné ListAll()
                     var miAll = repo.GetType().GetMethod("ListAll", Type.EmptyTypes);
                     if (miAll != null)
                     {
-                        var all = miAll.Invoke(repo, new object[0]) as IEnumerable<Route>;
-                        if (all != null) return all.Where(r => r.FormVersionId == formVersionId).ToList();
+                        var all = miAll.Invoke(repo, Array.Empty<object>()) as IEnumerable<Route>;
+                        if (all != null)
+                            return all.Where(r => r.FormVersionId == formVersionId).ToList();
                     }
                 }
             }
-            catch { /* ignoruj, spadneme na JSON */ }
+            catch
+            {
+                // ignoruj – spadneme na JSON fallback
+            }
 
-            // JSON fallback
+            // 2) JSON fallback
             var dir = Agt.Infrastructure.JsonStore.JsonPaths.Dir("routes");
             Directory.CreateDirectory(dir);
+
             var list = new List<Route>();
+
             foreach (var f in Directory.EnumerateFiles(dir, "*.json"))
             {
                 try
                 {
                     var json = File.ReadAllText(f);
                     var r = JsonSerializer.Deserialize<Route>(json);
-                    if (r != null && r.FormVersionId == formVersionId) list.Add(r);
+                    if (r != null && r.FormVersionId == formVersionId)
+                        list.Add(r);
                 }
-                catch { }
+                catch
+                {
+                    // ignoruj poškozené záznamy
+                }
             }
+
             return list;
         }
 
@@ -268,38 +306,117 @@ namespace Agt.Desktop.Views
         {
             var dir = Agt.Infrastructure.JsonStore.JsonPaths.Dir("layouts");
             Directory.CreateDirectory(dir);
-            var path = System.IO.Path.Combine(dir, formVersionId + ".json");
-            if (!File.Exists(path)) return new LayoutSnapshot();
+            var path = Path.Combine(dir, formVersionId + ".json");
+
+            var result = new LayoutSnapshot();
+
+            if (!File.Exists(path))
+                return result;
 
             try
             {
-                var json = File.ReadAllText(path);
-                var snap = JsonSerializer.Deserialize<LayoutSnapshot>(json);
-                return snap ?? new LayoutSnapshot();
+                using var doc = JsonDocument.Parse(File.ReadAllText(path));
+                var root = doc.RootElement;
+
+                // Stages
+                if (root.TryGetProperty("Stages", out var sEl) &&
+                    sEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var st in sEl.EnumerateArray())
+                    {
+                        result.Stages.Add(new StageLayout
+                        {
+                            Id = st.GetProperty("Id").GetGuid(),
+                            Title = TryGetString(st, "Title"),
+                            X = TryGetDouble(st, "X", 0),
+                            Y = TryGetDouble(st, "Y", 0),
+                            Width = TryGetDouble(st, "Width", 600),
+                            Height = TryGetDouble(st, "Height", 400)
+                        });
+                    }
+                }
+
+                // Blocks
+                if (root.TryGetProperty("Blocks", out var bEl) &&
+                    bEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var bl in bEl.EnumerateArray())
+                    {
+                        var key =
+                            TryGetString(bl, "InstanceKey")
+                            ?? TryGetString(bl, "Key")
+                            ?? TryGetString(bl, "DefKey")
+                            ?? string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(key))
+                            continue;
+
+                        var title = TryGetString(bl, "Title") ?? key;
+
+                        result.Blocks.Add(new BlockLayout
+                        {
+                            Key = key,
+                            Title = title,
+                            StageId = bl.GetProperty("StageId").GetGuid(),
+                            X = TryGetDouble(bl, "X", 0),
+                            Y = TryGetDouble(bl, "Y", 0),
+                            Width = TryGetDouble(bl, "Width", 160),
+                            Height = TryGetDouble(bl, "Height", 80)
+                        });
+                    }
+                }
+
+                return result;
             }
             catch
             {
-                return new LayoutSnapshot();
+                return result;
             }
+        }
+
+        private static string? TryGetString(JsonElement el, string propName)
+        {
+            if (!el.TryGetProperty(propName, out var p))
+                return null;
+
+            return p.ValueKind switch
+            {
+                JsonValueKind.String => p.GetString(),
+                JsonValueKind.Number => p.ToString(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                _ => null
+            };
+        }
+
+        private static double TryGetDouble(JsonElement el, string propName, double defaultValue)
+        {
+            if (!el.TryGetProperty(propName, out var p))
+                return defaultValue;
+
+            if (p.ValueKind == JsonValueKind.Number && p.TryGetDouble(out var d))
+                return d;
+
+            if (p.ValueKind == JsonValueKind.String &&
+                double.TryParse(p.GetString(), System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out d))
+                return d;
+
+            return defaultValue;
         }
 
         // =================== DTO pro layout snapshot ===================
 
         private sealed class LayoutSnapshot
         {
-            public List<StageLayout> Stages { get; set; }
-            public List<BlockLayout> Blocks { get; set; }
-            public LayoutSnapshot()
-            {
-                Stages = new List<StageLayout>();
-                Blocks = new List<BlockLayout>();
-            }
+            public List<StageLayout> Stages { get; } = new();
+            public List<BlockLayout> Blocks { get; } = new();
         }
 
         private sealed class StageLayout
         {
             public Guid Id { get; set; }
-            public string Title { get; set; }
+            public string? Title { get; set; }
             public double X { get; set; }
             public double Y { get; set; }
             public double Width { get; set; }
@@ -308,8 +425,8 @@ namespace Agt.Desktop.Views
 
         private sealed class BlockLayout
         {
-            public string Key { get; set; }
-            public string Title { get; set; }
+            public string Key { get; set; } = string.Empty;
+            public string? Title { get; set; }
             public Guid StageId { get; set; }
             public double X { get; set; }
             public double Y { get; set; }

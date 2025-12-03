@@ -17,6 +17,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Agt.Desktop.Views;   // kvůli NewBlockDialog
 
+
+
 namespace Agt.Desktop.ViewModels
 {
     public sealed class FormProcessEditorViewModel : ViewModelBase
@@ -25,6 +27,7 @@ namespace Agt.Desktop.ViewModels
         private readonly IFormCloneService? _clone;
         private readonly IFormCaseRegistryService _registry;
         private readonly IProcessDefinitionService? _processDefinitions;
+        private readonly IFormRepository _formRepository;
 
 
         private readonly string _formsRoot =
@@ -33,7 +36,8 @@ namespace Agt.Desktop.ViewModels
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AGT", "form-drafts");
 
         private const double _portOffset = 12.0;
-
+        private const double MinBlockGap = 2.0;      // dříve 4.0
+        private const double SnapThreshold = 10.0;
         public GraphVm Graph { get; } = new();
         public ObservableCollection<PaletteItem> Palette { get; } = new();
         public ObservableCollection<string> AvailableUsers { get; } = new();
@@ -73,21 +77,15 @@ namespace Agt.Desktop.ViewModels
         public ICommand PublishAutoCommand => PublishCommand;
 
 
-        public FormProcessEditorViewModel(IFormSaveService save, IFormCloneService clone, IFormCaseRegistryService registry)
-            : this(
-                  save,
-                  clone,
-                  registry,
-                  Agt.Desktop.App.Services?.GetService(typeof(IProcessDefinitionService)) as IProcessDefinitionService)
-        {
-        }
-
+        // varianta pro DI: IFormRepository + IFormSaveService + IFormCloneService + IFormCaseRegistryService
         public FormProcessEditorViewModel(
+            IFormRepository formRepository,
             IFormSaveService save,
             IFormCloneService clone,
             IFormCaseRegistryService registry,
             IProcessDefinitionService? processDefinitions)
         {
+            _formRepository = formRepository;
             _save = save;
             _clone = clone;
             _registry = registry;
@@ -97,11 +95,90 @@ namespace Agt.Desktop.ViewModels
             SaveDraftCommand = new RelayCommand(_ => SaveDraft());
             OpenDraftCommand = new RelayCommand(_ => OpenDraft());
             PublishCommand = new RelayCommand(_ => Publish(), _ => _save != null);
-
             NewFormCommand = new RelayCommand(_ => CreateNewForm());
+        }
 
-            // případně demo data pro assignery
-            // SeedDirectoryDemo();
+        // varianta, kterou má pravděpodobně nastavené DI (4 parametry – chyba CS7036)
+        public FormProcessEditorViewModel(
+            IFormRepository formRepository,
+            IFormSaveService save,
+            IFormCloneService clone,
+            IFormCaseRegistryService registry)
+            : this(
+                formRepository,
+                save,
+                clone,
+                registry,
+                Agt.Desktop.App.Services?.GetService(typeof(IProcessDefinitionService)) as IProcessDefinitionService)
+        {
+        }
+
+        // varianta kompatibilní se starším kódem (původní podpis – bez IFormRepository)
+        public FormProcessEditorViewModel(
+            IFormSaveService save,
+            IFormCloneService clone,
+            IFormCaseRegistryService registry)
+            : this(
+                Agt.Desktop.App.Services?.GetService(typeof(IFormRepository)) as IFormRepository
+                    ?? throw new InvalidOperationException("IFormRepository není registrován v DI konteineru."),
+                save,
+                clone,
+                registry,
+                Agt.Desktop.App.Services?.GetService(typeof(IProcessDefinitionService)) as IProcessDefinitionService)
+        {
+        }
+        private enum ChangeKind
+        {
+            None,
+            Minor,
+            Major
+        }
+
+        private ChangeKind CompareLayout(JsonNode baseline, JsonNode edited)
+        {
+            if (baseline == null) return ChangeKind.Major;
+
+            // porovnání počtu stagí a bloků je major
+            int s1 = baseline["Stages"]?.AsArray().Count ?? 0;
+            int s2 = edited["Stages"]?.AsArray().Count ?? 0;
+            if (s1 != s2) return ChangeKind.Major;
+
+            int b1 = baseline["Blocks"]?.AsArray().Count ?? 0;
+            int b2 = edited["Blocks"]?.AsArray().Count ?? 0;
+            if (b1 != b2) return ChangeKind.Major;
+
+            // pokud se změnily X/Y/W/H -> minor
+            if (!JsonNode.DeepEquals(baseline, edited))
+                return ChangeKind.Minor;
+
+            return ChangeKind.None;
+        }
+        private static string BumpVersion(string? version, ChangeKind kind)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+                return "1.0.0";
+
+            var parts = version.Split('.');
+            int major = int.Parse(parts[0]);
+            int minor = int.Parse(parts[1]);
+            int patch = int.Parse(parts[2]);
+
+            switch (kind)
+            {
+                case ChangeKind.Major:
+                    major++;
+                    minor = 0;
+                    patch = 0;
+                    break;
+                case ChangeKind.Minor:
+                    minor++;
+                    patch = 0;
+                    break;
+                default:
+                    break;
+            }
+
+            return $"{major}.{minor}.{patch}";
         }
 
         public void LoadPaletteFromLibrary(IBlockLibrary lib)
@@ -277,8 +354,12 @@ namespace Agt.Desktop.ViewModels
         private static bool RectsOverlap(double x1, double y1, double w1, double h1,
                                          double x2, double y2, double w2, double h2)
         {
-            return !(x1 + w1 <= x2 || x2 + w2 <= x1 || y1 + h1 <= y2 || y2 + h2 <= y1);
+            return !(x1 + w1 + MinBlockGap <= x2 ||
+                     x2 + w2 + MinBlockGap <= x1 ||
+                     y1 + h1 + MinBlockGap <= y2 ||
+                     y2 + h2 + MinBlockGap <= y1);
         }
+
         /// <summary>Vrátí "Stage N" s nejmenším volným N (bere v potaz i "Nová Stage N").</summary>
         public string GetNextStageName(string prefix)
         {
@@ -329,40 +410,36 @@ namespace Agt.Desktop.ViewModels
         /// Načte buď (A) náš export se Stages/Routes, nebo (B) layout uložený zvlášť: { Form, Stages, StageRoutes, Blocks }.
         /// Schémata bloků se berou z BlockLibraryJson podle Key+Version (ne z form JSONu).
         /// </summary>
+        /// <summary>
+        /// Načte layout výhradně ve formátu FormLayoutDto (bez zpětné kompatibility).
+        /// </summary>
         public void ImportFromJsonNode(JsonNode json)
         {
-            _originalBaselineJson = json?.DeepClone();
-            OriginalFilePath = null;
+            if (json is null)
+                throw new ArgumentNullException(nameof(json));
 
-            // form key – zkus více polí
-            FormKey = FindFirstString(json, "Key", "FormKey", "Id", "FormId") ?? "Process";
-
-            Graph.Stages.Clear();
-            Graph.StageEdges.Clear();
-
-            // (A) Editor export – Stages + Routes
-            if (json?["Stages"] is JsonArray stagesA)
+            try
             {
-                ImportShapeA(json, stagesA);
-                HasLoadedDefinition = true;
-                return;
-            }
+                // baseline pro diffování/verzování – už v novém formátu
+                _originalBaselineJson = json.DeepClone();
+                OriginalFilePath = null;
 
-            // (B) Layout uložený zvlášť – Form, Stages, StageRoutes, Blocks
-            if (json?["Blocks"] is JsonArray blocksB)
+                // deserialize do DTO
+                var layout = json.Deserialize<FormLayoutDto>();
+                if (layout == null)
+                    throw new InvalidOperationException("JSON neobsahuje platný FormLayoutDto.");
+
+                LoadFromLayout(layout);
+                HasLoadedDefinition = true;
+            }
+            catch (Exception ex)
             {
-                ImportShapeB(json, blocksB);
-                HasLoadedDefinition = true;
-                return;
+                MessageBox.Show(
+                    "Načítaný JSON není platný FormLayoutDto:\n" + ex.Message,
+                    "Načítání layoutu",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
-
-            // nic z toho -> přátelská hláška
-            var keys = (json as JsonObject)?.Select(kv => kv.Key).ToArray() ?? Array.Empty<string>();
-            MessageBox.Show(
-                "Načítaný JSON neobsahuje očekávanou strukturu.\n" +
-                "Hledám buď:  A) 'Stages' + 'Routes',  nebo  B) 'Blocks' (+ volitelně 'Stages','StageRoutes').\n" +
-                $"Kořenová pole v souboru: {string.Join(", ", keys)}",
-                "Načítání", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void ImportShapeA(JsonNode json, JsonArray stagesNode)
@@ -655,6 +732,182 @@ namespace Agt.Desktop.ViewModels
                 Transitions = transitions
             };
         }
+        /// <summary>
+        /// Převod aktuálního grafu (GraphVm) na FormLayoutDto.
+        /// 
+        /// - FormKey = aktuální FormKey
+        /// - FormVersionId = parametr
+        /// - Stages = stage včetně rozměrů
+        /// - Blocks = instance bloků ve stagích
+        /// - StageRoutes = hrany mezi stagemi
+        /// 
+        /// Layout přesně odpovídá tomu, co se ukládá do StageGraphJson.
+        /// </summary>
+        /// <summary>
+        /// Převod aktuálního grafu (GraphVm) na FormLayoutDto (all-in-one layout).
+        /// </summary>
+        public FormLayoutDto BuildFormLayout(Guid formVersionId)
+        {
+            var layout = new FormLayoutDto
+            {
+                FormKey = FormKey,
+                FormVersionId = formVersionId
+            };
+
+            // 1) Stages + bloky
+            foreach (var s in Graph.Stages)
+            {
+                var stageId = s.Id == Guid.Empty ? Guid.NewGuid() : s.Id;
+
+                var stageDto = new StageLayoutDto
+                {
+                    Id = stageId,
+                    Title = s.Title ?? string.Empty,
+                    X = s.X,
+                    Y = s.Y,
+                    Width = s.W,
+                    Height = s.H
+                };
+
+                layout.Stages.Add(stageDto);
+
+                foreach (var b in s.Blocks)
+                {
+                    var blockInstanceId = b.Id == Guid.Empty ? Guid.NewGuid() : b.Id;
+
+                    var blockDto = new BlockInstanceDto
+                    {
+                        Id = blockInstanceId,
+                        BlockId = b.BlockId,
+                        Version = string.IsNullOrWhiteSpace(b.Version) ? "1.0.0" : b.Version,
+                        Title = b.Title ?? string.Empty,
+                        StageId = stageId,
+                        X = b.X,
+                        Y = b.Y,
+                        Width = b.PreviewWidth,
+                        Height = b.PreviewHeight
+                    };
+
+                    layout.Blocks.Add(blockDto);
+                }
+            }
+
+            // 2) StageRoutes (hrany)
+            foreach (var e in Graph.StageEdges)
+            {
+                var edgeId = e.Id == Guid.Empty ? Guid.NewGuid() : e.Id;
+
+                var routeDto = new StageRouteDto
+                {
+                    Id = edgeId,
+                    FromStageId = e.FromStageId,
+                    ToStageId = e.ToStageId,
+                    ConditionJson = string.IsNullOrWhiteSpace(e.ConditionJson)
+                        ? @"{ ""conditions"": [] }"
+                        : e.ConditionJson
+                };
+
+                layout.StageRoutes.Add(routeDto);
+            }
+
+            return layout;
+        }
+
+        /// <summary>
+        /// Naplní GraphVm z FormLayoutDto.
+        /// </summary>
+        private void LoadFromLayout(FormLayoutDto layout)
+        {
+            Graph.Stages.Clear();
+            Graph.StageEdges.Clear();
+
+            FormKey = string.IsNullOrWhiteSpace(layout.FormKey)
+                ? "Process"
+                : layout.FormKey;
+
+            // map stageId -> StageVm pro vazbu bloků a hran
+            var stageMap = new Dictionary<Guid, StageVm>();
+
+            // Stages
+            foreach (var s in layout.Stages)
+            {
+                var st = new StageVm
+                {
+                    Id = s.Id == Guid.Empty ? Guid.NewGuid() : s.Id,
+                    Title = s.Title ?? "Stage",
+                    X = s.X,
+                    Y = s.Y,
+                    W = Math.Max(200, s.Width),
+                    H = Math.Max(150, s.Height)
+                };
+
+                Graph.Stages.Add(st);
+                stageMap[st.Id] = st;
+            }
+
+            // Pokud nejsou žádné stage v layoutu, vytvoř alespoň jednu default
+            if (Graph.Stages.Count == 0)
+            {
+                var st = new StageVm
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Stage 1",
+                    X = 100,
+                    Y = 100,
+                    W = 800,
+                    H = 600
+                };
+                Graph.Stages.Add(st);
+                stageMap[st.Id] = st;
+            }
+
+            // Bloky – instancování (blok může být klidně víckrát ve stejné nebo jiné stage)
+            foreach (var bi in layout.Blocks)
+            {
+                if (!stageMap.TryGetValue(bi.StageId, out var st))
+                {
+                    // fallback – když StageId neexistuje, položit do první stage
+                    st = Graph.Stages.First();
+                }
+
+                var b = new BlockVm
+                {
+                    Id = bi.Id == Guid.Empty ? Guid.NewGuid() : bi.Id,
+                    BlockId = bi.BlockId,
+                    Title = bi.Title ?? string.Empty,
+                    Version = string.IsNullOrWhiteSpace(bi.Version) ? "1.0.0" : bi.Version,
+                    X = bi.X,
+                    Y = bi.Y
+                };
+
+                // rozměry/preview (včetně výpočtu komponent ze schématu)
+                GeneratePreview(b);
+                b.PreviewWidth = Math.Max(b.PreviewWidth, bi.Width > 0 ? bi.Width : b.PreviewWidth);
+                b.PreviewHeight = Math.Max(b.PreviewHeight, bi.Height > 0 ? bi.Height : b.PreviewHeight);
+
+                st.Blocks.Add(b);
+            }
+
+            // StageEdges / StageRoutes
+            foreach (var r in layout.StageRoutes)
+            {
+                var edge = new StageEdgeVm
+                {
+                    Id = r.Id == Guid.Empty ? Guid.NewGuid() : r.Id,
+                    FromStageId = r.FromStageId,
+                    ToStageId = r.ToStageId,
+                    ConditionJson = string.IsNullOrWhiteSpace(r.ConditionJson)
+                        ? @"{ ""conditions"": [] }"
+                        : r.ConditionJson
+                };
+                Graph.StageEdges.Add(edge);
+            }
+
+            // žádný výběr po načtení
+            SelectedStage = null;
+            SelectedBlock = null;
+            SelectedStageEdge = null;
+        }
 
         private static string BuildStageMetadataJson(StageVm s)
         {
@@ -686,55 +939,34 @@ namespace Agt.Desktop.ViewModels
 
         private JsonNode ExportFormAsJsonNode()
         {
-            var root = new JsonObject
+            // zkus získat FormVersionId z aktuálního souboru
+            var fvId = TryParseFormVersionIdFromPath(OriginalFilePath) ?? Guid.Empty;
+
+            var layout = BuildFormLayout(fvId);
+
+            // jednoduchá serializace DTO -> JsonNode
+            var json = JsonSerializer.Serialize(layout, new JsonSerializerOptions
             {
-                ["Key"] = FormKey,
-                ["Metadata"] = new JsonObject { ["ExportedUtc"] = DateTime.UtcNow }
-            };
+                WriteIndented = true
+            });
 
-            var stages = new JsonArray();
-            foreach (var s in Graph.Stages)
-            {
-                var arr = new JsonArray();
-                foreach (var b in s.Blocks)
-                {
-                    arr.Add(new JsonObject
-                    {
-                        ["Id"] = b.Id.ToString(),
-                        ["BlockId"] = b.BlockId.ToString(),
-                        ["Title"] = b.Title,
-                        ["Version"] = string.IsNullOrWhiteSpace(b.Version) ? "1.0.0" : b.Version,
-                        ["X"] = b.X,
-                        ["Y"] = b.Y,
-                        ["Width"] = b.PreviewWidth,
-                        ["Height"] = b.PreviewHeight
-                    });
+            var node = JsonNode.Parse(json);
+            if (node == null)
+                throw new InvalidOperationException("Serializace FormLayoutDto vrátila prázdný JSON.");
 
-                }
+            return node;
+        }
+        public (double X, double Y) GetNextBelowLast(StageVm st, double left = 8, double margin = 12)
+        {
+            if (st.Blocks.Count == 0)
+                return (left, margin);
 
-                stages.Add(new JsonObject
-                {
-                    ["Id"] = s.Id.ToString(),
-                    ["Title"] = s.Title,
-                    ["X"] = s.X,
-                    ["Y"] = s.Y,
-                    ["Width"] = s.W,
-                    ["Height"] = s.H,
-                    ["Blocks"] = arr
-                });
-            }
-            root["Stages"] = stages;
-
-            var routes = new JsonArray();
-            foreach (var e in Graph.StageEdges)
-                routes.Add(new JsonObject { ["FromStageId"] = e.FromStageId.ToString(), ["ToStageId"] = e.ToStageId.ToString(), ["Condition"] = e.ConditionJson });
-            root["Routes"] = routes;
-
-            return root;
+            var last = st.Blocks.OrderByDescending(b => b.Y + b.PreviewHeight).First();
+            var y = last.Y + last.PreviewHeight + margin;
+            return (left, y);
         }
 
         // =============== Nový formulář / Otevření / Drafty / Publikace ===============
-
 
         private void CreateNewForm()
         {
@@ -750,7 +982,7 @@ namespace Agt.Desktop.ViewModels
 
             var name = dlg.NameValue?.Trim();
 
-            // FormKey = název, GUID z dialogu se použije v dalších scénářích, pokud bude potřeba
+            // FormKey = název
             FormKey = string.IsNullOrWhiteSpace(name) ? "Process" : name;
 
             // vyčisti graf
@@ -764,13 +996,16 @@ namespace Agt.Desktop.ViewModels
             // od teď je editor "aktivní"
             HasLoadedDefinition = true;
         }
-
         private void OpenFromRepository()
         {
-            var win = new Agt.Desktop.Views.FormRepositoryBrowserWindow();
-            win.Owner = Agt.Desktop.App.Current?.MainWindow;
+            var win = new Agt.Desktop.Views.FormRepositoryBrowserWindow
+            {
+                Owner = Agt.Desktop.App.Current?.MainWindow
+            };
+
             if (win.ShowDialog() == true)
             {
+                // původní API okna – žádné SelectedEntry, ale JSON a klíč
                 var json = win.SelectedFormJson;
                 var key = win.SelectedFormKey ?? "Process";
 
@@ -779,33 +1014,56 @@ namespace Agt.Desktop.ViewModels
                     FormKey = key;
                     ImportFromJsonNode(json);
                     HasLoadedDefinition = true;
-                    MessageBox.Show($"Načten formulář „{FormKey}“.", "Otevřít", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    MessageBox.Show(
+                        $"Načten formulář „{FormKey}“.",
+                        "Otevřít",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
                 else
                 {
-                    MessageBox.Show("Soubor se nepodařilo načíst (prázdný / neplatný JSON).", "Otevřít", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(
+                        "Soubor se nepodařilo načíst (prázdný / neplatný JSON).",
+                        "Otevřít",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
                 }
             }
         }
+
 
         private void SaveDraft()
         {
             try
             {
-                Directory.CreateDirectory(_draftsRoot);
-                var json = ExportFormAsJsonNode();
+                var edited = ExportFormAsJsonNode();        // FormLayoutDto JSON
+                if (_originalBaselineJson == null)
+                    _originalBaselineJson = edited.DeepClone();
 
-                var file = Path.Combine(_draftsRoot, $"{FormKey}__draft_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}.json");
-                var opts = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(file, json.ToJsonString(opts));
+                var changeKind = CompareLayout(_originalBaselineJson, edited);
 
-                MessageBox.Show($"Pracovní verze uložena:\n{file}", "Draft", MessageBoxButton.OK, MessageBoxImage.Information);
+                var latest = _formRepository.GetLatest(FormKey);
+                string newVersion = BumpVersion(latest?.Version, changeKind);
+
+                var entry = _formRepository.SaveNewVersion(
+                    formKey: FormKey,
+                    baseVersion: newVersion,     // nebo null
+                    editedJson: edited,
+                    publish: false                   // nebo true
+                );
+
+                _originalBaselineJson = edited.DeepClone();
+
+                MessageBox.Show($"Draft uložen jako verze {newVersion}.",
+                    "Draft", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Uložení pracovní verze selhalo: " + ex.Message, "Draft", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Chyba ukládání: " + ex.Message);
             }
         }
+
 
         private void OpenDraft()
         {
@@ -835,79 +1093,15 @@ namespace Agt.Desktop.ViewModels
 
         public void Publish()
         {
-            if (_save == null)
-            {
-                MessageBox.Show("Služba publikace není k dispozici.", "Publikovat",
-                    MessageBoxButton.OK, MessageBoxImage.Exclamation);
-                return;
-            }
-
-            if (_originalBaselineJson == null)
-                _originalBaselineJson = new JsonObject { ["Key"] = FormKey };
-
             var edited = ExportFormAsJsonNode();
+            var latest = _formRepository.GetLatest(FormKey);
+            var version = latest?.Version ?? "1.0.0";
 
-            try
-            {
-                // každé použití dostane VLASTNÍ KOPII, jinak vzniká „node has already a parent“
-                var editedForSave = edited.DeepClone();
-                var editedForRegistry = edited.DeepClone();
+            _formRepository.SetPublished(FormKey, version);
 
-                // 1) DESIGN uložení (mimo runtime)
-                var designRoot = GetDir("design-forms");
-                var newPath = _save.SaveNextVersionFromJson(
-                    formsRoot: designRoot,
-                    formKey: FormKey,
-                    original: _originalBaselineJson,
-                    edited: editedForSave,
-                    out var newVer);
+            _registry?.RegisterPublished(FormKey, version, edited);
 
-                _originalBaselineJson = edited.DeepClone();
-                OriginalFilePath = newPath;
-
-                // 2) REGISTRACE pro běh
-                if (_registry == null)
-                {
-                    MessageBox.Show(
-                        "Publikace proběhla, ale chybí registrace pro Case (IFormCaseRegistryService). " +
-                        "Formulář nebude ve výběru pro spuštění.",
-                        "Publikace – varování", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                var paths = _registry.RegisterPublished(FormKey, newVer, editedForRegistry);
-
-                MessageBox.Show(
-                    $"Publikováno: {FormKey} v{newVer}\n\n" +
-                    $"Design:        {newPath}\n" +
-                    $"forms:         {paths.FormsPath}\n" +
-                    $"form-versions: {paths.FormVersionPath}\n" +
-                    $"layouts:       {paths.LayoutPath}",
-                    "Publikace OK", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                // 3) Ulož doménový process graph (stages, blocks, transitions) pokud je k dispozici služba
-                if (_processDefinitions != null && !string.IsNullOrWhiteSpace(paths.FormVersionPath))
-                {
-                    var fvId = TryParseFormVersionIdFromPath(paths.FormVersionPath);
-                    if (fvId.HasValue)
-                    {
-                        try
-                        {
-                            var graph = BuildProcessGraph(fvId.Value);
-                            _processDefinitions.SaveGraph(graph);
-                        }
-                        catch
-                        {
-                            // chyby uloženÍ procesního grafu neblokují publikaci formuláře
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Publikace selhala: " + ex.Message, "Chyba",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            MessageBox.Show($"Publikováno: {FormKey} v{version}");
         }
 
         // Helper – použij stejný jako dřív; pokud ho v souboru už máš, duplicitně NEPŘIDÁVEJ
@@ -1011,7 +1205,6 @@ namespace Agt.Desktop.ViewModels
             Raise(nameof(Graph));
         }
 
-
         public void SelectBlock(BlockVm? b)
         {
             foreach (var st in Graph.Stages)
@@ -1040,17 +1233,33 @@ namespace Agt.Desktop.ViewModels
 
         public void ClampBlocksInside(StageVm st, double blockW, double blockH, double header)
         {
-            foreach (var b in st.Blocks) ClampBlockInside(b, st, blockW, blockH, header);
+            foreach (var b in st.Blocks)
+                ClampBlockInside(b, st, blockW, blockH, header);
         }
 
         public void ClampBlockInside(BlockVm b, StageVm st, double blockW, double blockH, double header)
         {
             if (b == null || st == null) return;
-            const double innerPad = 4;
-            b.X = Math.Max(innerPad, Math.Min(b.X, st.W - blockW - innerPad));
-            b.Y = Math.Max(header + innerPad, Math.Min(b.Y, st.H - header - blockH - innerPad));
+
+            const double innerPad = 8;
+
+            // využitelná výška těla stage (pod headerem)
+            var bodyHeight = Math.Max(0, st.H - header);
+
+            var maxX = Math.Max(innerPad, st.W - blockW - innerPad);
+            var maxY = Math.Max(innerPad, bodyHeight - blockH - innerPad);
+
+            b.X = Math.Max(innerPad, Math.Min(b.X, maxX));
+            b.Y = Math.Max(innerPad, Math.Min(b.Y, maxY));
         }
 
+
+        // --- pomocné funkce pro snap / kolize bloků ---
+
+        private static double SnapTo(double v, double grid)
+            => grid <= 0 ? v : Math.Round(v / grid) * grid;
+
+        /// <summary>Obecný test překryvu obdélníku s blokem (bez mezery).</summary>
         private static bool RectIntersects(double x, double y, double w, double h, BlockVm other)
         {
             return !(x + w <= other.X ||
@@ -1059,112 +1268,344 @@ namespace Agt.Desktop.ViewModels
                      other.Y + other.PreviewHeight <= y);
         }
 
-        private static double SnapTo(double v, double grid) => grid <= 0 ? v : Math.Round(v / grid) * grid;
-
-        public (double X, double Y) FindNearestFreeSlot(StageVm st, double targetX, double targetY,
-                                                        double blockW, double blockH,
-                                                        double grid, double header,
-                                                        int maxIterations = 200)
+        private static bool Intersects(BlockVm a, BlockVm b)
         {
-            double baseX = SnapTo(targetX, grid);
-            double baseY = SnapTo(targetY, grid);
+            return RectIntersects(a.X, a.Y, a.PreviewWidth, a.PreviewHeight, b);
+        }
 
-            const double innerPad = 4;
-            baseX = Math.Max(innerPad, Math.Min(baseX, st.W - blockW - innerPad));
-            baseY = Math.Max(header + innerPad, Math.Min(baseY, st.H - header - blockH - innerPad));
+        private (double X, double Y) ApplyStickySnap(
+    StageVm st,
+    BlockVm moving,
+    double x,
+    double y,
+    double headerHeight,
+    double threshold)
+        {
+            const double innerPad = 8;
+
+            double bodyHeight = Math.Max(0, st.H - headerHeight);
+
+            double w = moving.PreviewWidth;
+            double h = moving.PreviewHeight;
+
+            double ClampX(double vx)
+                => Math.Max(innerPad, Math.Min(vx, Math.Max(innerPad, st.W - w - innerPad)));
+
+            double ClampY(double vy)
+                => Math.Max(innerPad, Math.Min(vy, Math.Max(innerPad, bodyHeight - h - innerPad)));
+
+            bool IsFree(double vx, double vy)
+            {
+                foreach (var other in st.Blocks)
+                {
+                    if (ReferenceEquals(other, moving)) continue;
+                    if (RectIntersects(vx, vy, w, h, other)) return false;
+                }
+                return true;
+            }
+
+            // kandidátní vertikální a horizontální linie
+            var snapXLines = new List<double>
+    {
+        innerPad,
+        Math.Max(innerPad, st.W - w - innerPad)
+    };
+
+            var snapYLines = new List<double>
+    {
+        innerPad,
+        Math.Max(innerPad, bodyHeight - h - innerPad)
+    };
+
+            foreach (var other in st.Blocks)
+            {
+                if (ReferenceEquals(other, moving)) continue;
+                snapXLines.Add(other.X);
+                snapXLines.Add(other.X + other.PreviewWidth);
+                snapYLines.Add(other.Y);
+                snapYLines.Add(other.Y + other.PreviewHeight);
+            }
+
+            double bestX = x;
+            double bestY = y;
+            double bestDx = threshold + 1;
+            double bestDy = threshold + 1;
+
+            // osa X – levý a pravý okraj
+            foreach (var lineX in snapXLines)
+            {
+                // levý okraj
+                {
+                    double candX = ClampX(lineX);
+                    double dx = Math.Abs(candX - x);
+                    if (dx <= threshold && dx < bestDx && IsFree(candX, y))
+                    {
+                        bestDx = dx;
+                        bestX = candX;
+                    }
+                }
+
+                // pravý okraj
+                {
+                    double candX = ClampX(lineX - w);
+                    double dx = Math.Abs(candX - x);
+                    if (dx <= threshold && dx < bestDx && IsFree(candX, y))
+                    {
+                        bestDx = dx;
+                        bestX = candX;
+                    }
+                }
+            }
+
+            // osa Y – horní a spodní okraj
+            foreach (var lineY in snapYLines)
+            {
+                // horní okraj
+                {
+                    double candY = ClampY(lineY);
+                    double dy = Math.Abs(candY - y);
+                    if (dy <= threshold && dy < bestDy && IsFree(bestX, candY))
+                    {
+                        bestDy = dy;
+                        bestY = candY;
+                    }
+                }
+
+                // spodní okraj
+                {
+                    double candY = ClampY(lineY - h);
+                    double dy = Math.Abs(candY - y);
+                    if (dy <= threshold && dy < bestDy && IsFree(bestX, candY))
+                    {
+                        bestDy = dy;
+                        bestY = candY;
+                    }
+                }
+            }
+
+            return (bestX, bestY);
+        }
+
+        /// <summary>Překryv dvou bloků (bez mezery).</summary>
+        private static bool BlocksOverlap(BlockVm a, BlockVm b)
+        {
+            return !(a.X + a.PreviewWidth <= b.X ||
+                     b.X + b.PreviewWidth <= a.X ||
+                     a.Y + a.PreviewHeight <= b.Y ||
+                     b.Y + b.PreviewHeight <= a.Y);
+        }
+
+        /// <summary>
+        /// Jednoduché „sticky“ zarovnání – snaží se přichytit levý / horní okraj
+        /// k levým / horním okrajům ostatních bloků a k okraji stage.
+        /// </summary>
+        private void ApplyStickyAlign(StageVm st, BlockVm moving, double headerHeight, double threshold = 8.0)
+        {
+            if (moving == null || st == null) return;
+
+            double x = moving.X;
+            double y = moving.Y;
+
+            double w = moving.PreviewWidth;
+            double h = moving.PreviewHeight;
+
+            const double innerPad = 8;
+
+            double bodyHeight = Math.Max(0, st.H - headerHeight);
+
+            // kandidátní X (levé okraje)
+            var xTargets = new List<double> { innerPad }; // levý okraj stage
+            foreach (var other in st.Blocks)
+            {
+                if (ReferenceEquals(other, moving)) continue;
+                xTargets.Add(other.X);
+            }
+
+            // kandidátní Y (horní okraje)
+            var yTargets = new List<double> { headerHeight + innerPad }; // horní oblast těla stage
+            foreach (var other in st.Blocks)
+            {
+                if (ReferenceEquals(other, moving)) continue;
+                yTargets.Add(other.Y);
+            }
+
+            double bestDx = threshold + 1;
+            double bestX = x;
+            foreach (var tx in xTargets)
+            {
+                var dx = tx - x;
+                if (Math.Abs(dx) < bestDx)
+                {
+                    bestDx = Math.Abs(dx);
+                    bestX = tx;
+                }
+            }
+            if (bestDx <= threshold)
+                x = bestX;
+
+            double bestDy = threshold + 1;
+            double bestY = y;
+            foreach (var ty in yTargets)
+            {
+                var dy = ty - y;
+                if (Math.Abs(dy) < bestDy)
+                {
+                    bestDy = Math.Abs(dy);
+                    bestY = ty;
+                }
+            }
+            if (bestDy <= threshold)
+                y = bestY;
+
+            // znovu omez dovnitř stage
+            moving.X = x;
+            moving.Y = y;
+            ClampBlockInside(moving, st, w, h, headerHeight);
+        }
+
+        /// <summary>
+        /// Najde nejbližší volné místo v rámci stage (používá se pro AutoLayout / drop bez XY).
+        /// </summary>
+        public (double X, double Y) FindNearestFreeSlot(
+            StageVm st,
+            double targetX,
+            double targetY,
+            double blockW,
+            double blockH,
+            double grid,
+            double header,
+            int maxIterations = 200)
+        {
+            const double innerPad = 8;
+
+            double bodyHeight = Math.Max(0, st.H - header);
+
+            double Snap(double v) => grid <= 0 ? v : Math.Round(v / grid) * grid;
+
+            double ClampX(double x)
+                => Math.Max(innerPad, Math.Min(x, Math.Max(innerPad, st.W - blockW - innerPad)));
+
+            double ClampY(double y)
+                => Math.Max(innerPad, Math.Min(y, Math.Max(innerPad, bodyHeight - blockH - innerPad)));
+
+            double baseX = ClampX(Snap(targetX));
+            double baseY = ClampY(Snap(targetY));
 
             bool IsFree(double x, double y)
             {
                 foreach (var other in st.Blocks)
-                    if (RectIntersects(x, y, blockW, blockH, other)) return false;
+                {
+                    if (RectIntersects(x, y, blockW, blockH, other))
+                        return false;
+                }
                 return true;
             }
-            if (IsFree(baseX, baseY)) return (baseX, baseY);
 
-            var step = Math.Max(1, (int)(grid > 0 ? grid : 8));
+            // ideální pozice je volná
+            if (IsFree(baseX, baseY))
+                return (baseX, baseY);
+
+            // spirála po gridu okolo baseX/baseY
+            int step = Math.Max(1, (int)(grid > 0 ? grid : 8));
             int radius = step;
             int iter = 0;
 
-            while (iter < maxIterations && radius < 4000)
+            while (iter < maxIterations && radius < 2000)
             {
+                // horní a spodní řada
                 for (int dx = -radius; dx <= radius; dx += step)
                 {
-                    {
-                        double x = SnapTo(baseX + dx, grid);
-                        double y = SnapTo(baseY - radius, grid);
-                        x = Math.Max(innerPad, Math.Min(x, st.W - blockW - innerPad));
-                        y = Math.Max(header + innerPad, Math.Min(y, st.H - header - blockH - innerPad));
-                        if (IsFree(x, y)) return (x, y);
-                        if (++iter >= maxIterations) break;
-                    }
-                    {
-                        double x = SnapTo(baseX + dx, grid);
-                        double y = SnapTo(baseY + radius, grid);
-                        x = Math.Max(innerPad, Math.Min(x, st.W - blockW - innerPad));
-                        y = Math.Max(header + innerPad, Math.Min(y, st.H - header - blockH - innerPad));
-                        if (IsFree(x, y)) return (x, y);
-                        if (++iter >= maxIterations) break;
-                    }
+                    double xTop = ClampX(Snap(baseX + dx));
+                    double yTop = ClampY(Snap(baseY - radius));
+                    if (IsFree(xTop, yTop)) return (xTop, yTop);
+                    if (++iter >= maxIterations) break;
+
+                    double xBottom = xTop;
+                    double yBottom = ClampY(Snap(baseY + radius));
+                    if (IsFree(xBottom, yBottom)) return (xBottom, yBottom);
+                    if (++iter >= maxIterations) break;
                 }
+
+                // levý a pravý sloupec
                 for (int dy = -radius + step; dy <= radius - step; dy += step)
                 {
-                    {
-                        double x = SnapTo(baseX - radius, grid);
-                        double y = SnapTo(baseY + dy, grid);
-                        x = Math.Max(innerPad, Math.Min(x, st.W - blockW - innerPad));
-                        y = Math.Max(header + innerPad, Math.Min(y, st.H - header - blockH - innerPad));
-                        if (IsFree(x, y)) return (x, y);
-                        if (++iter >= maxIterations) break;
-                    }
-                    {
-                        double x = SnapTo(baseX + radius, grid);
-                        double y = SnapTo(baseY + dy, grid);
-                        x = Math.Max(innerPad, Math.Min(x, st.W - blockW - innerPad));
-                        y = Math.Max(header + innerPad, Math.Min(y, st.H - header - blockH - innerPad));
-                        if (IsFree(x, y)) return (x, y);
-                        if (++iter >= maxIterations) break;
-                    }
+                    double xLeft = ClampX(Snap(baseX - radius));
+                    double yLeft = ClampY(Snap(baseY + dy));
+                    if (IsFree(xLeft, yLeft)) return (xLeft, yLeft);
+                    if (++iter >= maxIterations) break;
+
+                    double xRight = ClampX(Snap(baseX + radius));
+                    double yRight = yLeft;
+                    if (IsFree(xRight, yRight)) return (xRight, yRight);
+                    if (++iter >= maxIterations) break;
                 }
+
                 radius += step;
             }
 
+            // fallback – vezmi nejbližší rozumnou pozici
             return (baseX, baseY);
         }
 
-        private static bool Intersects(BlockVm a, BlockVm b) =>
-            !(a.X + a.PreviewWidth <= b.X ||
-              b.X + b.PreviewWidth <= a.X ||
-              a.Y + a.PreviewHeight <= b.Y ||
-              b.Y + b.PreviewHeight <= a.Y);
-
         private void ResolveBlockOverlaps(BlockVm moved, StageVm st, double grid, double headerHeight)
         {
-            for (int iter = 0; iter < 20; iter++)
+            if (moved == null || st == null) return;
+
+            const int maxIterations = 20;
+
+            for (int iter = 0; iter < maxIterations; iter++)
             {
+                // najdi první blok, se kterým se stále „dotýká“ (včetně MinBlockGap)
                 var hit = st.Blocks.FirstOrDefault(b => !ReferenceEquals(b, moved) && Intersects(moved, b));
-                if (hit == null) break;
+                if (hit == null)
+                    break;
 
-                double dxRight = (hit.X + hit.PreviewWidth) - moved.X;
-                double dxLeft = (moved.X + moved.PreviewWidth) - hit.X;
-                double dyDown = (hit.Y + hit.PreviewHeight) - moved.Y;
-                double dyUp = (moved.Y + moved.PreviewHeight) - hit.Y;
+                double gap = MinBlockGap;
 
-                var best = new (double dx, double dy)[] {
-                    ( +dxRight + 1, 0 ),
-                    ( -(dxLeft)  - 1, 0 ),
-                    ( 0, +dyDown + 1 ),
-                    ( 0, -(dyUp)  - 1 )
-                }.OrderBy(v => Math.Abs(v.dx) + Math.Abs(v.dy)).First();
+                // kandidátní posuny – vždy jen v jednom směru (X nebo Y)
+                var candidates = new (double dx, double dy)[]
+                {
+            // 1) přesunout moved VLEVO od hit
+            (
+                dx: (hit.X - gap) - (moved.X + moved.PreviewWidth),
+                dy: 0
+            ),
+            // 2) přesunout moved VPRAVO od hit
+            (
+                dx: (hit.X + hit.PreviewWidth + gap) - moved.X,
+                dy: 0
+            ),
+            // 3) přesunout moved NAD hit
+            (
+                dx: 0,
+                dy: (hit.Y - gap) - (moved.Y + moved.PreviewHeight)
+            ),
+            // 4) přesunout moved POD hit
+            (
+                dx: 0,
+                dy: (hit.Y + hit.PreviewHeight + gap) - moved.Y
+            )
+                };
 
+                // vyber nejmenší posun (podle |dx| + |dy|)
+                var best = candidates
+                    .OrderBy(c => Math.Abs(c.dx) + Math.Abs(c.dy))
+                    .First();
+
+                // aplikuj posun
                 moved.X += best.dx;
                 moved.Y += best.dy;
 
+                // jemné zarovnání na grid – ale až po výpočtu minimálního posunu
                 moved.X = SnapTo(moved.X, grid);
                 moved.Y = SnapTo(moved.Y, grid);
 
+                // udržet blok uvnitř stage
                 ClampBlockInside(moved, st, moved.PreviewWidth, moved.PreviewHeight, headerHeight);
             }
         }
+
+
 
         private void AutoGrowStageIfNeeded(StageVm st, BlockVm b, double headerHeight)
         {
@@ -1177,20 +1618,32 @@ namespace Agt.Desktop.ViewModels
         public void MoveBlockTo(BlockVm b, StageVm st, double targetX, double targetY, double grid, double headerHeight)
         {
             if (b == null || st == null) return;
-            b.X = targetX; b.Y = targetY;
+
+            // 1) grid snap
+            double x = SnapTo(targetX, grid);
+            double y = SnapTo(targetY, grid);
+
+            b.X = x;
+            b.Y = y;
+
+            // 2) omezit dovnitř stage
             ClampBlockInside(b, st, b.PreviewWidth, b.PreviewHeight, headerHeight);
-            b.X = SnapTo(b.X, grid); b.Y = SnapTo(b.Y, grid);
+            x = b.X;
+            y = b.Y;
+
+            // 3) sticky zarovnání na nejbližší hranu (jen pokud to neudělá kolizi)
+            var snapped = ApplyStickySnap(st, b, x, y, headerHeight, SnapThreshold);
+            b.X = snapped.X;
+            b.Y = snapped.Y;
+
+            // 4) případné překryvy – lokální posun
             ResolveBlockOverlaps(b, st, grid, headerHeight);
+
+            // 5) automatické zvětšení stage
             AutoGrowStageIfNeeded(st, b, headerHeight);
         }
 
-        public (double X, double Y) GetNextBelowLast(StageVm st, double left = 8, double margin = 12)
-        {
-            if (st.Blocks.Count == 0) return (left, margin);
-            var last = st.Blocks.OrderByDescending(b => b.Y + b.PreviewHeight).First();
-            var y = last.Y + last.PreviewHeight + margin;
-            return (left, y);
-        }
+
 
         // ====== Preview z knihovny ======
         public void GeneratePreview(BlockVm b)

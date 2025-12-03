@@ -1,4 +1,5 @@
 ﻿using Agt.Desktop.Services;
+using Agt.Domain.Abstractions;
 using Agt.Domain.Repositories;
 using Agt.Infrastructure.DI;             // AddAgtCore
 using Agt.Infrastructure.JsonStore;
